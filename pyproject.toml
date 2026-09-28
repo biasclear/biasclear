@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "biasclear"
+version = "2.0.0a1"
+description = "Rule-based persuasion checker built on Persistent Influence Theory (PIT). Alpha."
+# PyPI shows its own readme: absolute links, and nothing that stops being
+# true after the first upload (an uploaded description cannot be edited).
+readme = "docs/PYPI_README.md"
+requires-python = ">=3.10"
+# Apache-2.0 for the code; CC BY 4.0 for the rule pack (rules/LICENSE), which
+# the wheel ships as biasclear/data/biasclear-rules.json.
+license = "Apache-2.0 AND CC-BY-4.0"
+license-files = ["LICENSE", "rules/LICENSE"]
+authors = [{ name = "BiasClear contributors", email = "hello@biasclear.com" }]
+dependencies = []
+keywords = ["persuasion", "rhetoric", "linter", "media literacy"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Text Processing :: Linguistic",
+    "Typing :: Typed",
+]
+
+[project.urls]
+# No Homepage yet: the site is at a preview address until biasclear.com
+# serves it, and a release's metadata can't be edited. Add
+# Homepage = "https://biasclear.com" in the first release after that.
+Repository = "https://github.com/biasclear/biasclear"
+
+[project.optional-dependencies]
+test = ["pytest>=8", "jsonschema>=4.18"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/biasclear"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/rules",
+    "/tests",
+    "/scripts",
+    "/README.md",
+    "/docs/PYPI_README.md",
+    "/CHANGELOG.md",
+    "/LICENSE",
+]
+# The site's build scripts need site/ and packages/, which stay in the
+# repository; tests that read repository-only files skip in the sdist.
+exclude = ["/scripts/*.mjs", "/scripts/*.d.mts", "**/__pycache__"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+xfail_strict = true

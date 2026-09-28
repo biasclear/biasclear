@@ -1,0 +1,91 @@
+name: Pages
+
+# Builds the website from site/ and deploys it to GitHub Pages. Every page is
+# built from the repository by scripts/build-site.mjs, and checked by
+# site/test/site.test.mjs before anything is uploaded. There are no deploy
+# secrets: GitHub's OIDC token authorizes the deployment.
+#
+# Repository settings this needs once: Settings > Pages > Source: GitHub
+# Actions, and the github-pages environment limited to main
+# (docs/REPO_SETTINGS.md). A run started by hand on another branch builds and
+# checks the site, and deploys nothing.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+# One deployment at a time. A newer push waits; a deploy in progress is not cancelled.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      # actions/configure-pages reads the site's address (for the link-preview tags)
+      pages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # scripts/site_facts.py imports the symmetry tests to count them, so it needs pytest.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      # Only pytest (for scripts/site_facts.py), pinned by hash with its
+      # dependencies, so no unpinned package runs in the job that builds the site.
+      - name: Install pytest (pinned by hash)
+        run: python -m pip install --quiet --no-deps --only-binary=:all: --require-hashes -r .github/requirements-site.txt
+
+      - name: Install the engine's build tools
+        working-directory: packages/engine
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Check the site
+        env:
+          PYTHON: python
+        run: node --test site/test/site.test.mjs
+
+      # The site's public address (https://biasclear.github.io/biasclear, or the
+      # custom domain once it is set), for og:url and og:image only.
+      - id: pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Build the site into _site/
+        env:
+          PYTHON: python
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
+        run: node scripts/build-site.mjs
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+
+  deploy:
+    name: deploy
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,6 @@
+# Text files are checked out with LF endings on every system, so the build's
+# parsers (front matter, the README's citation) and the byte-identical copy of
+# the rule pack in src/biasclear/data/ see the same bytes everywhere.
+* text=auto eol=lf
+*.png binary
+*.woff2 binary

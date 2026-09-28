@@ -1,0 +1,8377 @@
+{
+ "about": "What the retired v1 engine did on every scannable text in its tests and calibration corpus, plus edge cases. For each case: v1_rule_ids are the rules v1 raised (excluded rules removed); v1_spans are every match of those rules' v1 regexes, in indicator order; moves are what v2 must return for domain 'all': per rule, sort by start then longest and drop overlaps, then sort all moves by start, longest, and pack order. Offsets are Unicode code points. Real names of people, parties, organizations and outlets in the texts are replaced with made-up names of the same shape before v1 reads them (scripts/make_golden.py --rename).",
+ "generated_by": "scripts/make_golden.py",
+ "v1_core_version": "1.2.0",
+ "v1_frozen_core_git_blob": "feaba315eda026785a41275b91e88f66f668a076",
+ "rules_version": "2.0.0a1",
+ "excluded_rules": [
+  "CREDENTIAL_AS_PROOF",
+  "INSTITUTIONAL_NEUTRALITY",
+  "FIN_CHERRY_PICKED_TIMEFRAME"
+ ],
+ "excluded_texts": [
+  {
+   "src": "tests/test_calibration.py:464",
+   "reason": "dated litigation specifics; could echo a real legal matter"
+  },
+  {
+   "src": "tests/test_frozen_core.py:415",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "tests/test_frozen_core.py:656",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "tests/test_frozen_core.py:780",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "tests/test_frozen_core.py:789",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#5",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#0",
+   "reason": "dated litigation specifics; could echo a real legal matter"
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#1",
+   "reason": "dated litigation specifics; could echo a real legal matter"
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#2",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#5",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#6",
+   "reason": "dated litigation specifics; could echo a real legal matter"
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#8",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#40",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#0",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#13",
+   "reason": "names a real, identifiable person"
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#16",
+   "reason": "names a real, identifiable person"
+  }
+ ],
+ "cases": [
+  {
+   "src": "tests/test_api.py:1",
+   "text": "\nAPI Integration Tests \u2014 Endpoint Verification\n\nTests every public API endpoint using FastAPI's TestClient.\nNo real LLM calls \u2014 we test local scan mode and mock-free\npaths (health, audit, patterns).\n\nThese tests catch:\n  - Schema mismatches (response model vs actual data)\n  - Route registration issues\n  - Middleware/dependency injection bugs\n  - Response format regressions\n",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:25",
+   "text": "Create a test client for the BiasClear API.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:33",
+   "text": "Keep API tests independent of previous request volume.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:47",
+   "text": "Verify /health returns correct structure.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:85",
+   "text": "Verify /scan local mode returns correct structure.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:89",
+   "text": "The court held in Smith v. Jones, 500 U.S. 100 (2000), that the statute applies.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:102",
+   "text": "All credible legal scholars agree this case is plainly frivolous. The well-settled law makes clear that no reasonable court would entertain such arguments.",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      70,
+      86
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     70,
+     86
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_api.py:115",
+   "text": "Verify all ScanResponse fields are present.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:117",
+   "text": "This is a neutral factual statement with no bias indicators.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:132",
+   "text": "Verify flag objects have correct shape.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:134",
+   "text": "All experts unanimously agree this is settled science.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      11
+     ],
+     [
+      12,
+      29
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     11
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     12,
+     29
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_api.py:149",
+   "text": "This is plainly meritless and wholly frivolous litigation.",
+   "v1_rule_ids": [
+    "LEGAL_MERIT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_MERIT_DISMISSAL": [
+     [
+      8,
+      25
+     ],
+     [
+      30,
+      46
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     8,
+     25
+    ],
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     30,
+     46
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_api.py:159",
+   "text": "The embattled leader's controversial policy sparked growing concern among many experts who say the move is ill-conceived.",
+   "v1_rule_ids": [
+    "MEDIA_EDITORIAL_AS_NEWS"
+   ],
+   "v1_spans": {
+    "MEDIA_EDITORIAL_AS_NEWS": [
+     [
+      0,
+      20
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EDITORIAL_AS_NEWS",
+     0,
+     20
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_api.py:186",
+   "text": "All experts agree this settled science proves my point.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      11
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      4,
+      17
+     ],
+     [
+      31,
+      45
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     11
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     4,
+     17
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     31,
+     45
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_api.py:203",
+   "text": "Clean factual statement.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:204",
+   "text": "All experts agree this is true.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      11
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      4,
+      17
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     11
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     4,
+     17
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_api.py:219",
+   "text": "Verify public stats reflect scan audit data.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:223",
+   "text": "Everyone agrees this is the only reasonable option.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      15
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     15
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_api.py:241",
+   "text": "Test correction threshold gate \u2014 no LLM calls needed.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:244",
+   "text": "Clean text should not trigger correction.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:246",
+   "text": "The court ruled on the matter.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_api.py:261",
+   "text": "Verify CorrectResponse fields are present.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:1",
+   "text": "\nTests for the calibration framework.\n\nTests cover:\n  - Corpus parser (format parsing, edge cases)\n  - Benchmark runner (metric calculation, report generation)\n  - Weight optimizer (recommendation logic)\n",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:47",
+   "text": "            ---\n            tags: settled_law_dismissal\n            severity: high\n            source: test filing\n            notes: test note\n\n            It is well-settled law that this claim is meritless.\n\n            ---\n        ",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      163,
+      179
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     163,
+     179
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_calibration.py:70",
+   "text": "            ---\n            tags: clean\n            severity: none\n            source: test\n\n            This is a factual statement with no bias.\n\n            ---\n        ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:87",
+   "text": "            ---\n            tags: settled_law_dismissal, merit_dismissal, sanctions_threat\n            severity: critical\n            source: aggressive filing\n\n            Combined attack text.\n\n            ---\n        ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:108",
+   "text": "            ---\n            tags: clean\n            severity: none\n            source: test\n\n            Clean text here.\n\n            ---\n            tags: fear_urgency\n            severity: moderate\n            source: test\n\n            Act now or face disaster!\n\n            ---\n        ",
+   "v1_rule_ids": [
+    "FEAR_URGENCY"
+   ],
+   "v1_spans": {
+    "FEAR_URGENCY": [
+     [
+      239,
+      246
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FEAR_URGENCY",
+     239,
+     246
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_calibration.py:132",
+   "text": "            # This is a comment\n            # Another comment\n\n            ---\n            tags: clean\n            severity: none\n            source: test\n\n            Actual sample text.\n\n            ---\n        ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:150",
+   "text": "            ---\n\n            Just text with no metadata.\n\n            ---\n        ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:167",
+   "text": "# Only comments\n# Nothing here\n",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:177",
+   "text": "            ---\n            tags: clean\n            severity: none\n            source: test\n\n            First line of the passage.\n            Second line continues the thought.\n            Third line wraps up.\n\n            ---\n        ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:195",
+   "text": "All human tags should map to valid pattern IDs.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:206",
+   "text": "Missing mapping for tag: ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:209",
+   "text": "parse_all_corpora reads from all .txt files.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:210",
+   "text": "            ---\n            tags: clean\n            severity: none\n            source: file_a\n\n            Sample A.\n\n            ---\n        ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:220",
+   "text": "            ---\n            tags: fear_urgency\n            severity: moderate\n            source: file_b\n\n            Sample B.\n\n            ---\n        ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:241",
+   "text": "Full benchmark should run on the seed corpus.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:248",
+   "text": "All metrics should be in valid ranges.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:258",
+   "text": "Clean samples should score higher than biased samples.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:264",
+   "text": "format_report should return a non-empty string.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:267",
+   "text": "BIASCLEAR CALIBRATION REPORT",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:269",
+   "text": "TRUTH SCORE ANALYSIS",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:272",
+   "text": "save_report should create both txt and json files.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:284",
+   "text": "Verify precision/recall/F1 calculations.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:299",
+   "text": "Zero values should return 0, not division error.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:307",
+   "text": "Should raise on empty corpus.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:309",
+   "text": "No samples found",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:320",
+   "text": "Optimizer should produce a report on seed data.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:328",
+   "text": "format_optimization_report should return non-empty string.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:332",
+   "text": "WEIGHT OPTIMIZATION REPORT",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:335",
+   "text": "When biased avg > 60, optimizer should recommend penalties.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:344",
+   "text": "Should recommend penalty increases",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:347",
+   "text": "If metrics are perfect, no recommendations.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:376",
+   "text": "Full pipeline: parse \u2192 benchmark \u2192 optimize \u2192 report.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:380",
+   "text": "            ---\n            tags: clean\n            severity: none\n            source: integration test\n\n            The court held in Smith v. Jones, 123 F.3d 456 (2020)\n            that the statute applies to these facts.\n\n            ---\n            tags: settled_law_dismissal\n            severity: high\n            source: integration test\n\n            It is well-settled law that these claims are without merit\n            and should be summarily rejected.\n\n            ---\n        ",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      364,
+      380
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     364,
+     380
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_calibration.py:416",
+   "text": "Seed corpus should achieve F1 > 0.90 as a regression guard.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:419",
+   "text": " (expected > 90%)",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:423",
+   "text": "Clean samples should score meaningfully higher than biased.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:426",
+   "text": " (expected > 25 points)",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:431",
+   "text": "Clean samples should have zero structural false positives.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:435",
+   "text": " suggests FP problem (expected >= 95)",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:440",
+   "text": "Biased samples should average below 70 Truth Score.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:443",
+   "text": " too high (expected <= 70)",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:448",
+   "text": "All 14 patterns with labeled samples should achieve 100% recall.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:453",
+   "text": " misses). Expected 100%.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:459",
+   "text": "Tests for the Truth Score calculator.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:462",
+   "text": "Text with no flags should score 100.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:471",
+   "text": "A single moderate structural flag should push score below 80.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:473",
+   "text": "We face a simple choice: either accept or face ruin. There is no middle ground.",
+   "v1_rule_ids": [
+    "FALSE_BINARY"
+   ],
+   "v1_spans": {
+    "FALSE_BINARY": [
+     [
+      8,
+      42
+     ],
+     [
+      62,
+      78
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FALSE_BINARY",
+     8,
+     42
+    ],
+    [
+     "FALSE_BINARY",
+     62,
+     78
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_calibration.py:478",
+   "text": "Single moderate flag scored ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:478",
+   "text": " (expected < 80)",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:481",
+   "text": "Multi-flag stacked samples should score well below 50.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:483",
+   "text": "It is well-settled law that this claim is frivolous. Filing sanctions should be considered for this vexatious litigation. The weight of authority is overwhelming.",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL",
+    "LEGAL_MERIT_DISMISSAL",
+    "LEGAL_WEIGHT_STACKING",
+    "LEGAL_SANCTIONS_THREAT"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      6,
+      22
+     ]
+    ],
+    "LEGAL_MERIT_DISMISSAL": [
+     [
+      100,
+      120
+     ]
+    ],
+    "LEGAL_WEIGHT_STACKING": [
+     [
+      122,
+      145
+     ]
+    ],
+    "LEGAL_SANCTIONS_THREAT": [
+     [
+      53,
+      76
+     ],
+     [
+      60,
+      90
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     6,
+     22
+    ],
+    [
+     "LEGAL_SANCTIONS_THREAT",
+     53,
+     76
+    ],
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     100,
+     120
+    ],
+    [
+     "LEGAL_WEIGHT_STACKING",
+     122,
+     145
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_calibration.py:489",
+   "text": "Multi-flag stacked scored ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:489",
+   "text": " (expected < 50)",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:492",
+   "text": "Flags spanning multiple PIT tiers should get extra penalty.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:495",
+   "text": "Everyone agrees this is correct. The consensus is clear.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      15
+     ],
+     [
+      33,
+      46
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     15
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     33,
+     46
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_calibration.py:502",
+   "text": "Everyone agrees this is correct. If we do not act immediately, the consequences will be catastrophic.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "FEAR_URGENCY"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      15
+     ]
+    ],
+    "FEAR_URGENCY": [
+     [
+      46,
+      61
+     ],
+     [
+      67,
+      100
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     15
+    ],
+    [
+     "FEAR_URGENCY",
+     46,
+     61
+    ],
+    [
+     "FEAR_URGENCY",
+     67,
+     100
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_calibration.py:510",
+   "text": " should be < single-tier ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:515",
+   "text": "Tests for the citation suppression bug fix (case sensitivity).",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:518",
+   "text": "CLAIM_WITHOUT_CITATION should be suppressed near Report No. citations.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:520",
+   "text": "Research indicates that recidivism drops 18-24% (Nat'l Inst. of Sentencing, Report No. 2023-47, at 15).",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:526",
+   "text": "Structural flags should be suppressed near citation: ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:531",
+   "text": "CLAIM_WITHOUT_CITATION should fire when no citation is present.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:533",
+   "text": "Research indicates that the approach is fundamentally flawed. Experts say we need a paradigm shift.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      18
+     ],
+     [
+      62,
+      73
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     18
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     62,
+     73
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_calibration.py:541",
+   "text": "Id. legal citation should suppress nearby keyword markers.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:543",
+   "text": "The data suggests compliance rates peak within 90 days (Id. at 22-23).",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_calibration.py:549",
+   "text": "Markers should be suppressed near Id. citation: ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:1",
+   "text": "\nCorrector Tests \u2014 Full Coverage\n\nTests the corrector module:\n  1. Threshold gate (_should_correct)\n  2. Flag instruction builder (_build_flag_instructions)\n  3. Post-correction verification (_verify_correction)\n  4. Diff span computation (_compute_diff_spans)\n  5. Full correct_bias flow (threshold path + mocked LLM path)\n",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:32",
+   "text": "Mock LLM that returns a pre-configured correction response.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:44",
+   "text": "Removed bias framing",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:55",
+   "text": "Verify _should_correct only triggers on real bias.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:58",
+   "text": "Score 100 + no flags = no correction.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:65",
+   "text": "Score 90 + keyword-only flags = no correction.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:74",
+   "text": "Score <= 80 always triggers correction.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:87",
+   "text": "Structural flag with severity >= moderate triggers.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:112",
+   "text": "Structural flag with severity 'low' alone doesn't trigger if score is high.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:121",
+   "text": "Score of 81 with no structural flags = no correction.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:133",
+   "text": "Verify _build_flag_instructions builds correct LLM guidance.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:141",
+   "text": "No specific structural",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:149",
+   "text": "All experts agree",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      11
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      4,
+      17
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     11
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     4,
+     17
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_corrector.py:190",
+   "text": "some AI finding",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:192",
+   "text": "AI-detected bias pattern",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:209",
+   "text": "Verify _verify_correction re-scans through frozen core.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:213",
+   "text": "The court held in Smith v. Jones that the statute applies.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:222",
+   "text": "All experts agree this is plainly frivolous and well-settled.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION",
+    "LEGAL_SETTLED_DISMISSAL"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      11
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      4,
+      17
+     ]
+    ],
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      48,
+      60
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     11
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     4,
+     17
+    ],
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     48,
+     60
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_corrector.py:230",
+   "text": "This is a neutral factual statement.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:242",
+   "text": "Verify _compute_diff_spans produces correct diffs.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:250",
+   "text": "hello cruel world",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:256",
+   "text": "hello beautiful world",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:263",
+   "text": "The evidence suggests this may be true.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      4,
+      21
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     4,
+     21
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_corrector.py:268",
+   "text": "The quick brown fox",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:269",
+   "text": "A quick red fox",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:292",
+   "text": "Verify the pattern lookup table is populated correctly.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:315",
+   "text": "Integration tests for correct_bias \u2014 the full pipeline.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:319",
+   "text": "No bias detected = no correction, passthrough.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:322",
+   "text": "The court ruled on the merits.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:333",
+   "text": "High score + only keyword markers = no correction.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:336",
+   "text": "Some text with minor issues.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:351",
+   "text": "Low score triggers LLM correction.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:352",
+   "text": "The evidence suggests this conclusion.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      4,
+      21
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     4,
+     21
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_corrector.py:379",
+   "text": "Structural moderate flag at high score still triggers.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:382",
+   "text": "All experts agree.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      11
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      4,
+      17
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     11
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     4,
+     17
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_corrector.py:402",
+   "text": "Domain is forwarded to post-correction verification.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:403",
+   "text": "The statute applies.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:405",
+   "text": "Well-settled law proves this.",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      0,
+      16
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     0,
+     16
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_corrector.py:426",
+   "text": "LLM failure returns original text with error field.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:430",
+   "text": "LLM is down",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:455",
+   "text": "Successful correction includes iteration tracking.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_corrector.py:458",
+   "text": "All experts agree this is settled.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      11
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      4,
+      17
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     11
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     4,
+     17
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:1",
+   "text": "\nTests for the Frozen Core \u2014 the most important tests in the system.\n\nIf the frozen core doesn't detect correctly, nothing else matters.\n",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:21",
+   "text": "Text with no bias should pass clean.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:24",
+   "text": "The meeting is scheduled for 3pm Tuesday.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:31",
+   "text": "According to the 2023 Census Bureau report (Table B-1), median household income was $74,580.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:42",
+   "text": "Tier 1: Consensus language substituting for evidence.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:46",
+   "text": "Everyone agrees that this policy is the best approach.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      15
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     15
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:57",
+   "text": "It is widely accepted that the earth revolves around the sun.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      21
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     21
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:67",
+   "text": "All experts in the field have concluded this is correct.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      11
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     11
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:77",
+   "text": "Tier 1: Authority claims with no source.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:80",
+   "text": "Studies show that remote work increases productivity.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      12
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     12
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:88",
+   "text": "Research indicates a strong correlation between sleep and performance.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      18
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     18
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:96",
+   "text": "Experts say the market will recover by Q3.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      11
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     11
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:105",
+   "text": "Tier 1: Opposing views dismissed by label.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:109",
+   "text": "That theory has been thoroughly debunked by the scientific community.",
+   "v1_rule_ids": [
+    "DISSENT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "DISSENT_DISMISSAL": [
+     [
+      12,
+      40
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISSENT_DISMISSAL",
+     12,
+     40
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:116",
+   "text": "Only conspiracy theorists believe the government was involved.",
+   "v1_rule_ids": [
+    "DISSENT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "DISSENT_DISMISSAL": [
+     [
+      5,
+      15
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISSENT_DISMISSAL",
+     5,
+     15
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:123",
+   "text": "No credible scientist would support that hypothesis.",
+   "v1_rule_ids": [
+    "DISSENT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "DISSENT_DISMISSAL": [
+     [
+      0,
+      21
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISSENT_DISMISSAL",
+     0,
+     21
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:130",
+   "text": "Tier 2: False dilemma / either-or framing.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:134",
+   "text": "Either we implement this policy now or we face economic collapse.",
+   "v1_rule_ids": [
+    "FALSE_BINARY"
+   ],
+   "v1_spans": {
+    "FALSE_BINARY": [
+     [
+      0,
+      38
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FALSE_BINARY",
+     0,
+     38
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:141",
+   "text": "You're either with us on this initiative or you're against progress.",
+   "v1_rule_ids": [
+    "FALSE_BINARY"
+   ],
+   "v1_spans": {
+    "FALSE_BINARY": [
+     [
+      0,
+      43
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FALSE_BINARY",
+     0,
+     43
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:148",
+   "text": "Tier 2: Fear-based urgency.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:152",
+   "text": "If we don't act now, the consequences will be catastrophic and irreversible.",
+   "v1_rule_ids": [
+    "FEAR_URGENCY"
+   ],
+   "v1_spans": {
+    "FEAR_URGENCY": [
+     [
+      0,
+      15
+     ],
+     [
+      25,
+      58
+     ],
+     [
+      63,
+      75
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FEAR_URGENCY",
+     0,
+     15
+    ],
+    [
+     "FEAR_URGENCY",
+     25,
+     58
+    ],
+    [
+     "FEAR_URGENCY",
+     63,
+     75
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:159",
+   "text": "We are approaching a point of no return on this issue.",
+   "v1_rule_ids": [
+    "FEAR_URGENCY"
+   ],
+   "v1_spans": {
+    "FEAR_URGENCY": [
+     [
+      21,
+      39
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FEAR_URGENCY",
+     21,
+     39
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:166",
+   "text": "Tier 2: Shame/social pressure as manipulation.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:170",
+   "text": "Any reasonable person would agree that this is the right approach.",
+   "v1_rule_ids": [
+    "SHAME_LEVER",
+    "MORAL_HIGH_GROUND"
+   ],
+   "v1_spans": {
+    "SHAME_LEVER": [
+     [
+      0,
+      21
+     ]
+    ],
+    "MORAL_HIGH_GROUND": [
+     [
+      0,
+      33
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MORAL_HIGH_GROUND",
+     0,
+     33
+    ],
+    [
+     "SHAME_LEVER",
+     0,
+     21
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:177",
+   "text": "We need to be on the right side of history on this issue.",
+   "v1_rule_ids": [
+    "SHAME_LEVER",
+    "INEVITABILITY_FRAME",
+    "MORAL_HIGH_GROUND"
+   ],
+   "v1_spans": {
+    "SHAME_LEVER": [
+     [
+      21,
+      42
+     ]
+    ],
+    "INEVITABILITY_FRAME": [
+     [
+      14,
+      42
+     ]
+    ],
+    "MORAL_HIGH_GROUND": [
+     [
+      14,
+      42
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "INEVITABILITY_FRAME",
+     14,
+     42
+    ],
+    [
+     "MORAL_HIGH_GROUND",
+     14,
+     42
+    ],
+    [
+     "SHAME_LEVER",
+     21,
+     42
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:184",
+   "text": "Tier 3: Credentials substituted for argument.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:188",
+   "text": "As a leading expert in the field, Dr. Smith's opinion should settle the matter.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:195",
+   "text": "With over 30 years of experience, her judgment is beyond question.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:202",
+   "text": "Legal domain patterns \u2014 opposing counsel rhetorical tools.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:206",
+   "text": "It is well-settled law that the defendant's argument fails.",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      6,
+      22
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     6,
+     22
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:214",
+   "text": "Plaintiff's claims are plainly meritless and should be dismissed.",
+   "v1_rule_ids": [
+    "LEGAL_MERIT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_MERIT_DISMISSAL": [
+     [
+      23,
+      40
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     23,
+     40
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:222",
+   "text": "The overwhelming weight of authority supports the defendant's position.",
+   "v1_rule_ids": [
+    "LEGAL_WEIGHT_STACKING"
+   ],
+   "v1_spans": {
+    "LEGAL_WEIGHT_STACKING": [
+     [
+      0,
+      36
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_WEIGHT_STACKING",
+     0,
+     36
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:230",
+   "text": "This filing is frivolous and vexatious, warranting sanctions under Rule 11.",
+   "v1_rule_ids": [
+    "LEGAL_SANCTIONS_THREAT"
+   ],
+   "v1_spans": {
+    "LEGAL_SANCTIONS_THREAT": [
+     [
+      67,
+      74
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SANCTIONS_THREAT",
+     67,
+     74
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:240",
+   "text": "Regression: this phrase was missed in v1.0.0.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:242",
+   "text": "Filing sanctions should be considered for this vexatious litigation.",
+   "v1_rule_ids": [
+    "LEGAL_MERIT_DISMISSAL",
+    "LEGAL_SANCTIONS_THREAT"
+   ],
+   "v1_spans": {
+    "LEGAL_MERIT_DISMISSAL": [
+     [
+      47,
+      67
+     ]
+    ],
+    "LEGAL_SANCTIONS_THREAT": [
+     [
+      0,
+      23
+     ],
+     [
+      7,
+      37
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SANCTIONS_THREAT",
+     0,
+     23
+    ],
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     47,
+     67
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:249",
+   "text": "Legal patterns should NOT fire for general domain.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:251",
+   "text": "It is well-settled law that this is correct.",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      6,
+      22
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     6,
+     22
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:264",
+   "text": "Truth score calculation.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:268",
+   "text": "The meeting is at 3pm.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:275",
+   "text": "Studies show that experts say the consensus is clear. Everyone agrees this is widely accepted common knowledge. Only conspiracy theorists would disagree.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION",
+    "DISSENT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      30,
+      43
+     ],
+     [
+      54,
+      69
+     ],
+     [
+      78,
+      93
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      12
+     ],
+     [
+      18,
+      29
+     ]
+    ],
+    "DISSENT_DISMISSAL": [
+     [
+      117,
+      127
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     12
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     18,
+     29
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     30,
+     43
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     54,
+     69
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     78,
+     93
+    ],
+    [
+     "DISSENT_DISMISSAL",
+     117,
+     127
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:290",
+   "text": "Knowledge type classification.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:293",
+   "text": "Please send me the document by Friday.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:298",
+   "text": "Experts say that studies show the consensus is clear. Research indicates authorities confirm the data suggests it is widely accepted that conventional wisdom holds.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      30,
+      43
+     ],
+     [
+      111,
+      132
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      11
+     ],
+     [
+      17,
+      29
+     ],
+     [
+      54,
+      72
+     ],
+     [
+      97,
+      110
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     11
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     17,
+     29
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     30,
+     43
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     54,
+     72
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     97,
+     110
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     111,
+     132
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:307",
+   "text": "While experts say this is true, we also observed that temperatures rose 2.3 degrees during the test period.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      6,
+      17
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     6,
+     17
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:315",
+   "text": "While experts say this is true, the actual data from the 2024 survey (Table 3, p.12) shows a different picture.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:327",
+   "text": "That theory has been thoroughly debunked. No credible scientist supports it. Any reasonable person would agree.",
+   "v1_rule_ids": [
+    "DISSENT_DISMISSAL",
+    "SHAME_LEVER",
+    "MORAL_HIGH_GROUND"
+   ],
+   "v1_spans": {
+    "DISSENT_DISMISSAL": [
+     [
+      12,
+      40
+     ],
+     [
+      42,
+      63
+     ]
+    ],
+    "SHAME_LEVER": [
+     [
+      77,
+      98
+     ]
+    ],
+    "MORAL_HIGH_GROUND": [
+     [
+      77,
+      110
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISSENT_DISMISSAL",
+     12,
+     40
+    ],
+    [
+     "DISSENT_DISMISSAL",
+     42,
+     63
+    ],
+    [
+     "MORAL_HIGH_GROUND",
+     77,
+     110
+    ],
+    [
+     "SHAME_LEVER",
+     77,
+     98
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:331",
+   "text": "Experts say this is true.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      11
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     11
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:338",
+   "text": "According to the Bureau of Workforce Statistics report from January 2025, unemployment decreased by 0.2 percentage points.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:345",
+   "text": "The core must be immutable.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:352",
+   "text": "Principles dict shouldn't be mutated at runtime.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:364",
+   "text": "INEVITABILITY_FRAME \u2014 Tier 1",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:368",
+   "text": "This is the direction the field is heading and there is no stopping this trend.",
+   "v1_rule_ids": [
+    "INEVITABILITY_FRAME"
+   ],
+   "v1_spans": {
+    "INEVITABILITY_FRAME": [
+     [
+      0,
+      42
+     ],
+     [
+      47,
+      72
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "INEVITABILITY_FRAME",
+     0,
+     42
+    ],
+    [
+     "INEVITABILITY_FRAME",
+     47,
+     72
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:375",
+   "text": "History will judge those who resisted this change.",
+   "v1_rule_ids": [
+    "SHAME_LEVER",
+    "INEVITABILITY_FRAME"
+   ],
+   "v1_spans": {
+    "SHAME_LEVER": [
+     [
+      0,
+      18
+     ]
+    ],
+    "INEVITABILITY_FRAME": [
+     [
+      0,
+      18
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "SHAME_LEVER",
+     0,
+     18
+    ],
+    [
+     "INEVITABILITY_FRAME",
+     0,
+     18
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:389",
+   "text": "Sales increased 12% year-over-year, continuing the upward trend observed since Q2 2023.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:397",
+   "text": "APPEAL_TO_TRADITION \u2014 Tier 1",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:401",
+   "text": "We have always done it this way and it has worked fine.",
+   "v1_rule_ids": [
+    "APPEAL_TO_TRADITION"
+   ],
+   "v1_spans": {
+    "APPEAL_TO_TRADITION": [
+     [
+      0,
+      31
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "APPEAL_TO_TRADITION",
+     0,
+     31
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:408",
+   "text": "Departing from established practice would be unwise and dangerous.",
+   "v1_rule_ids": [
+    "APPEAL_TO_TRADITION"
+   ],
+   "v1_spans": {
+    "APPEAL_TO_TRADITION": [
+     [
+      0,
+      51
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "APPEAL_TO_TRADITION",
+     0,
+     51
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:423",
+   "text": "FALSE_EQUIVALENCE \u2014 Tier 1",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:427",
+   "text": "Both sides have valid points and the truth lies somewhere in the middle.",
+   "v1_rule_ids": [
+    "FALSE_EQUIVALENCE"
+   ],
+   "v1_spans": {
+    "FALSE_EQUIVALENCE": [
+     [
+      0,
+      28
+     ],
+     [
+      33,
+      71
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FALSE_EQUIVALENCE",
+     0,
+     28
+    ],
+    [
+     "FALSE_EQUIVALENCE",
+     33,
+     71
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:434",
+   "text": "It's not as simple as many critics suggest \u2014 there are valid arguments on both sides of this debate.",
+   "v1_rule_ids": [
+    "FALSE_EQUIVALENCE"
+   ],
+   "v1_spans": {
+    "FALSE_EQUIVALENCE": [
+     [
+      0,
+      42
+     ],
+     [
+      45,
+      84
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FALSE_EQUIVALENCE",
+     0,
+     42
+    ],
+    [
+     "FALSE_EQUIVALENCE",
+     45,
+     84
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:442",
+   "text": "The parties present different interpretations. Plaintiff reads the clause narrowly, Defendant reads it broadly. The court must examine the text to determine which reading controls.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:451",
+   "text": "MORAL_HIGH_GROUND \u2014 Tier 2",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:455",
+   "text": "Any decent person would recognize the importance of this issue.",
+   "v1_rule_ids": [
+    "SHAME_LEVER",
+    "MORAL_HIGH_GROUND"
+   ],
+   "v1_spans": {
+    "SHAME_LEVER": [
+     [
+      0,
+      17
+     ]
+    ],
+    "MORAL_HIGH_GROUND": [
+     [
+      0,
+      33
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MORAL_HIGH_GROUND",
+     0,
+     33
+    ],
+    [
+     "SHAME_LEVER",
+     0,
+     17
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:462",
+   "text": "This is simply a matter of basic human decency.",
+   "v1_rule_ids": [
+    "MORAL_HIGH_GROUND"
+   ],
+   "v1_spans": {
+    "MORAL_HIGH_GROUND": [
+     [
+      0,
+      46
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MORAL_HIGH_GROUND",
+     0,
+     46
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:469",
+   "text": "It is morally reprehensible to take such a position.",
+   "v1_rule_ids": [
+    "MORAL_HIGH_GROUND"
+   ],
+   "v1_spans": {
+    "MORAL_HIGH_GROUND": [
+     [
+      6,
+      30
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MORAL_HIGH_GROUND",
+     6,
+     30
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:476",
+   "text": "LEGAL_PROCEDURAL_GATEKEEPING \u2014 Tier 3",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:480",
+   "text": "Plaintiff failed to properly preserve this argument for appeal.",
+   "v1_rule_ids": [
+    "LEGAL_PROCEDURAL_GATEKEEPING"
+   ],
+   "v1_spans": {
+    "LEGAL_PROCEDURAL_GATEKEEPING": [
+     [
+      10,
+      37
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_PROCEDURAL_GATEKEEPING",
+     10,
+     37
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:488",
+   "text": "Defendant has waived this argument by not raising it in the initial responsive pleading.",
+   "v1_rule_ids": [
+    "LEGAL_PROCEDURAL_GATEKEEPING"
+   ],
+   "v1_spans": {
+    "LEGAL_PROCEDURAL_GATEKEEPING": [
+     [
+      14,
+      34
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_PROCEDURAL_GATEKEEPING",
+     14,
+     34
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:497",
+   "text": "This claim is procedurally barred and need not be addressed on the merits.",
+   "v1_rule_ids": [
+    "LEGAL_PROCEDURAL_GATEKEEPING"
+   ],
+   "v1_spans": {
+    "LEGAL_PROCEDURAL_GATEKEEPING": [
+     [
+      14,
+      33
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_PROCEDURAL_GATEKEEPING",
+     14,
+     33
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:506",
+   "text": "Plaintiff lacks standing to raise this constitutional challenge.",
+   "v1_rule_ids": [
+    "LEGAL_PROCEDURAL_GATEKEEPING"
+   ],
+   "v1_spans": {
+    "LEGAL_PROCEDURAL_GATEKEEPING": [
+     [
+      10,
+      33
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_PROCEDURAL_GATEKEEPING",
+     10,
+     33
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:513",
+   "text": "Legitimate procedural objection WITH merit discussion should still fire\n        on the procedural part \u2014 that's correct. The distinction is human judgment.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:516",
+   "text": "Under Fed. R. Civ. P. 15, leave to amend is required. No motion to amend was filed. However, even on the merits, the statute requires notice within 30 days.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:528",
+   "text": "LEGAL_STRAW_MAN \u2014 Tier 2",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:532",
+   "text": "Plaintiff argues that all employers should be held strictly liable without any exception.",
+   "v1_rule_ids": [
+    "LEGAL_STRAW_MAN"
+   ],
+   "v1_spans": {
+    "LEGAL_STRAW_MAN": [
+     [
+      0,
+      25
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_STRAW_MAN",
+     0,
+     25
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:541",
+   "text": "Defendant is essentially arguing that this Court should eliminate all consumer protections.",
+   "v1_rule_ids": [
+    "LEGAL_STRAW_MAN"
+   ],
+   "v1_spans": {
+    "LEGAL_STRAW_MAN": [
+     [
+      10,
+      55
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_STRAW_MAN",
+     10,
+     55
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:550",
+   "text": "Plaintiff contends that the contract's termination clause is ambiguous and should be construed against the drafter.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:559",
+   "text": "Verify the full pattern inventory is as expected.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:592",
+   "text": "MEDIA_EDITORIAL_AS_NEWS \u2014 Tier 1",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:596",
+   "text": "The controversial policy sparked immediate backlash.",
+   "v1_rule_ids": [
+    "MEDIA_EDITORIAL_AS_NEWS",
+    "MEDIA_EMOTIONAL_LEAD"
+   ],
+   "v1_spans": {
+    "MEDIA_EDITORIAL_AS_NEWS": [
+     [
+      0,
+      24
+     ]
+    ],
+    "MEDIA_EMOTIONAL_LEAD": [
+     [
+      0,
+      51
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EMOTIONAL_LEAD",
+     0,
+     51
+    ],
+    [
+     "MEDIA_EDITORIAL_AS_NEWS",
+     0,
+     24
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:604",
+   "text": "The embattled executive released a statement late Friday.",
+   "v1_rule_ids": [
+    "MEDIA_EDITORIAL_AS_NEWS"
+   ],
+   "v1_spans": {
+    "MEDIA_EDITORIAL_AS_NEWS": [
+     [
+      0,
+      23
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EDITORIAL_AS_NEWS",
+     0,
+     23
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:612",
+   "text": "The so-called reform plan would eliminate thousands of jobs.",
+   "v1_rule_ids": [
+    "MEDIA_EDITORIAL_AS_NEWS"
+   ],
+   "v1_spans": {
+    "MEDIA_EDITORIAL_AS_NEWS": [
+     [
+      0,
+      25
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EDITORIAL_AS_NEWS",
+     0,
+     25
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:620",
+   "text": "The company announced a new policy on remote work.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:628",
+   "text": "MEDIA_ANONYMOUS_ATTRIBUTION \u2014 Tier 3",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:632",
+   "text": "Unnamed sources say the merger talks have stalled.",
+   "v1_rule_ids": [
+    "MEDIA_ANONYMOUS_ATTRIBUTION"
+   ],
+   "v1_spans": {
+    "MEDIA_ANONYMOUS_ATTRIBUTION": [
+     [
+      0,
+      15
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_ANONYMOUS_ATTRIBUTION",
+     0,
+     15
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:640",
+   "text": "People familiar with the matter confirmed the timeline.",
+   "v1_rule_ids": [
+    "MEDIA_ANONYMOUS_ATTRIBUTION"
+   ],
+   "v1_spans": {
+    "MEDIA_ANONYMOUS_ATTRIBUTION": [
+     [
+      0,
+      31
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_ANONYMOUS_ATTRIBUTION",
+     0,
+     31
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:648",
+   "text": "Critics say the approach is fundamentally flawed.",
+   "v1_rule_ids": [
+    "MEDIA_ANONYMOUS_ATTRIBUTION"
+   ],
+   "v1_spans": {
+    "MEDIA_ANONYMOUS_ATTRIBUTION": [
+     [
+      0,
+      11
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_ANONYMOUS_ATTRIBUTION",
+     0,
+     11
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:664",
+   "text": "MEDIA_WEASEL_QUANTIFIERS \u2014 Tier 2, requires 2 instances.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:668",
+   "text": "Many experts believe the policy will fail. It is widely believed that the approach has serious flaws.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION",
+    "MEDIA_WEASEL_QUANTIFIERS"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      5,
+      20
+     ]
+    ],
+    "MEDIA_WEASEL_QUANTIFIERS": [
+     [
+      0,
+      12
+     ],
+     [
+      43,
+      64
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_WEASEL_QUANTIFIERS",
+     0,
+     12
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     5,
+     20
+    ],
+    [
+     "MEDIA_WEASEL_QUANTIFIERS",
+     43,
+     64
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:676",
+   "text": "Single weasel word is too common in legitimate writing.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:678",
+   "text": "Many analysts expect the Fed to hold rates steady.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:686",
+   "text": "MEDIA_FALSE_BALANCE \u2014 Tier 1",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:690",
+   "text": "Some say that vaccines cause autism, while mainstream scientists disagree with these claims.",
+   "v1_rule_ids": [
+    "MEDIA_FALSE_BALANCE"
+   ],
+   "v1_spans": {
+    "MEDIA_FALSE_BALANCE": [
+     [
+      0,
+      73
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_FALSE_BALANCE",
+     0,
+     73
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:699",
+   "text": "Economists are divided on whether the policy will reduce inflation. Proponents cite historical parallels, while opponents point to structural differences.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:709",
+   "text": "MEDIA_EMOTIONAL_LEAD \u2014 Tier 2",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:713",
+   "text": "Shocking revelations emerged today about the company's practices.",
+   "v1_rule_ids": [
+    "MEDIA_EMOTIONAL_LEAD"
+   ],
+   "v1_spans": {
+    "MEDIA_EMOTIONAL_LEAD": [
+     [
+      0,
+      8
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EMOTIONAL_LEAD",
+     0,
+     8
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:721",
+   "text": "A bombshell report released Thursday alleges widespread fraud.",
+   "v1_rule_ids": [
+    "MEDIA_EMOTIONAL_LEAD"
+   ],
+   "v1_spans": {
+    "MEDIA_EMOTIONAL_LEAD": [
+     [
+      0,
+      11
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EMOTIONAL_LEAD",
+     0,
+     11
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:728",
+   "text": "Emotional words in the middle of text are not editorial leads.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:730",
+   "text": "The investigation, which began in January, uncovered what prosecutors called shocking evidence of systematic fraud.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:739",
+   "text": "The National Reserve announced a quarter-point rate increase.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:747",
+   "text": "Verify media pattern inventory.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:753",
+   "text": "Media domain should load base + media patterns.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:755",
+   "text": "The controversial policy was announced today.",
+   "v1_rule_ids": [
+    "MEDIA_EDITORIAL_AS_NEWS"
+   ],
+   "v1_spans": {
+    "MEDIA_EDITORIAL_AS_NEWS": [
+     [
+      0,
+      24
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EDITORIAL_AS_NEWS",
+     0,
+     24
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:762",
+   "text": "Media patterns should NOT fire in general domain.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:776",
+   "text": "CAUSAL_TOTALIZATION \u2014 Tier 2, identity-neutral causal blame.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:787",
+   "text": "Symmetry: same pattern fires for opposite political figure.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:796",
+   "text": "Non-political entity triggers the same pattern.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:798",
+   "text": "My boss is ruining my life.",
+   "v1_rule_ids": [
+    "CAUSAL_TOTALIZATION"
+   ],
+   "v1_spans": {
+    "CAUSAL_TOTALIZATION": [
+     [
+      8,
+      26
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CAUSAL_TOTALIZATION",
+     8,
+     26
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:806",
+   "text": "The media is destroying this country.",
+   "v1_rule_ids": [
+    "CAUSAL_TOTALIZATION"
+   ],
+   "v1_spans": {
+    "CAUSAL_TOTALIZATION": [
+     [
+      10,
+      36
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CAUSAL_TOTALIZATION",
+     10,
+     36
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:814",
+   "text": "The government is wrecking the economy.",
+   "v1_rule_ids": [
+    "CAUSAL_TOTALIZATION"
+   ],
+   "v1_spans": {
+    "CAUSAL_TOTALIZATION": [
+     [
+      15,
+      38
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CAUSAL_TOTALIZATION",
+     15,
+     38
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:822",
+   "text": "That company destroyed my life.",
+   "v1_rule_ids": [
+    "CAUSAL_TOTALIZATION"
+   ],
+   "v1_spans": {
+    "CAUSAL_TOTALIZATION": [
+     [
+      13,
+      30
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CAUSAL_TOTALIZATION",
+     13,
+     30
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:829",
+   "text": "Specific, bounded causal claims should NOT trigger.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:831",
+   "text": "The policy caused me to lose my Tovicaid coverage.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:838",
+   "text": "Concrete factual causation with mechanism should NOT trigger.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:840",
+   "text": "The company's negligence caused me financial harm.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:848",
+   "text": "The study found a 15% increase in yield.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:856",
+   "text": "MONOCAUSAL_BLAME \u2014 Tier 2, single-cause compression.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:860",
+   "text": "Because of the Kestrines everything has fallen apart.",
+   "v1_rule_ids": [
+    "MONOCAUSAL_BLAME"
+   ],
+   "v1_spans": {
+    "MONOCAUSAL_BLAME": [
+     [
+      0,
+      52
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MONOCAUSAL_BLAME",
+     0,
+     52
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:867",
+   "text": "Symmetry: fires for opposite party too.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:869",
+   "text": "Because of the Vallorans everything has gone wrong.",
+   "v1_rule_ids": [
+    "MONOCAUSAL_BLAME"
+   ],
+   "v1_spans": {
+    "MONOCAUSAL_BLAME": [
+     [
+      0,
+      50
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MONOCAUSAL_BLAME",
+     0,
+     50
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:877",
+   "text": "Immigration is the sole reason for all of this.",
+   "v1_rule_ids": [
+    "MONOCAUSAL_BLAME"
+   ],
+   "v1_spans": {
+    "MONOCAUSAL_BLAME": [
+     [
+      15,
+      34
+     ],
+     [
+      12,
+      46
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MONOCAUSAL_BLAME",
+     12,
+     46
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:885",
+   "text": "He is the only reason for my problems.",
+   "v1_rule_ids": [
+    "MONOCAUSAL_BLAME"
+   ],
+   "v1_spans": {
+    "MONOCAUSAL_BLAME": [
+     [
+      6,
+      25
+     ],
+     [
+      3,
+      37
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MONOCAUSAL_BLAME",
+     3,
+     37
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:893",
+   "text": "It's all their fault that we're in this mess.",
+   "v1_rule_ids": [
+    "MONOCAUSAL_BLAME"
+   ],
+   "v1_spans": {
+    "MONOCAUSAL_BLAME": [
+     [
+      0,
+      20
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MONOCAUSAL_BLAME",
+     0,
+     20
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:900",
+   "text": "Acknowledging a contributing factor is not monocausal.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:902",
+   "text": "The regulation was one of several factors that led to the decline.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:910",
+   "text": "The tariff increased steel prices by 25%, which raised construction costs.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:918",
+   "text": "TOTALIZING_HARM_LANGUAGE \u2014 Tier 3, sweeping harm without bounds.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:922",
+   "text": "They are ruining everything for the rest of us.",
+   "v1_rule_ids": [
+    "CAUSAL_TOTALIZATION",
+    "TOTALIZING_HARM_LANGUAGE"
+   ],
+   "v1_spans": {
+    "CAUSAL_TOTALIZATION": [
+     [
+      5,
+      27
+     ]
+    ],
+    "TOTALIZING_HARM_LANGUAGE": [
+     [
+      5,
+      27
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CAUSAL_TOTALIZATION",
+     5,
+     27
+    ],
+    [
+     "TOTALIZING_HARM_LANGUAGE",
+     5,
+     27
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:930",
+   "text": "The economy has been completely destroyed.",
+   "v1_rule_ids": [
+    "TOTALIZING_HARM_LANGUAGE"
+   ],
+   "v1_spans": {
+    "TOTALIZING_HARM_LANGUAGE": [
+     [
+      21,
+      41
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "TOTALIZING_HARM_LANGUAGE",
+     21,
+     41
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:938",
+   "text": "Everything is gone. There is no hope left.",
+   "v1_rule_ids": [
+    "TOTALIZING_HARM_LANGUAGE"
+   ],
+   "v1_spans": {
+    "TOTALIZING_HARM_LANGUAGE": [
+     [
+      0,
+      18
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "TOTALIZING_HARM_LANGUAGE",
+     0,
+     18
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:946",
+   "text": "After what they did, there is nothing left.",
+   "v1_rule_ids": [
+    "TOTALIZING_HARM_LANGUAGE"
+   ],
+   "v1_spans": {
+    "TOTALIZING_HARM_LANGUAGE": [
+     [
+      30,
+      42
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "TOTALIZING_HARM_LANGUAGE",
+     30,
+     42
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:953",
+   "text": "Bounded harm statements should NOT trigger.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:955",
+   "text": "The flood destroyed three buildings on Main Street.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:963",
+   "text": "The company lost $2.3 million in the breach.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:971",
+   "text": "Cross-cutting symmetry tests \u2014 prove identity-neutral treatment.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:976",
+   "text": "The school board",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:979",
+   "text": "Every entity should trigger CAUSAL_TOTALIZATION equally.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:981",
+   "text": " is ruining my life.",
+   "v1_rule_ids": [
+    "CAUSAL_TOTALIZATION"
+   ],
+   "v1_spans": {
+    "CAUSAL_TOTALIZATION": [
+     [
+      1,
+      19
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CAUSAL_TOTALIZATION",
+     1,
+     19
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_frozen_core.py:985",
+   "text": "Failed for entity: ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:988",
+   "text": "The policy caused me to lose my health insurance.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:989",
+   "text": "Rising interest rates made my mortgage unaffordable.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:990",
+   "text": "The company's layoffs left 200 workers without income.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:991",
+   "text": "The regulation increased compliance costs by 40%.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:992",
+   "text": "His decision to close the plant eliminated 500 jobs.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_frozen_core.py:995",
+   "text": "Legitimate bounded causal claims must never trigger blame patterns.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_infra.py:1",
+   "text": "\nTests for auth middleware and rate limiting.\n",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_infra.py:12",
+   "text": "API key authentication tests.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_infra.py:46",
+   "text": "Rate limiting tests.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_infra.py:103",
+   "text": "Structured logging tests.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:1",
+   "text": "\nOutage Simulation Tests \u2014 Degraded Mode Verification\n\nTests covering graceful degradation under failure conditions:\n  - LLM provider unavailable\n  - Circuit breaker open\n  - Batch partial failures\n  - Fallback from deep/full to local scan\n",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:26",
+   "text": "Reset rate limiter state between tests.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:40",
+   "text": "Verify local scan always works regardless of LLM state.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:43",
+   "text": "Local scan has zero LLM dependency.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:45",
+   "text": "All experts agree this is settled science.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      11
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      4,
+      17
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     11
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     4,
+     17
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_outage.py:54",
+   "text": "Clean text should score high on local scan.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:69",
+   "text": "Verify batch scan handles partial failures without crashing.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:72",
+   "text": "Local-only batch should always succeed regardless of LLM state.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:76",
+   "text": "All experts universally agree.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      11
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     11
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_outage.py:85",
+   "text": "Error placeholder items must satisfy ScanResponse schema.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:98",
+   "text": "Scan failed for this item.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:115",
+   "text": "Verify health endpoint works even when other things are broken.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:118",
+   "text": "Health should still respond when LLM check fails.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:127",
+   "text": "Health response should always have required fields.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:136",
+   "text": "Missing required field: ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:139",
+   "text": "Stats endpoint should return valid data.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:156",
+   "text": "Verify audit chain handles edge cases.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:159",
+   "text": "Verification on empty chain should return verified=True.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:172",
+   "text": "Single entry chain should verify.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:186",
+   "text": "Verification with limit should check most recent entries.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:201",
+   "text": "Tampered entry should break chain verification.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:213",
+   "text": "UPDATE audit_chain SET data = ? WHERE id = 3",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:214",
+   "text": "{\"index\": 999, \"tampered\": true}",
+   "v1_rule_ids": [
+    "MEDIA_SELECTIVE_QUOTATION"
+   ],
+   "v1_spans": {
+    "MEDIA_SELECTIVE_QUOTATION": [
+     [
+      1,
+      8
+     ],
+     [
+      15,
+      25
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     1,
+     8
+    ],
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     15,
+     25
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_outage.py:231",
+   "text": "Verify degraded state is explicit in API responses \u2014 not hidden.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:234",
+   "text": "ScanResponse must include degraded and degradation_warning fields.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:249",
+   "text": "Degraded fields must not be stripped by Pydantic serialization.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:259",
+   "text": "LLM was unavailable.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:267",
+   "text": "Route-level CircuitOpenError fallback must set degraded=True.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:282",
+   "text": "Health response must include llm_status and llm_last_success_ago.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:290",
+   "text": "Health should report circuit_open when circuit breaker is tripped.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_outage.py:300",
+   "text": "Local-only scan should never be marked as degraded.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:1",
+   "text": "\nTests for Phase 1B features:\n- Context-aware citation suppression\n- Learning ring governance lifecycle\n- Pattern proposer validation logic\n",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:19",
+   "text": "Markers near legitimate citations should be suppressed.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:22",
+   "text": "'Studies show (Smith et al., 2024)...' should NOT flag.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:24",
+   "text": "Studies show (Smith et al., 2024) that sleep improves cognitive performance.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:30",
+   "text": "'Studies show that...' with no citation SHOULD flag.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      1,
+      13
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     1,
+     13
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_phase1b.py:32",
+   "text": "Studies show that sleep improves cognitive performance.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      12
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     12
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_phase1b.py:38",
+   "text": "Markers near case law citations should be suppressed.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:40",
+   "text": "Research indicates, per Johnson v. Smith, that the standard applies.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:46",
+   "text": "Markers near [1] style citations should be suppressed.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:48",
+   "text": "The data suggests [14] a strong correlation between variables.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:54",
+   "text": "Markers near 'Table 3, p. 47' should be suppressed.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:56",
+   "text": "The data suggests a correlation (see Table 3, p. 47) between the two variables.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:62",
+   "text": "Only markers with nearby citations are suppressed; others still flag.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:65",
+   "text": "Studies show (Smith, 2024) that cognitive load increases error rates in standardized testing environments across multiple demographics and age groups in longitudinal research designs. In a completely unrelated matter, experts say the consensus is that everyone agrees this policy is undeniably correct.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      230,
+      243
+     ],
+     [
+      252,
+      267
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      12
+     ],
+     [
+      218,
+      229
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     12
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     218,
+     229
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     230,
+     243
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     252,
+     267
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_phase1b.py:80",
+   "text": "Citation suppression only applies to keyword markers, not structural patterns.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:82",
+   "text": "That theory has been thoroughly debunked (see Jones, 2023).",
+   "v1_rule_ids": [
+    "DISSENT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "DISSENT_DISMISSAL": [
+     [
+      12,
+      40
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISSENT_DISMISSAL",
+     12,
+     40
+    ]
+   ]
+  },
+  {
+   "src": "tests/test_phase1b.py:95",
+   "text": "Test the governed pattern lifecycle.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:99",
+   "text": "Create a fresh learning ring with temp database and temp JSON.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:113",
+   "text": "Proposing a new pattern should stage it with 1 confirmation.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:117",
+   "text": "A test pattern for unit testing.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:129",
+   "text": "Proposing the same pattern again increments confirmations.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:144",
+   "text": "Pattern should auto-activate at the confirmation threshold.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:155",
+   "text": "Without auto_activate, threshold holds the pattern until approve().",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:175",
+   "text": "Active patterns should be compatible with frozen core evaluation.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:180",
+   "text": "Detects 'absolutely certain without doubt'",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:192",
+   "text": "It is absolutely certain without doubt that this is correct.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:199",
+   "text": "Patterns with invalid PIT tiers should be rejected.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:206",
+   "text": "does not exist",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:209",
+   "text": "Pattern should auto-deactivate if FP rate exceeds limit.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:233",
+   "text": "Audit logger should be called on state transitions.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:245",
+   "text": "get_all_patterns should return metadata for all patterns.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:263",
+   "text": "Test the proposer's validation and filtering logic.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:328",
+   "text": "Should skip if deep analysis found no bias.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:342",
+   "text": "Should skip if deep severity is low.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_phase1b.py:355",
+   "text": "Should skip if local already caught 3+ flags.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:1",
+   "text": "\nRed Team Tests \u2014 Adversarial Security Verification\n\nTests covering active attack scenarios:\n  - Auth bypass attempts\n  - Playground token abuse\n  - Regex injection / ReDoS attempts\n  - Batch flood protection\n  - Rate limit hourly window integrity\n  - Input injection\n",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:44",
+   "text": "Attempt to bypass authentication through various vectors.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:47",
+   "text": "Without auth enabled (test mode), scan should work.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:54",
+   "text": "Empty X-API-Key header should not grant elevated access.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:61",
+   "text": "Beta signups endpoint should be gated when no API key provided.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:66",
+   "text": "SQL injection in certificate verify hash.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:67",
+   "text": "/certificate/verify/'; DROP TABLE audit_chain; --",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:71",
+   "text": "SQL injection in audit event_type filter.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:72",
+   "text": "/audit?event_type='; DROP TABLE audit_chain; --&limit=5",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:78",
+   "text": "XSS payload in scan text should be processed, not executed.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:93",
+   "text": "Attempt to abuse playground tokens.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:96",
+   "text": "Token from one IP should not work on another.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:107",
+   "text": "Forged HMAC signature should be rejected.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:121",
+   "text": "Empty token should be rejected.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:128",
+   "text": "Random garbage token should be rejected.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:139",
+   "text": "Verify ReDoS-dangerous patterns are rejected.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:142",
+   "text": "Pattern with nested quantifiers should be rejected at proposal.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:147",
+   "text": "ReDoS test pattern",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:158",
+   "text": "Regex longer than 200 chars should be rejected.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:174",
+   "text": "Syntactically invalid regex should be rejected.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:190",
+   "text": "Frozen core regex execution has timeout protection.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:192",
+   "text": "this is a test",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:196",
+   "text": "Invalid regex in frozen core should return empty, not crash.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:207",
+   "text": "Verify batch scan limits are enforced.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:210",
+   "text": "Batch with >50 items should be rejected.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:220",
+   "text": "Batch with exactly 50 items should be accepted.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:222",
+   "text": "Clean factual statement number ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:231",
+   "text": "Empty batch should be rejected by Pydantic validation.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:241",
+   "text": "Verify hourly rate limit survives the per-minute check.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:244",
+   "text": "Timestamps older than 60s must survive count_within(60).",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:262",
+   "text": "Hourly count should include all 5 timestamps \u2014 count_within must not mutate the list",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:267",
+   "text": "Trimming should only happen in record(), not in count_within().",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:287",
+   "text": "Verify input boundaries are enforced.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:290",
+   "text": "Empty text should still return a valid response.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:297",
+   "text": "Very long text should not crash the server.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:298",
+   "text": "This is a test sentence. ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:306",
+   "text": "Invalid scan mode should be rejected.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:313",
+   "text": "Unicode text should not crash.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_redteam.py:315",
+   "text": "Les experts sont unanimes. This is fine.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:1",
+   "text": "\nSecurity Tests \u2014 Hardening Verification\n\nTests covering all security hardening measures:\n  - Playground session tokens\n  - IP-based rate limiting\n  - Security headers (HSTS, CSP, X-Frame, etc.)\n  - Request ID tracing\n  - Audit endpoint information lockdown\n  - Input validation (audit hash format)\n  - OpenAPI docs lockdown\n",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:35",
+   "text": "Playground session token lifecycle tests.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:131",
+   "text": "Verify unauthenticated requests are rate-limited by IP.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:163",
+   "text": "Verify all security headers are present in responses.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:210",
+   "text": "Verify X-Request-ID is present and valid UUID4.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:237",
+   "text": "Verify prev_hash is stripped from audit responses.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:240",
+   "text": "Audit entries should not expose prev_hash.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:248",
+   "text": "Beta signup audit entries should not store raw emails.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:263",
+   "text": "JSON POST to /beta-signup succeeds.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:269",
+   "text": "Form-encoded POST to /beta-signup succeeds.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:279",
+   "text": "Form-encoded signup audit entries also mask the email.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:296",
+   "text": "Verify public privacy materials are available.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "tests/test_security.py:309",
+   "text": "Verify certificate verify endpoint validates hash format.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#0",
+   "text": "The R&K 500 rose 1.2% on Tuesday, closing at 5,842. Trading volume\nwas below the 30-day average. Brenner Lowe analysts attributed the\nmove to better-than-expected earnings from the technology sector,\nwith 78% of reporting companies exceeding consensus estimates.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#1",
+   "text": "Based on current revenue growth of 15% year-over-year and assuming\nstable margins, our model estimates earnings per share of $4.50-$5.00\nfor fiscal 2026. This estimate is subject to change based on\nmacroeconomic conditions and competitive dynamics.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#2",
+   "text": "Past performance does not guarantee future results. The fund's returns\nover the past five years have averaged 8.3% annually, compared to 9.1%\nfor the benchmark index. Investors should consider their risk tolerance\nand investment horizon before making decisions.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#3",
+   "text": "Every successful fund manager we studied has followed a disciplined\nvalue investing approach without exception. All top performers share\na common philosophy of buying undervalued assets and holding for the\nlong term. This proves that value investing is the superior strategy.",
+   "v1_rule_ids": [
+    "FIN_SURVIVORSHIP_BIAS"
+   ],
+   "v1_spans": {
+    "FIN_SURVIVORSHIP_BIAS": [
+     [
+      0,
+      40
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FIN_SURVIVORSHIP_BIAS",
+     0,
+     40
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#4",
+   "text": "If you had invested a $10,000 investment in Zenlo in 1997, it would\nnow be worth over $20 million. This demonstrates the incredible power\nof identifying high-growth companies early and holding through volatility.",
+   "v1_rule_ids": [
+    "FIN_SURVIVORSHIP_BIAS"
+   ],
+   "v1_spans": {
+    "FIN_SURVIVORSHIP_BIAS": [
+     [
+      20,
+      80
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FIN_SURVIVORSHIP_BIAS",
+     20,
+     80
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#5",
+   "text": "The stock is down 65% from its all-time high reached last January,\nsuggesting significant upside potential for patient investors. At\ncurrent levels, the shares are trading at just a fraction of their\npeak value, representing a compelling entry point.",
+   "v1_rule_ids": [
+    "FIN_ANCHORING"
+   ],
+   "v1_spans": {
+    "FIN_ANCHORING": [
+     [
+      13,
+      44
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FIN_ANCHORING",
+     13,
+     44
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#6",
+   "text": "Shares have surged 340% from their pandemic low in March 2020,\ndemonstrating remarkable resilience and growth. The company has\nrallied 85% from its 52-week low and shows no signs of slowing.",
+   "v1_rule_ids": [
+    "FIN_ANCHORING"
+   ],
+   "v1_spans": {
+    "FIN_ANCHORING": [
+     [
+      127,
+      159
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FIN_ANCHORING",
+     127,
+     159
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#7",
+   "text": "Since March 2020, the portfolio has returned an annualized 45%,\ndramatically outperforming the broader market. Over the past three\nyears it has beaten every major index by a wide margin.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#8",
+   "text": "Starting in 2009, our strategy delivered an annualized 18% return,\nmore than doubling what passive index funds generated over the same\nperiod. In the last five years, we have consistently beaten our\nbenchmark by 400 basis points annually.",
+   "v1_rule_ids": [
+    "FIN_RECENCY_EXTRAPOLATION"
+   ],
+   "v1_spans": {
+    "FIN_RECENCY_EXTRAPOLATION": [
+     [
+      170,
+      194
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FIN_RECENCY_EXTRAPOLATION",
+     170,
+     194
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#9",
+   "text": "Revenue will reach $5 billion by the end of 2026 as the company\ncaptures market share from legacy competitors. The stock is destined\nto double from current levels once the market recognizes the\ncompany's true growth potential. Guaranteed returns of 12% annually\nmake this an unmissable opportunity.",
+   "v1_rule_ids": [
+    "FIN_PROJECTION_AS_FACT"
+   ],
+   "v1_spans": {
+    "FIN_PROJECTION_AS_FACT": [
+     [
+      0,
+      29
+     ],
+     [
+      111,
+      142
+     ],
+     [
+      227,
+      245
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FIN_PROJECTION_AS_FACT",
+     0,
+     29
+    ],
+    [
+     "FIN_PROJECTION_AS_FACT",
+     111,
+     142
+    ],
+    [
+     "FIN_PROJECTION_AS_FACT",
+     227,
+     245
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#10",
+   "text": "The market will reach new highs by year-end as corporate earnings\ncontinue to expand. Growth is set to accelerate in the second half,\nand profits will exceed analyst expectations by a wide margin.",
+   "v1_rule_ids": [
+    "FIN_PROJECTION_AS_FACT"
+   ],
+   "v1_spans": {
+    "FIN_PROJECTION_AS_FACT": [
+     [
+      0,
+      21
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FIN_PROJECTION_AS_FACT",
+     0,
+     21
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#11",
+   "text": "The fund has consistently outperformed its benchmark year after year,\ndelivering above-average returns in every market environment. There\nis no reason to think this trend will stop or reverse given the\nteam's proven track record. The strategy continues its winning streak\nwith no sign of change.",
+   "v1_rule_ids": [
+    "FIN_RECENCY_EXTRAPOLATION"
+   ],
+   "v1_spans": {
+    "FIN_RECENCY_EXTRAPOLATION": [
+     [
+      9,
+      38
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FIN_RECENCY_EXTRAPOLATION",
+     9,
+     38
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#12",
+   "text": "Every successful tech investor we've studied bought early and held.\nBased on this pattern, investing in emerging AI companies today will\nreach returns of 500% or more over the next decade. The stock is\ngoing to surge as adoption accelerates.",
+   "v1_rule_ids": [
+    "FIN_SURVIVORSHIP_BIAS",
+    "FIN_PROJECTION_AS_FACT"
+   ],
+   "v1_spans": {
+    "FIN_SURVIVORSHIP_BIAS": [
+     [
+      0,
+      44
+     ]
+    ],
+    "FIN_PROJECTION_AS_FACT": [
+     [
+      189,
+      216
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FIN_SURVIVORSHIP_BIAS",
+     0,
+     44
+    ],
+    [
+     "FIN_PROJECTION_AS_FACT",
+     189,
+     216
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/financial_corpus.txt#13",
+   "text": "Over the trailing 12-month period ending December 2025, the fund\nreturned 11.4% compared to the benchmark's 10.8%. However, over\nthe full five-year period, the fund has lagged the benchmark by\napproximately 60 basis points annually, net of fees.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#0",
+   "text": "The Bureau of Workforce Statistics reported that nonfarm payrolls increased\nby 256,000 in December 2025, exceeding the consensus forecast of\n155,000. The unemployment rate fell to 4.1 percent from 4.2 percent\nin November. Average hourly earnings rose 0.3 percent for the month\nand 3.9 percent year-over-year.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#1",
+   "text": "The proposed zoning change would permit mixed-use development on parcels\ncurrently designated for single-family residential. Supporters argue this\nwould increase housing supply and reduce commute times, while opponents\nexpress concerns about traffic congestion, school capacity, and\nchanges to neighborhood character. The planning commission will hold\nthree public hearings before making its recommendation.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#2",
+   "text": "Revenue for the fourth quarter was $14.2 billion, up 12 percent\nfrom the prior year period. Operating income was $3.1 billion,\nrepresenting a 21.8 percent operating margin. Free cash flow for\nthe full year was $8.7 billion. The company repurchased 15 million\nshares during the quarter at an average price of $142.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#3",
+   "text": "This study examined the relationship between sleep duration and\ncognitive performance in adults aged 55-70 (N=1,247). Participants\nwho reported fewer than six hours of sleep per night showed a\nstatistically significant decline in working memory scores compared\nto the control group (p < 0.01). However, the effect size was modest\n(Cohen's d = 0.34), and several confounding variables, including\nmedication use and comorbidities, could not be fully controlled.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#4",
+   "text": "The laptop's display is bright enough for outdoor use and the color\naccuracy is excellent for photo editing. Battery life averaged about\nseven hours in our mixed-use testing, which falls short of the\nmanufacturer's 11-hour claim. The keyboard has good travel but the\ntrackpad occasionally registers unintended palm touches. At $1,299,\nit competes directly with the Varda LX 15 and SlateBook Air M3.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#6",
+   "text": "Our mission is to provide affordable dental care to underserved\ncommunities in rural Tennessee. In 2025, we served 4,200 patients\nacross 12 mobile clinic sites and performed 1,800 procedures. Our\noperating budget was $1.3 million, funded primarily through grants\nfrom the Tennessee Department of Health and private donations.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#7",
+   "text": "Construction on the bridge began in October 1933 and was completed\nahead of schedule in April 1937. The total cost was $35 million,\napproximately $27 million under the original bond issue. Eleven\nworkers died during construction. The bridge's main span measures\n4,200 feet, which remained the longest in the world until 1964.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#8",
+   "text": "Based on our analysis of 340 intersection incidents over three years,\nwe recommend installing a traffic signal at the Main Street and Oak\nAvenue crossing. The intersection averaged 8.3 reported collisions\nper year, exceeding the state threshold of 5.0 for signal\nconsideration. Pedestrian volume data from March 2025 counts show\nan average of 220 daily crossings during peak hours.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#9",
+   "text": "The system uses a convolutional neural network trained on approximately\n2.4 million labeled images to detect manufacturing defects on the\nassembly line. In production testing over six months, it achieved a\ndefect detection rate of 94.2 percent with a false positive rate of\n3.1 percent. Human inspectors reviewing the same batch detected\n91.8 percent of defects. The system processes images in 47 milliseconds\non average, enabling real-time rejection.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#10",
+   "text": "In my view, the city council should prioritize road maintenance over\nnew construction projects this budget cycle. I base this on the public\nworks department's own assessment that 34 percent of city roads are\nrated as \"poor\" or \"very poor.\" Others may reasonably disagree and\nprioritize the proposed community center, which has strong public\nsupport in recent surveys. Both positions have merit.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#11",
+   "text": "According to the American Cardiac Association's 2025 statistical update,\ncardiovascular disease remains the leading cause of death in the\nUnited States, accounting for approximately 928,000 deaths annually.\nThe age-adjusted death rate has declined 29 percent since 2000,\nattributed primarily to improvements in treatment of acute coronary\nevents and reductions in smoking prevalence.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#12",
+   "text": "The vast majority of stakeholders support the transition to the new\nregulatory framework. Those familiar with the details recognize that\nmodernization is long overdue and that the current system creates\nunnecessary burdens for both consumers and providers. A growing body\nof evidence suggests that early adopters have seen measurable\nimprovements in efficiency and customer satisfaction.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION",
+    "SOFT_CONSENSUS"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      275,
+      292
+     ]
+    ],
+    "SOFT_CONSENSUS": [
+     [
+      0,
+      41
+     ],
+     [
+      259,
+      292
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "SOFT_CONSENSUS",
+     0,
+     41
+    ],
+    [
+     "SOFT_CONSENSUS",
+     259,
+     292
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     275,
+     292
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#13",
+   "text": "The overwhelming majority of healthcare professionals agree that\npreventive screening protocols should begin at age 40 rather than\nthe current guideline of 45. This position is increasingly recognized\nas the standard of care, and organizations that fail to adopt it risk\nfalling behind established best practices.",
+   "v1_rule_ids": [
+    "SOFT_CONSENSUS"
+   ],
+   "v1_spans": {
+    "SOFT_CONSENSUS": [
+     [
+      0,
+      59
+     ],
+     [
+      177,
+      203
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "SOFT_CONSENSUS",
+     0,
+     59
+    ],
+    [
+     "SOFT_CONSENSUS",
+     177,
+     203
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#14",
+   "text": "A strong majority of technology leaders believe that generative AI\nwill fundamentally reshape enterprise operations within the next three\nyears. Mounting evidence supports this timeline, with adoption rates\naccelerating across every major industry vertical.",
+   "v1_rule_ids": [
+    "SOFT_CONSENSUS"
+   ],
+   "v1_spans": {
+    "SOFT_CONSENSUS": [
+     [
+      2,
+      47
+     ],
+     [
+      145,
+      171
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "SOFT_CONSENSUS",
+     2,
+     47
+    ],
+    [
+     "SOFT_CONSENSUS",
+     145,
+     171
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#15",
+   "text": "The clear majority of practitioners in this field concur that\ntraditional approaches are no longer adequate for modern challenges.\nThere is a growing consensus among professionals that the new\nmethodology offers superior outcomes across all measured dimensions.",
+   "v1_rule_ids": [
+    "SOFT_CONSENSUS"
+   ],
+   "v1_spans": {
+    "SOFT_CONSENSUS": [
+     [
+      0,
+      56
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "SOFT_CONSENSUS",
+     0,
+     56
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#16",
+   "text": "The great bulk of educators support smaller class sizes as the\nsingle most effective intervention for improving student outcomes.\nEmerging research supports this position, demonstrating consistent\nimprovements in test scores and graduation rates when class sizes\nare reduced below 20 students.",
+   "v1_rule_ids": [
+    "SOFT_CONSENSUS"
+   ],
+   "v1_spans": {
+    "SOFT_CONSENSUS": [
+     [
+      0,
+      35
+     ],
+     [
+      130,
+      156
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "SOFT_CONSENSUS",
+     0,
+     35
+    ],
+    [
+     "SOFT_CONSENSUS",
+     130,
+     156
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#17",
+   "text": "Those who oppose these measures appear to misunderstand the complexity\nof modern regulatory requirements. The framework was designed by\nprofessionals with decades of experience in compliance and risk\nmanagement. Implementation concerns, while understandable from those\nwithout sufficient background in the field, do not reflect the\nrealities of operational risk.",
+   "v1_rule_ids": [
+    "COMPETENCE_DISMISSAL"
+   ],
+   "v1_spans": {
+    "COMPETENCE_DISMISSAL": [
+     [
+      0,
+      55
+     ],
+     [
+      269,
+      301
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "COMPETENCE_DISMISSAL",
+     0,
+     55
+    ],
+    [
+     "COMPETENCE_DISMISSAL",
+     269,
+     301
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#18",
+   "text": "Critics of the proposal simply don't understand the nuance of\ninternational trade agreements. The provisions they object to are\nstandard in every bilateral trade deal signed in the last decade.\nTheir concerns reflect a fundamental lack of understanding of how\nthese instruments actually function in practice.",
+   "v1_rule_ids": [
+    "COMPETENCE_DISMISSAL"
+   ],
+   "v1_spans": {
+    "COMPETENCE_DISMISSAL": [
+     [
+      24,
+      58
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "COMPETENCE_DISMISSAL",
+     24,
+     58
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#19",
+   "text": "While we appreciate the feedback from community groups, many of the\nobjections raised come from individuals who lack the expertise to\nevaluate the environmental impact methodology we employed. Our\nassessment was conducted by board-certified environmental scientists\nusing EQA-approved protocols.",
+   "v1_rule_ids": [
+    "COMPETENCE_DISMISSAL"
+   ],
+   "v1_spans": {
+    "COMPETENCE_DISMISSAL": [
+     [
+      112,
+      133
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "COMPETENCE_DISMISSAL",
+     112,
+     133
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#20",
+   "text": "Consumer advocacy groups who challenge our data practices fail to grasp\nthe technical complexity of modern data architecture. The privacy\ncontrols we implement exceed regulatory requirements in every\njurisdiction where we operate. Suggestions that our systems are\ninadequate reflect a misunderstanding of how encryption and\nanonymization technologies actually work.",
+   "v1_rule_ids": [
+    "COMPETENCE_DISMISSAL"
+   ],
+   "v1_spans": {
+    "COMPETENCE_DISMISSAL": [
+     [
+      58,
+      96
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "COMPETENCE_DISMISSAL",
+     58,
+     96
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#21",
+   "text": "Researchers who question these findings don't fully appreciate the\nimplications of the longitudinal methodology we employed. Our study\nspans fourteen years of continuous observation, a scope that shorter\nstudies cannot replicate. Those who resist these conclusions often\nhave limited experience with datasets of this magnitude.",
+   "v1_rule_ids": [
+    "COMPETENCE_DISMISSAL"
+   ],
+   "v1_spans": {
+    "COMPETENCE_DISMISSAL": [
+     [
+      40,
+      79
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "COMPETENCE_DISMISSAL",
+     40,
+     79
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#22",
+   "text": "Leading organizations support the adoption of these standards as a\nbaseline for responsible AI development. The framework aligns with\nprinciples endorsed by major institutions across the technology sector.\nOrganizations that fail to adopt these practices risk falling behind\nindustry expectations.",
+   "v1_rule_ids": [
+    "VAGUE_INSTITUTIONAL_APPEAL"
+   ],
+   "v1_spans": {
+    "VAGUE_INSTITUTIONAL_APPEAL": [
+     [
+      0,
+      29
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "VAGUE_INSTITUTIONAL_APPEAL",
+     0,
+     29
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#23",
+   "text": "Respected authorities warn that companies without adequate bias\nmitigation strategies face significant regulatory exposure.\nKey stakeholders across government and industry have emphasized the\nurgency of adopting comprehensive monitoring frameworks before\nenforcement deadlines take effect.",
+   "v1_rule_ids": [
+    "VAGUE_INSTITUTIONAL_APPEAL"
+   ],
+   "v1_spans": {
+    "VAGUE_INSTITUTIONAL_APPEAL": [
+     [
+      0,
+      26
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "VAGUE_INSTITUTIONAL_APPEAL",
+     0,
+     26
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#24",
+   "text": "Medical authorities have long recognized the critical importance of\nearly intervention in neurodevelopmental disorders. Professional bodies\nacross the healthcare sector have endorsed universal screening\nprotocols, and significant institutions continue to advocate for\nexpanded access to early diagnostic services.",
+   "v1_rule_ids": [
+    "VAGUE_INSTITUTIONAL_APPEAL"
+   ],
+   "v1_spans": {
+    "VAGUE_INSTITUTIONAL_APPEAL": [
+     [
+      218,
+      263
+     ],
+     [
+      0,
+      40
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "VAGUE_INSTITUTIONAL_APPEAL",
+     0,
+     40
+    ],
+    [
+     "VAGUE_INSTITUTIONAL_APPEAL",
+     218,
+     263
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#25",
+   "text": "Regulatory bodies warn that current market conditions present\nelevated risks for retail investors. Top institutions have stressed\nthe importance of diversification, and industry leaders have advocated\nfor stronger consumer protection measures in the derivatives market.",
+   "v1_rule_ids": [
+    "VAGUE_INSTITUTIONAL_APPEAL"
+   ],
+   "v1_spans": {
+    "VAGUE_INSTITUTIONAL_APPEAL": [
+     [
+      169,
+      200
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "VAGUE_INSTITUTIONAL_APPEAL",
+     169,
+     200
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#26",
+   "text": "Prominent organizations recommend a comprehensive approach to digital\nliteracy education beginning in elementary school. Expert bodies\nacross the education sector have recognized that current curricula\nare inadequate for preparing students for a technology-driven economy.",
+   "v1_rule_ids": [
+    "VAGUE_INSTITUTIONAL_APPEAL"
+   ],
+   "v1_spans": {
+    "VAGUE_INSTITUTIONAL_APPEAL": [
+     [
+      0,
+      33
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "VAGUE_INSTITUTIONAL_APPEAL",
+     0,
+     33
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#27",
+   "text": "Our mission is to build a more equitable future for all communities\nwe serve. We strive to ensure that every decision we make reflects\nour commitment to transparency and accountability. We are deeply\ncommitted to advancing diversity at every level of our organization\nand believe that inclusion is not just a goal but a responsibility.",
+   "v1_rule_ids": [
+    "ASPIRATIONAL_DEFLECTION"
+   ],
+   "v1_spans": {
+    "ASPIRATIONAL_DEFLECTION": [
+     [
+      0,
+      17
+     ],
+     [
+      78,
+      97
+     ],
+     [
+      186,
+      212
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     0,
+     17
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     78,
+     97
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     186,
+     212
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#28",
+   "text": "We are firmly committed to the highest standards of environmental\nstewardship. Our goal is to achieve carbon neutrality across all\noperations by 2035. We strive to ensure that our supply chain\npractices meet or exceed international environmental standards.\nOur vision is to create a sustainable future for the next generation.",
+   "v1_rule_ids": [
+    "ASPIRATIONAL_DEFLECTION"
+   ],
+   "v1_spans": {
+    "ASPIRATIONAL_DEFLECTION": [
+     [
+      79,
+      93
+     ],
+     [
+      257,
+      273
+     ],
+     [
+      151,
+      170
+     ],
+     [
+      0,
+      26
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     0,
+     26
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     79,
+     93
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     151,
+     170
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     257,
+     273
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#29",
+   "text": "We are deeply dedicated to protecting user privacy and data security.\nOur priority has always been to maintain the trust our users place\nin us. We strive to deliver industry-leading security measures and\nour commitment is to ensure that incidents like this do not recur.\nOur mission is to build technology that empowers and protects.",
+   "v1_rule_ids": [
+    "ASPIRATIONAL_DEFLECTION"
+   ],
+   "v1_spans": {
+    "ASPIRATIONAL_DEFLECTION": [
+     [
+      70,
+      101
+     ],
+     [
+      204,
+      224
+     ],
+     [
+      271,
+      288
+     ],
+     [
+      144,
+      164
+     ],
+     [
+      0,
+      26
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     0,
+     26
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     70,
+     101
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     144,
+     164
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     204,
+     224
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     271,
+     288
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#30",
+   "text": "Our commitment is to ensure every family has access to quality\nhealthcare. We strive to build an economy that works for everyone,\nnot just the privileged few. Our goal is to create pathways to\nprosperity in every community. We seek to provide educational\nopportunities that unlock the potential of every child.",
+   "v1_rule_ids": [
+    "ASPIRATIONAL_DEFLECTION"
+   ],
+   "v1_spans": {
+    "ASPIRATIONAL_DEFLECTION": [
+     [
+      0,
+      20
+     ],
+     [
+      159,
+      173
+     ],
+     [
+      75,
+      93
+     ],
+     [
+      224,
+      242
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     0,
+     20
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     75,
+     93
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     159,
+     173
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     224,
+     242
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#31",
+   "text": "We are wholly dedicated to ending food insecurity in our region. Our\nvision is to create a world where no child goes hungry. We strive to\nprovide nutritious meals to every family in need. Our aspiration is\nto eliminate the root causes of poverty in the communities we serve.\nWe work to ensure that every dollar donated makes the greatest\npossible impact.",
+   "v1_rule_ids": [
+    "ASPIRATIONAL_DEFLECTION"
+   ],
+   "v1_spans": {
+    "ASPIRATIONAL_DEFLECTION": [
+     [
+      65,
+      81
+     ],
+     [
+      188,
+      208
+     ],
+     [
+      125,
+      145
+     ],
+     [
+      275,
+      292
+     ],
+     [
+      0,
+      26
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     0,
+     26
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     65,
+     81
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     125,
+     145
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     188,
+     208
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     275,
+     292
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#32",
+   "text": "What they're really saying is that they want to dismantle the safety\nnet that millions of Americans depend on. They dress it up in the\nlanguage of fiscal responsibility, but this is essentially about\nshifting costs from corporations to working families.",
+   "v1_rule_ids": [
+    "DISMISSAL_BY_REFRAMING"
+   ],
+   "v1_spans": {
+    "DISMISSAL_BY_REFRAMING": [
+     [
+      0,
+      26
+     ],
+     [
+      174,
+      199
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISMISSAL_BY_REFRAMING",
+     0,
+     26
+    ],
+    [
+     "DISMISSAL_BY_REFRAMING",
+     174,
+     199
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#33",
+   "text": "The consumer advocacy groups frame their objection as a privacy\nconcern, but their position is actually about blocking innovation.\nWhat they are really arguing is that technology companies should not\nbe allowed to improve their products, regardless of the benefits\nto users.",
+   "v1_rule_ids": [
+    "DISMISSAL_BY_REFRAMING"
+   ],
+   "v1_spans": {
+    "DISMISSAL_BY_REFRAMING": [
+     [
+      131,
+      159
+     ],
+     [
+      77,
+      109
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISMISSAL_BY_REFRAMING",
+     77,
+     109
+    ],
+    [
+     "DISMISSAL_BY_REFRAMING",
+     131,
+     159
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#34",
+   "text": "The opposition frames this as a states' rights issue, but this is\nfundamentally about preserving outdated regulatory structures that\nbenefit incumbent industries. What they're really asking is that we\ncontinue to subsidize inefficiency at the expense of consumers.",
+   "v1_rule_ids": [
+    "DISMISSAL_BY_REFRAMING"
+   ],
+   "v1_spans": {
+    "DISMISSAL_BY_REFRAMING": [
+     [
+      163,
+      189
+     ],
+     [
+      58,
+      85
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISMISSAL_BY_REFRAMING",
+     58,
+     85
+    ],
+    [
+     "DISMISSAL_BY_REFRAMING",
+     163,
+     189
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#35",
+   "text": "When you strip their argument down to its core, the union is\ndemanding that management surrender all decision-making authority\nover staffing levels. The rhetoric about safety standards is a\nthin veneer over what this is really about: control over operations.",
+   "v1_rule_ids": [
+    "DISMISSAL_BY_REFRAMING"
+   ],
+   "v1_spans": {
+    "DISMISSAL_BY_REFRAMING": [
+     [
+      212,
+      232
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISMISSAL_BY_REFRAMING",
+     212,
+     232
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#36",
+   "text": "If we examine this argument carefully, what they are actually saying\nis that empirical evidence should be subordinated to ideological\ncommitments. Their position is essentially a rejection of the\nscientific method in favor of predetermined conclusions.",
+   "v1_rule_ids": [
+    "DISMISSAL_BY_REFRAMING"
+   ],
+   "v1_spans": {
+    "DISMISSAL_BY_REFRAMING": [
+     [
+      39,
+      68
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISMISSAL_BY_REFRAMING",
+     39,
+     68
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#37",
+   "text": "The overwhelming majority of industry leaders agree that emerging\nframeworks are essential for maintaining market confidence. Those who\noppose these measures appear to misunderstand the complexity of modern\nregulatory requirements.",
+   "v1_rule_ids": [
+    "SOFT_CONSENSUS",
+    "COMPETENCE_DISMISSAL"
+   ],
+   "v1_spans": {
+    "SOFT_CONSENSUS": [
+     [
+      0,
+      51
+     ]
+    ],
+    "COMPETENCE_DISMISSAL": [
+     [
+      126,
+      181
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "SOFT_CONSENSUS",
+     0,
+     51
+    ],
+    [
+     "COMPETENCE_DISMISSAL",
+     126,
+     181
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#38",
+   "text": "All climate scientists agree that immediate action is required to\nprevent catastrophic consequences. If we fail to act now, the window\nof opportunity will close permanently. There is no time left for\ndebate \u2014 the science is settled and only denial stands in the way\nof progress.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "FEAR_URGENCY"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      22
+     ]
+    ],
+    "FEAR_URGENCY": [
+     [
+      74,
+      86
+     ],
+     [
+      101,
+      118
+     ],
+     [
+      183,
+      190
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     22
+    ],
+    [
+     "FEAR_URGENCY",
+     74,
+     86
+    ],
+    [
+     "FEAR_URGENCY",
+     101,
+     118
+    ],
+    [
+     "FEAR_URGENCY",
+     183,
+     190
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#39",
+   "text": "A growing body of evidence confirms that the proposed standards will\nsignificantly reduce consumer harm. Leading organizations across the\nfinancial services sector support these reforms, and the vast majority\nof compliance professionals agree that modernization is overdue.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION",
+    "SOFT_CONSENSUS",
+    "VAGUE_INSTITUTIONAL_APPEAL"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      18,
+      35
+     ]
+    ],
+    "SOFT_CONSENSUS": [
+     [
+      191,
+      242
+     ],
+     [
+      2,
+      35
+     ]
+    ],
+    "VAGUE_INSTITUTIONAL_APPEAL": [
+     [
+      105,
+      171
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "SOFT_CONSENSUS",
+     2,
+     35
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     18,
+     35
+    ],
+    [
+     "VAGUE_INSTITUTIONAL_APPEAL",
+     105,
+     171
+    ],
+    [
+     "SOFT_CONSENSUS",
+     191,
+     242
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#40",
+   "text": "As holders of advanced degrees in this discipline and practitioners\nwith combined experience exceeding forty years, we can confirm that\ncritics of this methodology lack the expertise to evaluate the\nstatistical framework we employed. Our qualifications speak for\nthemselves and should settle this debate.",
+   "v1_rule_ids": [
+    "COMPETENCE_DISMISSAL"
+   ],
+   "v1_spans": {
+    "COMPETENCE_DISMISSAL": [
+     [
+      164,
+      185
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "COMPETENCE_DISMISSAL",
+     164,
+     185
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#41",
+   "text": "We face a clear choice: adopt the proposed reforms now or watch our\ncompetitive position deteriorate irreversibly. There is no middle\nground. Half measures will only accelerate the decline. If we do\nnot act with complete commitment by the end of this quarter, the\nconsequences will be severe and permanent.",
+   "v1_rule_ids": [
+    "FALSE_BINARY",
+    "FEAR_URGENCY"
+   ],
+   "v1_spans": {
+    "FALSE_BINARY": [
+     [
+      8,
+      58
+     ],
+     [
+      124,
+      140
+     ]
+    ],
+    "FEAR_URGENCY": [
+     [
+      101,
+      113
+     ],
+     [
+      264,
+      291
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FALSE_BINARY",
+     8,
+     58
+    ],
+    [
+     "FEAR_URGENCY",
+     101,
+     113
+    ],
+    [
+     "FALSE_BINARY",
+     124,
+     140
+    ],
+    [
+     "FEAR_URGENCY",
+     264,
+     291
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#42",
+   "text": "Any reasonable person would recognize the importance of these\nprotections. Those who continue to oppose common-sense safety\nmeasures have been thoroughly debunked by credible researchers.\nOnly fringe voices still question what the rest of society has\naccepted as basic decency.",
+   "v1_rule_ids": [
+    "DISSENT_DISMISSAL",
+    "SHAME_LEVER",
+    "MORAL_HIGH_GROUND"
+   ],
+   "v1_spans": {
+    "DISSENT_DISMISSAL": [
+     [
+      154,
+      162
+     ],
+     [
+      193,
+      199
+     ]
+    ],
+    "SHAME_LEVER": [
+     [
+      0,
+      21
+     ]
+    ],
+    "MORAL_HIGH_GROUND": [
+     [
+      0,
+      37
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MORAL_HIGH_GROUND",
+     0,
+     37
+    ],
+    [
+     "SHAME_LEVER",
+     0,
+     21
+    ],
+    [
+     "DISSENT_DISMISSAL",
+     154,
+     162
+    ],
+    [
+     "DISSENT_DISMISSAL",
+     193,
+     199
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#43",
+   "text": "Studies consistently demonstrate that our approach delivers superior\noutcomes compared to traditional methods. Research confirms that the\nframework we developed has been independently validated. As a neutral\nthird party, our assessment reflects the evidence objectively and\nwithout preference for any particular outcome.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      111,
+      128
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     111,
+     128
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/general_corpus.txt#44",
+   "text": "Think about the children who will suffer if this program is defunded.\nEvery parent knows in their heart that this is the right thing to do.\nWe must stand on the right side of morality and refuse to let\nbureaucratic indifference destroy the futures of our most vulnerable\ncitizens. This is not a policy question \u2014 it is a matter of basic\nhuman decency.",
+   "v1_rule_ids": [
+    "EMOTIONAL_SUBSTITUTION",
+    "MORAL_HIGH_GROUND"
+   ],
+   "v1_spans": {
+    "EMOTIONAL_SUBSTITUTION": [
+     [
+      0,
+      24
+     ]
+    ],
+    "MORAL_HIGH_GROUND": [
+     [
+      154,
+      183
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "EMOTIONAL_SUBSTITUTION",
+     0,
+     24
+    ],
+    [
+     "MORAL_HIGH_GROUND",
+     154,
+     183
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#3",
+   "text": "The contract's liquidated damages clause sets compensation at $500 per\nday of delay, which the court must evaluate under the two-part test\nestablished in this jurisdiction: whether damages were difficult to\nestimate at contracting, and whether the amount is a reasonable forecast\nof likely harm.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#4",
+   "text": "Defendant's motion should be denied because the evidence creates a\ngenuine dispute of material fact. The deposition testimony of three\nwitnesses directly contradicts Defendant's version of events regarding\nthe timeline of the transaction.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#7",
+   "text": "Plaintiff's reliance on Williams v. Carter is misplaced. That case\ninvolved a commercial lease dispute where the tenant had provided\nwritten notice of the defect, a factual predicate entirely absent\nhere. The record contains no evidence that Defendant received any\npre-suit notification as required under Section 12(a).",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#9",
+   "text": "Research indicates that early intervention programs reduce recidivism\nby 18-24% across jurisdictions (Nat'l Inst. of Sentencing, Report No.\n2023-47, at 15). The data suggests that structured re-entry services\nyield the highest compliance rates when implemented within the first\n90 days (Id. at 22-23).",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#10",
+   "text": "It is well-settled law in this Circuit that claims of the type asserted\nby Plaintiff are plainly meritless. No reasonable court has ever\nentertained such arguments, and this Court should not be the first to\ndignify this frivolous filing with extended analysis.",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL",
+    "LEGAL_MERIT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      6,
+      22
+     ]
+    ],
+    "LEGAL_MERIT_DISMISSAL": [
+     [
+      89,
+      106
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     6,
+     22
+    ],
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     89,
+     106
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#11",
+   "text": "Plaintiff's argument is frivolous and fails as a matter of law. The\nmotion should be denied on its face without further consideration.",
+   "v1_rule_ids": [
+    "LEGAL_MERIT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_MERIT_DISMISSAL": [
+     [
+      38,
+      62
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     38,
+     62
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#12",
+   "text": "It is well-settled that employers retain broad discretion in these\nmatters. Plaintiff's attempt to challenge this established principle\nis without merit and should be rejected.",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      6,
+      23
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     6,
+     23
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#13",
+   "text": "Counsel for Plaintiff is hereby put on notice that continued pursuit of\nthese baseless claims may result in sanctions under Rule 11. Filing\nsanctions should be considered for this vexatious litigation, and the\nCourt should impose appropriate penalties for wasting judicial resources.",
+   "v1_rule_ids": [
+    "LEGAL_MERIT_DISMISSAL",
+    "LEGAL_SANCTIONS_THREAT"
+   ],
+   "v1_spans": {
+    "LEGAL_MERIT_DISMISSAL": [
+     [
+      180,
+      200
+     ]
+    ],
+    "LEGAL_SANCTIONS_THREAT": [
+     [
+      124,
+      131
+     ],
+     [
+      133,
+      156
+     ],
+     [
+      140,
+      170
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SANCTIONS_THREAT",
+     124,
+     131
+    ],
+    [
+     "LEGAL_SANCTIONS_THREAT",
+     133,
+     156
+    ],
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     180,
+     200
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#14",
+   "text": "See Smith v. Jones, 123 F.3d 456 (5th Cir. 2019); Brown v. Davis, 789\nF.2d 101 (5th Cir. 2018); Wilson v. Green, 456 F.3d 789 (5th Cir.\n2017); Taylor v. White, 234 F.3d 567 (5th Cir. 2016); Miller v. Black,\n678 F.3d 234 (5th Cir. 2015); Anderson v. Clark, 345 F.3d 678 (5th\nCir. 2014). The weight of authority is clear and overwhelming.",
+   "v1_rule_ids": [
+    "LEGAL_WEIGHT_STACKING"
+   ],
+   "v1_spans": {
+    "LEGAL_WEIGHT_STACKING": [
+     [
+      286,
+      309
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_WEIGHT_STACKING",
+     286,
+     309
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#15",
+   "text": "This Court should recognize that Plaintiff's claims are based on\nwell-settled law that this Circuit resolved decades ago. Continued\nprosecution of these claims constitutes vexatious litigation warranting\nsanctions. The Court should not only dismiss but should consider\nreferring counsel to the disciplinary committee for pursuing such\nfrivolous theories.",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL",
+    "LEGAL_MERIT_DISMISSAL",
+    "LEGAL_SANCTIONS_THREAT"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      65,
+      81
+     ]
+    ],
+    "LEGAL_MERIT_DISMISSAL": [
+     [
+      172,
+      192
+     ]
+    ],
+    "LEGAL_SANCTIONS_THREAT": [
+     [
+      172,
+      213
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     65,
+     81
+    ],
+    [
+     "LEGAL_SANCTIONS_THREAT",
+     172,
+     213
+    ],
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     172,
+     192
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#16",
+   "text": "Everyone agrees that this approach is the correct one. The consensus\namong experts is clear, and most people in the field would confirm that\nthis position is undeniably correct.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      15
+     ],
+     [
+      55,
+      68
+     ],
+     [
+      97,
+      108
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     15
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     55,
+     68
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     97,
+     108
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#17",
+   "text": "Experts say that the current approach is fundamentally flawed. Research\nindicates that alternative methods produce better outcomes. Leading\nauthorities confirm that a paradigm shift is overdue.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION",
+    "VAGUE_INSTITUTIONAL_APPEAL"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      11
+     ],
+     [
+      63,
+      81
+     ]
+    ],
+    "VAGUE_INSTITUTIONAL_APPEAL": [
+     [
+      132,
+      159
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     11
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     63,
+     81
+    ],
+    [
+     "VAGUE_INSTITUTIONAL_APPEAL",
+     132,
+     159
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#18",
+   "text": "These so-called alternative theories have been thoroughly debunked by\nmainstream scholarship. Only fringe elements continue to advance such\ndiscredited positions, and serious analysts have long since moved past\nthese outdated arguments.",
+   "v1_rule_ids": [
+    "DISSENT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "DISSENT_DISMISSAL": [
+     [
+      58,
+      66
+     ],
+     [
+      99,
+      105
+     ],
+     [
+      140,
+      151
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "DISSENT_DISMISSAL",
+     58,
+     66
+    ],
+    [
+     "DISSENT_DISMISSAL",
+     99,
+     105
+    ],
+    [
+     "DISSENT_DISMISSAL",
+     140,
+     151
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#19",
+   "text": "If we do not act immediately, the consequences will be catastrophic and\nirreversible. Every day of delay brings us closer to a point of no\nreturn. The window for action is closing rapidly and failure to respond\nnow would be devastating.",
+   "v1_rule_ids": [
+    "FEAR_URGENCY"
+   ],
+   "v1_spans": {
+    "FEAR_URGENCY": [
+     [
+      13,
+      28
+     ],
+     [
+      34,
+      67
+     ],
+     [
+      72,
+      84
+     ],
+     [
+      127,
+      145
+     ],
+     [
+      224,
+      235
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FEAR_URGENCY",
+     13,
+     28
+    ],
+    [
+     "FEAR_URGENCY",
+     34,
+     67
+    ],
+    [
+     "FEAR_URGENCY",
+     72,
+     84
+    ],
+    [
+     "FEAR_URGENCY",
+     127,
+     145
+    ],
+    [
+     "FEAR_URGENCY",
+     224,
+     235
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#20",
+   "text": "We face a simple choice: either we accept the proposed restructuring\nin its entirety, or we face certain insolvency. There is no middle\nground and no alternative path forward.",
+   "v1_rule_ids": [
+    "FALSE_BINARY"
+   ],
+   "v1_spans": {
+    "FALSE_BINARY": [
+     [
+      25,
+      88
+     ],
+     [
+      126,
+      142
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FALSE_BINARY",
+     25,
+     88
+    ],
+    [
+     "FALSE_BINARY",
+     126,
+     142
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#21",
+   "text": "As a Carverton-trained economist with thirty years of experience and\nnumerous peer-reviewed publications, my assessment should carry\ndecisive weight. My credentials speak for themselves, and opposing\nviews from less qualified analysts can be safely disregarded.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#22",
+   "text": "The Department's official position reflects a careful, balanced\nassessment of the evidence. As a neutral regulatory body, our\nfindings represent the objective truth of the matter, free from\nthe advocacy that characterizes outside commentary.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#23",
+   "text": "Any reasonable person would recognize the validity of this position.\nTo argue otherwise would be to align oneself with a discredited\nminority that has embarrassed the profession. No serious professional\nwants to be associated with such views.",
+   "v1_rule_ids": [
+    "DISSENT_DISMISSAL",
+    "SHAME_LEVER",
+    "MORAL_HIGH_GROUND"
+   ],
+   "v1_spans": {
+    "DISSENT_DISMISSAL": [
+     [
+      121,
+      132
+     ]
+    ],
+    "SHAME_LEVER": [
+     [
+      0,
+      21
+     ]
+    ],
+    "MORAL_HIGH_GROUND": [
+     [
+      0,
+      37
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MORAL_HIGH_GROUND",
+     0,
+     37
+    ],
+    [
+     "SHAME_LEVER",
+     0,
+     21
+    ],
+    [
+     "DISSENT_DISMISSAL",
+     121,
+     132
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#24",
+   "text": "The devastation wrought upon these hardworking families is simply\nheartbreaking. No decent person could look at these innocent victims\nand conclude that the defendant's actions were acceptable. The suffering\nspeaks for itself, and this Court must respond with compassion.",
+   "v1_rule_ids": [
+    "EMOTIONAL_SUBSTITUTION"
+   ],
+   "v1_spans": {
+    "EMOTIONAL_SUBSTITUTION": [
+     [
+      59,
+      79
+     ],
+     [
+      81,
+      103
+     ],
+     [
+      194,
+      225
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "EMOTIONAL_SUBSTITUTION",
+     59,
+     79
+    ],
+    [
+     "EMOTIONAL_SUBSTITUTION",
+     81,
+     103
+    ],
+    [
+     "EMOTIONAL_SUBSTITUTION",
+     194,
+     225
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#25",
+   "text": "Pursuant to the operationalization of the multi-stakeholder engagement\nframework, the implementing entity shall effectuate a phased\nrealignment of resource allocation paradigms in accordance with the\ncross-functional optimization metrics established under the revised\ngovernance protocol.",
+   "v1_rule_ids": [
+    "BUREAUCRATIC_OBSCURITY"
+   ],
+   "v1_spans": {
+    "BUREAUCRATIC_OBSCURITY": [
+     [
+      0,
+      34
+     ],
+     [
+      200,
+      237
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "BUREAUCRATIC_OBSCURITY",
+     0,
+     34
+    ],
+    [
+     "BUREAUCRATIC_OBSCURITY",
+     200,
+     237
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#26",
+   "text": "Leading experts unanimously agree that this methodology is the gold\nstandard. Research indicates it outperforms all alternatives, and the\nscientific consensus is clear. The authorities in this field, with\ntheir extensive credentials and institutional backing, have spoken\ndefinitively on this matter.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      8,
+      33
+     ],
+     [
+      134,
+      158
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      78,
+      96
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     8,
+     33
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     78,
+     96
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     134,
+     158
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#27",
+   "text": "The weight of authority conclusively demonstrates that this issue is\nwell-settled. See Anderson, 234 F.3d at 567; Brown, 789 F.2d at 101;\nClark, 345 F.3d at 678; Davis, 456 F.3d at 789; Evans, 678 F.3d at\n234; Franklin, 123 F.3d at 456. Plaintiff's plainly meritless position\nhas been rejected by every court to consider it, and this Court should\nsummarily dismiss these frivolous claims.",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL",
+    "LEGAL_MERIT_DISMISSAL",
+    "LEGAL_WEIGHT_STACKING"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      69,
+      81
+     ]
+    ],
+    "LEGAL_MERIT_DISMISSAL": [
+     [
+      249,
+      266
+     ]
+    ],
+    "LEGAL_WEIGHT_STACKING": [
+     [
+      0,
+      23
+     ],
+     [
+      297,
+      320
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_WEIGHT_STACKING",
+     0,
+     23
+    ],
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     69,
+     81
+    ],
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     249,
+     266
+    ],
+    [
+     "LEGAL_WEIGHT_STACKING",
+     297,
+     320
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#28",
+   "text": "We have reached a critical juncture: either the board approves this\nmeasure today, or we face irreversible financial collapse. Anyone who\nvotes against this proposal is choosing personal comfort over the\nsurvival of this organization. History will judge harshly those who\nfailed to act when action was still possible.",
+   "v1_rule_ids": [
+    "FALSE_BINARY",
+    "FEAR_URGENCY",
+    "SHAME_LEVER",
+    "INEVITABILITY_FRAME"
+   ],
+   "v1_spans": {
+    "FALSE_BINARY": [
+     [
+      37,
+      85
+     ]
+    ],
+    "FEAR_URGENCY": [
+     [
+      94,
+      106
+     ]
+    ],
+    "SHAME_LEVER": [
+     [
+      235,
+      253
+     ]
+    ],
+    "INEVITABILITY_FRAME": [
+     [
+      235,
+      253
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FALSE_BINARY",
+     37,
+     85
+    ],
+    [
+     "FEAR_URGENCY",
+     94,
+     106
+    ],
+    [
+     "SHAME_LEVER",
+     235,
+     253
+    ],
+    [
+     "INEVITABILITY_FRAME",
+     235,
+     253
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#29",
+   "text": "The scientific community has universally recognized these findings as\ndefinitive. Fringe objectors who continue to raise discredited\nconcerns are operating outside the bounds of legitimate discourse.\nThe institutional consensus, as confirmed by every major regulatory\nbody, speaks with one authoritative voice on this matter.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "DISSENT_DISMISSAL"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      29,
+      51
+     ],
+     [
+      200,
+      227
+     ]
+    ],
+    "DISSENT_DISMISSAL": [
+     [
+      82,
+      88
+     ],
+     [
+      121,
+      132
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     29,
+     51
+    ],
+    [
+     "DISSENT_DISMISSAL",
+     82,
+     88
+    ],
+    [
+     "DISSENT_DISMISSAL",
+     121,
+     132
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     200,
+     227
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#30",
+   "text": "Studies show that without immediate intervention, the projected\ndecline will accelerate beyond any hope of recovery. The data suggests\nwe have months, not years, to implement corrective measures. Experts\nsay that delay at this stage would be catastrophic.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION",
+    "FEAR_URGENCY"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      12
+     ],
+     [
+      121,
+      134
+     ],
+     [
+      196,
+      207
+     ]
+    ],
+    "FEAR_URGENCY": [
+     [
+      242,
+      254
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     12
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     121,
+     134
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     196,
+     207
+    ],
+    [
+     "FEAR_URGENCY",
+     242,
+     254
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#31",
+   "text": "This is the direction the entire industry is heading, and there is no\nstopping this trend. History will judge those who resisted this change\nharshly. The future belongs to those who adapt, and the inevitable\nmarch of progress cannot be halted.",
+   "v1_rule_ids": [
+    "SHAME_LEVER",
+    "INEVITABILITY_FRAME"
+   ],
+   "v1_spans": {
+    "SHAME_LEVER": [
+     [
+      91,
+      109
+     ]
+    ],
+    "INEVITABILITY_FRAME": [
+     [
+      58,
+      83
+     ],
+     [
+      91,
+      109
+     ],
+     [
+      193,
+      213
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "INEVITABILITY_FRAME",
+     58,
+     83
+    ],
+    [
+     "SHAME_LEVER",
+     91,
+     109
+    ],
+    [
+     "INEVITABILITY_FRAME",
+     91,
+     109
+    ],
+    [
+     "INEVITABILITY_FRAME",
+     193,
+     213
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#32",
+   "text": "We have always done it this way and the time-tested practice has served\nus well for decades. Departing from established practice would be unwise\nand potentially catastrophic. The age-old wisdom dictates that stability\ncomes from maintaining proven approaches.",
+   "v1_rule_ids": [
+    "FEAR_URGENCY",
+    "APPEAL_TO_TRADITION"
+   ],
+   "v1_spans": {
+    "FEAR_URGENCY": [
+     [
+      161,
+      173
+     ]
+    ],
+    "APPEAL_TO_TRADITION": [
+     [
+      0,
+      31
+     ],
+     [
+      93,
+      144
+     ],
+     [
+      179,
+      202
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "APPEAL_TO_TRADITION",
+     0,
+     31
+    ],
+    [
+     "APPEAL_TO_TRADITION",
+     93,
+     144
+    ],
+    [
+     "FEAR_URGENCY",
+     161,
+     173
+    ],
+    [
+     "APPEAL_TO_TRADITION",
+     179,
+     202
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#33",
+   "text": "Both sides have valid points in this debate, and the truth lies\nsomewhere in the middle. While one side presents peer-reviewed data and\nthe other relies on anecdotal claims, there are valid arguments on both\nsides and we should give equal weight to each perspective.",
+   "v1_rule_ids": [
+    "FALSE_EQUIVALENCE"
+   ],
+   "v1_spans": {
+    "FALSE_EQUIVALENCE": [
+     [
+      0,
+      28
+     ],
+     [
+      49,
+      87
+     ],
+     [
+      174,
+      213
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FALSE_EQUIVALENCE",
+     0,
+     28
+    ],
+    [
+     "FALSE_EQUIVALENCE",
+     49,
+     87
+    ],
+    [
+     "FALSE_EQUIVALENCE",
+     174,
+     213
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#34",
+   "text": "Any decent person would recognize the importance of this issue. It is\nsimply a matter of basic human decency, and those who disagree are on\nthe wrong side of morality. No ethical professional would take the\nopposing position.",
+   "v1_rule_ids": [
+    "SHAME_LEVER",
+    "MORAL_HIGH_GROUND"
+   ],
+   "v1_spans": {
+    "SHAME_LEVER": [
+     [
+      0,
+      17
+     ]
+    ],
+    "MORAL_HIGH_GROUND": [
+     [
+      0,
+      33
+     ],
+     [
+      64,
+      108
+     ],
+     [
+      137,
+      166
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MORAL_HIGH_GROUND",
+     0,
+     33
+    ],
+    [
+     "SHAME_LEVER",
+     0,
+     17
+    ],
+    [
+     "MORAL_HIGH_GROUND",
+     64,
+     108
+    ],
+    [
+     "MORAL_HIGH_GROUND",
+     137,
+     166
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#35",
+   "text": "Plaintiff failed to properly preserve this argument at the trial level\nand has therefore waived this claim on appeal. Because Plaintiff did\nnot timely raise this objection, it is procedurally barred and this\nCourt need not reach the merits.",
+   "v1_rule_ids": [
+    "LEGAL_PROCEDURAL_GATEKEEPING"
+   ],
+   "v1_spans": {
+    "LEGAL_PROCEDURAL_GATEKEEPING": [
+     [
+      10,
+      37
+     ],
+     [
+      89,
+      106
+     ],
+     [
+      179,
+      198
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_PROCEDURAL_GATEKEEPING",
+     10,
+     37
+    ],
+    [
+     "LEGAL_PROCEDURAL_GATEKEEPING",
+     89,
+     106
+    ],
+    [
+     "LEGAL_PROCEDURAL_GATEKEEPING",
+     179,
+     198
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#36",
+   "text": "Plaintiff argues that all employers should be held strictly liable\nwithout any exception for every workplace incident. This extreme\nposition would essentially be asking this Court to impose unlimited\nliability on every business in the state, a result that no reasonable\ncourt would countenance.",
+   "v1_rule_ids": [
+    "LEGAL_STRAW_MAN"
+   ],
+   "v1_spans": {
+    "LEGAL_STRAW_MAN": [
+     [
+      0,
+      25
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_STRAW_MAN",
+     0,
+     25
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#37",
+   "text": "Not only has Plaintiff waived this argument by failing to raise it in\nthe proceedings below, but the claim is also plainly meritless and\nfails as a matter of law. The Court lacks jurisdiction to entertain\nthis untimely filing.",
+   "v1_rule_ids": [
+    "LEGAL_MERIT_DISMISSAL",
+    "LEGAL_PROCEDURAL_GATEKEEPING"
+   ],
+   "v1_spans": {
+    "LEGAL_MERIT_DISMISSAL": [
+     [
+      115,
+      132
+     ],
+     [
+      137,
+      161
+     ]
+    ],
+    "LEGAL_PROCEDURAL_GATEKEEPING": [
+     [
+      23,
+      43
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_PROCEDURAL_GATEKEEPING",
+     23,
+     43
+    ],
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     115,
+     132
+    ],
+    [
+     "LEGAL_MERIT_DISMISSAL",
+     137,
+     161
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#38",
+   "text": "Plaintiff is essentially arguing that this Court should overturn decades\nof well-settled precedent and hold that every contract term is\nunconscionable. No court in this jurisdiction has ever entertained such\nan extreme reading of the statute.",
+   "v1_rule_ids": [
+    "LEGAL_SETTLED_DISMISSAL",
+    "LEGAL_STRAW_MAN"
+   ],
+   "v1_spans": {
+    "LEGAL_SETTLED_DISMISSAL": [
+     [
+      76,
+      88
+     ]
+    ],
+    "LEGAL_STRAW_MAN": [
+     [
+      10,
+      55
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_STRAW_MAN",
+     10,
+     55
+    ],
+    [
+     "LEGAL_SETTLED_DISMISSAL",
+     76,
+     88
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#39",
+   "text": "Plaintiff's third cause of action was not raised in the complaint or\nany amended pleading. Under Fed. R. Civ. P. 15(a)(2), leave to amend\nis required after a responsive pleading has been filed. Because no\nmotion to amend was made, the Court should disregard this claim.\nHowever, even on the merits, the claim fails because the statute\nrequires notice within 30 days, and Plaintiff waited 47 days.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/legal_corpus.txt#41",
+   "text": "The parties present different interpretations of the contract's force\nmajeure clause. Plaintiff reads \"act of God\" narrowly, limited to\nnatural disasters. Defendant reads it broadly to include pandemics.\nThe court must examine the text, context, and industry custom to\ndetermine which reading controls.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#1",
+   "text": "A report by the Inspector General released Tuesday found that the agency\nhad failed to conduct required safety inspections at 14 facilities over\nthe past three years. The report recommended immediate remedial action\nand increased oversight.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#2",
+   "text": "In an editorial published Thursday, the board argued that the proposed\nzoning changes would disproportionately affect small businesses in the\ndowntown corridor. The editorial cited property tax data from the city\nassessor's office.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#3",
+   "text": "The controversial policy, which critics have called misguided, was\nannounced by the embattled agency director at a tense press conference.\nThe divisive proposal would restructure the entire department.",
+   "v1_rule_ids": [
+    "MEDIA_EDITORIAL_AS_NEWS"
+   ],
+   "v1_spans": {
+    "MEDIA_EDITORIAL_AS_NEWS": [
+     [
+      0,
+      24
+     ],
+     [
+      139,
+      160
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EDITORIAL_AS_NEWS",
+     0,
+     24
+    ],
+    [
+     "MEDIA_EDITORIAL_AS_NEWS",
+     139,
+     160
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#4",
+   "text": "Sources close to the matter say the CEO is planning to step down within\nweeks. People familiar with the deliberations confirmed that the board\nhas already begun succession planning. Insiders say the decision was\ndriven by mounting pressure from institutional investors.",
+   "v1_rule_ids": [
+    "MEDIA_ANONYMOUS_ATTRIBUTION"
+   ],
+   "v1_spans": {
+    "MEDIA_ANONYMOUS_ATTRIBUTION": [
+     [
+      0,
+      16
+     ],
+     [
+      79,
+      117
+     ],
+     [
+      182,
+      194
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_ANONYMOUS_ATTRIBUTION",
+     0,
+     16
+    ],
+    [
+     "MEDIA_ANONYMOUS_ATTRIBUTION",
+     79,
+     117
+    ],
+    [
+     "MEDIA_ANONYMOUS_ATTRIBUTION",
+     182,
+     194
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#5",
+   "text": "Many experts believe the new regulation will backfire. There is growing\nconcern among industry observers that the approach lacks sufficient\nsafeguards. It is widely believed that the timeline is unrealistic,\nand numerous analysts have raised similar objections.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION",
+    "MEDIA_WEASEL_QUANTIFIERS"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      5,
+      20
+     ]
+    ],
+    "MEDIA_WEASEL_QUANTIFIERS": [
+     [
+      0,
+      12
+     ],
+     [
+      55,
+      79
+     ],
+     [
+      152,
+      173
+     ],
+     [
+      212,
+      229
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_WEASEL_QUANTIFIERS",
+     0,
+     12
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     5,
+     20
+    ],
+    [
+     "MEDIA_WEASEL_QUANTIFIERS",
+     55,
+     79
+    ],
+    [
+     "MEDIA_WEASEL_QUANTIFIERS",
+     152,
+     173
+    ],
+    [
+     "MEDIA_WEASEL_QUANTIFIERS",
+     212,
+     229
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#6",
+   "text": "Some say that cellphone towers cause cancer and chronic illness, while\nscientists at major research institutions disagree, citing decades of\npeer-reviewed studies finding no causal link. The debate continues to\ndivide communities across the country.",
+   "v1_rule_ids": [
+    "MEDIA_FALSE_BALANCE"
+   ],
+   "v1_spans": {
+    "MEDIA_FALSE_BALANCE": [
+     [
+      0,
+      121
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_FALSE_BALANCE",
+     0,
+     121
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#7",
+   "text": "Shocking new allegations have emerged against the pharmaceutical giant,\nas internal documents reveal a pattern of concealing adverse drug\nreactions from regulators. The company denied wrongdoing.",
+   "v1_rule_ids": [
+    "MEDIA_EMOTIONAL_LEAD"
+   ],
+   "v1_spans": {
+    "MEDIA_EMOTIONAL_LEAD": [
+     [
+      0,
+      8
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EMOTIONAL_LEAD",
+     0,
+     8
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#8",
+   "text": "The troubled company's ill-conceived expansion strategy is now under\nfire, according to sources familiar with the board's private\ndiscussions. Critics say the CEO's self-styled leadership approach\nhas alienated key investors and partners.",
+   "v1_rule_ids": [
+    "MEDIA_EDITORIAL_AS_NEWS",
+    "MEDIA_ANONYMOUS_ATTRIBUTION"
+   ],
+   "v1_spans": {
+    "MEDIA_EDITORIAL_AS_NEWS": [
+     [
+      0,
+      20
+     ]
+    ],
+    "MEDIA_ANONYMOUS_ATTRIBUTION": [
+     [
+      88,
+      109
+     ],
+     [
+      143,
+      154
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EDITORIAL_AS_NEWS",
+     0,
+     20
+    ],
+    [
+     "MEDIA_ANONYMOUS_ATTRIBUTION",
+     88,
+     109
+    ],
+    [
+     "MEDIA_ANONYMOUS_ATTRIBUTION",
+     143,
+     154
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#9",
+   "text": "A senior administration official, speaking on condition of anonymity\nbecause the decision had not yet been publicly announced, said the\nPresident would sign the executive order on Friday. The White House\nconfirmed the timeline later that evening.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#10",
+   "text": "A new study has linked the popular food additive to increased rates of\nchronic inflammation in laboratory settings, raising urgent questions\nabout its safety in consumer products. The findings have prompted calls\nfor regulatory review and renewed scrutiny of industry practices.\nHowever, the study also found that no evidence of harm was observed at\nthe dosage levels typical of human consumption, and the results could\nnot be confirmed in follow-up trials.",
+   "v1_rule_ids": [
+    "MEDIA_BURIED_QUALIFIER"
+   ],
+   "v1_spans": {
+    "MEDIA_BURIED_QUALIFIER": [
+     [
+      279,
+      325
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_BURIED_QUALIFIER",
+     279,
+     325
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#11",
+   "text": "The viral social media post, shared over 200,000 times, claimed that\nthe new education policy would eliminate arts programs from all public\nschools in the state. Parents flooded school board meetings with angry\ntestimony, and a petition gathered 50,000 signatures within 48 hours.\nThe governor's office condemned what it called \"fear-mongering.\"\nHowever, the department later clarified that the policy not confirmed\nto apply to existing programs, and the original claim was based on a\ndraft document that had since been substantially revised.",
+   "v1_rule_ids": [
+    "MEDIA_BURIED_QUALIFIER"
+   ],
+   "v1_spans": {
+    "MEDIA_BURIED_QUALIFIER": [
+     [
+      346,
+      385
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_BURIED_QUALIFIER",
+     346,
+     385
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#12",
+   "text": "The governor's so-called \"reform\" package would restructure the entire\ndepartment. Their \"balanced\" approach has drawn criticism from advocates\nwho say the \"expert\" panel was hand-picked to support a predetermined\noutcome. The \"voluntary\" compliance program has no enforcement mechanism.",
+   "v1_rule_ids": [
+    "MEDIA_SELECTIVE_QUOTATION"
+   ],
+   "v1_spans": {
+    "MEDIA_SELECTIVE_QUOTATION": [
+     [
+      15,
+      33
+     ],
+     [
+      83,
+      99
+     ],
+     [
+      152,
+      164
+     ],
+     [
+      223,
+      238
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     15,
+     33
+    ],
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     83,
+     99
+    ],
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     152,
+     164
+    ],
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     223,
+     238
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#14",
+   "text": "The central bank is widely expected to cut rates at its November meeting,\na decision that could soon lead to significant volatility in housing\nmarkets. Signs point to a broader shift in monetary policy, fueling\nspeculation that the era of high rates may be ending. The move is likely\nto trigger a wave of refinancing activity, raising the prospect of\nrenewed pressure on mortgage lenders.",
+   "v1_rule_ids": [
+    "MEDIA_SPECULATIVE_FRAMING"
+   ],
+   "v1_spans": {
+    "MEDIA_SPECULATIVE_FRAMING": [
+     [
+      17,
+      38
+     ],
+     [
+      90,
+      108
+     ],
+     [
+      152,
+      166
+     ],
+     [
+      203,
+      227
+     ],
+     [
+      274,
+      286
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_SPECULATIVE_FRAMING",
+     17,
+     38
+    ],
+    [
+     "MEDIA_SPECULATIVE_FRAMING",
+     90,
+     108
+    ],
+    [
+     "MEDIA_SPECULATIVE_FRAMING",
+     152,
+     166
+    ],
+    [
+     "MEDIA_SPECULATIVE_FRAMING",
+     203,
+     227
+    ],
+    [
+     "MEDIA_SPECULATIVE_FRAMING",
+     274,
+     286
+    ]
+   ]
+  },
+  {
+   "src": "calibration/corpus/media_corpus.txt#15",
+   "text": "Sources close to the negotiations say a deal is expected to be announced\nwithin days, a development that could soon reshape the competitive\nlandscape in the sector. People familiar with the deliberations suggest\nthat the terms are likely to include significant concessions from both\nsides. The merger raises the prospect of widespread layoffs, fueling\nfears that thousands of jobs may be at risk.",
+   "v1_rule_ids": [
+    "MEDIA_ANONYMOUS_ATTRIBUTION",
+    "MEDIA_SPECULATIVE_FRAMING"
+   ],
+   "v1_spans": {
+    "MEDIA_ANONYMOUS_ATTRIBUTION": [
+     [
+      0,
+      16
+     ],
+     [
+      165,
+      203
+     ]
+    ],
+    "MEDIA_SPECULATIVE_FRAMING": [
+     [
+      45,
+      59
+     ],
+     [
+      227,
+      240
+     ],
+     [
+      301,
+      323
+     ],
+     [
+      344,
+      362
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_ANONYMOUS_ATTRIBUTION",
+     0,
+     16
+    ],
+    [
+     "MEDIA_SPECULATIVE_FRAMING",
+     45,
+     59
+    ],
+    [
+     "MEDIA_ANONYMOUS_ATTRIBUTION",
+     165,
+     203
+    ],
+    [
+     "MEDIA_SPECULATIVE_FRAMING",
+     227,
+     240
+    ],
+    [
+     "MEDIA_SPECULATIVE_FRAMING",
+     301,
+     323
+    ],
+    [
+     "MEDIA_SPECULATIVE_FRAMING",
+     344,
+     362
+    ]
+   ]
+  },
+  {
+   "src": "edge:01",
+   "text": "",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "edge:02",
+   "text": "   \n\t  ",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "edge:03",
+   "text": "STUDIES SHOW that EVERYONE AGREES.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      18,
+      33
+     ]
+    ],
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      12
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     12
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     18,
+     33
+    ]
+   ]
+  },
+  {
+   "src": "edge:04",
+   "text": "Their \u201creform\u201d plan and the \u201cbalanced\u201d approach, plus a \u201csmart\u201d policy.",
+   "v1_rule_ids": [
+    "MEDIA_SELECTIVE_QUOTATION"
+   ],
+   "v1_spans": {
+    "MEDIA_SELECTIVE_QUOTATION": [
+     [
+      0,
+      14
+     ],
+     [
+      24,
+      38
+     ],
+     [
+      56,
+      63
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     0,
+     14
+    ],
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     24,
+     38
+    ],
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     56,
+     63
+    ]
+   ]
+  },
+  {
+   "src": "edge:05",
+   "text": "\ud83d\ude42\ud83d\ude42 Everyone agrees this is fine. \ud83d\ude42 Either we act now or we lose.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE",
+    "FALSE_BINARY",
+    "FEAR_URGENCY"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      3,
+      18
+     ]
+    ],
+    "FALSE_BINARY": [
+     [
+      35,
+      55
+     ]
+    ],
+    "FEAR_URGENCY": [
+     [
+      45,
+      52
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     3,
+     18
+    ],
+    [
+     "FALSE_BINARY",
+     35,
+     55
+    ],
+    [
+     "FEAR_URGENCY",
+     45,
+     52
+    ]
+   ]
+  },
+  {
+   "src": "edge:06",
+   "text": "Studies\u00a0show that it works, and experts\u00a0say so too.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      12
+     ],
+     [
+      32,
+      43
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     12
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     32,
+     43
+    ]
+   ]
+  },
+  {
+   "src": "edge:07",
+   "text": "Either we act\r\nnow or never.\r\nIt is all their fault.",
+   "v1_rule_ids": [
+    "FALSE_BINARY",
+    "FEAR_URGENCY",
+    "MONOCAUSAL_BLAME"
+   ],
+   "v1_spans": {
+    "FALSE_BINARY": [
+     [
+      0,
+      21
+     ]
+    ],
+    "FEAR_URGENCY": [
+     [
+      10,
+      18
+     ]
+    ],
+    "MONOCAUSAL_BLAME": [
+     [
+      30,
+      51
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "FALSE_BINARY",
+     0,
+     21
+    ],
+    [
+     "FEAR_URGENCY",
+     10,
+     18
+    ],
+    [
+     "MONOCAUSAL_BLAME",
+     30,
+     51
+    ]
+   ]
+  },
+  {
+   "src": "edge:08",
+   "text": "The committee met on a weekday afternoon to review the quarterly budget, the maintenance schedule for the east wing, the staffing plan for the spring term, and a request from the parents' association about parking. However, the central claim could not be confirmed by anyone.",
+   "v1_rule_ids": [
+    "MEDIA_BURIED_QUALIFIER"
+   ],
+   "v1_spans": {
+    "MEDIA_BURIED_QUALIFIER": [
+     [
+      215,
+      264
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_BURIED_QUALIFIER",
+     215,
+     264
+    ]
+   ]
+  },
+  {
+   "src": "edge:09",
+   "text": "Shocking: the quarterly report is finally out.",
+   "v1_rule_ids": [
+    "MEDIA_EMOTIONAL_LEAD"
+   ],
+   "v1_spans": {
+    "MEDIA_EMOTIONAL_LEAD": [
+     [
+      0,
+      8
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_EMOTIONAL_LEAD",
+     0,
+     8
+    ]
+   ]
+  },
+  {
+   "src": "edge:10",
+   "text": "Studies show nothing yet. The rest of this paragraph is filler text that only exists to push the next sentence far enough away.  The rest of this paragraph is filler text that only exists to push the next sentence far enough away. Studies show (Smith, 2024) a small effect.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      0,
+      12
+     ],
+     [
+      231,
+      243
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     0,
+     12
+    ],
+    [
+     "CLAIM_WITHOUT_CITATION",
+     231,
+     243
+    ]
+   ]
+  },
+  {
+   "src": "edge:11",
+   "text": "Studies show (Smith, 2024) a small effect. The rest of this paragraph is filler text that only exists to push the next sentence far enough away.  The rest of this paragraph is filler text that only exists to push the next sentence far enough away. Studies show nothing yet.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "edge:12",
+   "text": "Sanctions should be considered for this filing.",
+   "v1_rule_ids": [
+    "LEGAL_SANCTIONS_THREAT"
+   ],
+   "v1_spans": {
+    "LEGAL_SANCTIONS_THREAT": [
+     [
+      0,
+      30
+     ],
+     [
+      0,
+      30
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "LEGAL_SANCTIONS_THREAT",
+     0,
+     30
+    ]
+   ]
+  },
+  {
+   "src": "edge:13",
+   "text": "Critics claimed it was late.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "edge:14",
+   "text": "Critics claimed it was late, and they insisted it was rushed.",
+   "v1_rule_ids": [
+    "MEDIA_ASYMMETRIC_ATTRIBUTION"
+   ],
+   "v1_spans": {
+    "MEDIA_ASYMMETRIC_ATTRIBUTION": [
+     [
+      8,
+      15
+     ],
+     [
+      38,
+      46
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "MEDIA_ASYMMETRIC_ATTRIBUTION",
+     8,
+     15
+    ],
+    [
+     "MEDIA_ASYMMETRIC_ATTRIBUTION",
+     38,
+     46
+    ]
+   ]
+  },
+  {
+   "src": "edge:15",
+   "text": "We strive to ensure quality. We are deeply committed to it.",
+   "v1_rule_ids": [
+    "ASPIRATIONAL_DEFLECTION"
+   ],
+   "v1_spans": {
+    "ASPIRATIONAL_DEFLECTION": [
+     [
+      0,
+      19
+     ],
+     [
+      29,
+      55
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     0,
+     19
+    ],
+    [
+     "ASPIRATIONAL_DEFLECTION",
+     29,
+     55
+    ]
+   ]
+  },
+  {
+   "src": "edge:16",
+   "text": "We strive to ensure quality.",
+   "v1_rule_ids": [],
+   "v1_spans": {},
+   "moves": []
+  },
+  {
+   "src": "edge:17",
+   "text": "Caf\u00e9 owners say the na\u00efve plan works. Experts say so.",
+   "v1_rule_ids": [
+    "CLAIM_WITHOUT_CITATION"
+   ],
+   "v1_spans": {
+    "CLAIM_WITHOUT_CITATION": [
+     [
+      38,
+      49
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     38,
+     49
+    ]
+   ]
+  },
+  {
+   "src": "edge:18",
+   "text": "Everyone agrees. Everyone agrees. Everyone agrees.",
+   "v1_rule_ids": [
+    "CONSENSUS_AS_EVIDENCE"
+   ],
+   "v1_spans": {
+    "CONSENSUS_AS_EVIDENCE": [
+     [
+      0,
+      15
+     ],
+     [
+      17,
+      32
+     ],
+     [
+      34,
+      49
+     ]
+    ]
+   },
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     15
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     17,
+     32
+    ],
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     34,
+     49
+    ]
+   ]
+  }
+ ]
+}

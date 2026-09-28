@@ -1,0 +1,6 @@
+/* Loaded only when JavaScript is off (a <noscript> link in every page's head): the controls that need a script are
+   hidden, so nothing on the page looks usable and does nothing. The first sample's moves are listed as plain text. */
+.tone,.tabs,#markAll,.req,.handoff,.cap,.loupe,.edit-own,#listCount{display:none!important}
+.nojs-list{margin:10px 0 0;padding-left:1.2em;font-size:16px;line-height:1.45}
+.nojs-list li{padding:6px 0;border-bottom:1px solid var(--rule-2)}
+.nojs-list q{display:block;font-style:italic;color:var(--ink-3)}

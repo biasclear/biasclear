@@ -1,0 +1,34 @@
+{
+  "name": "@biasclear/engine",
+  "version": "2.0.0-alpha.1",
+  "private": true,
+  "description": "BiasClear's rule engine for browsers and Node: names the structural persuasion moves a text makes. Zero runtime dependencies.",
+  "license": "Apache-2.0 AND CC-BY-4.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "gen": "node scripts/gen-pack.mjs",
+    "typecheck": "node scripts/gen-pack.mjs && tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+    "build": "node scripts/build.mjs",
+    "test:unit": "node scripts/build.mjs && vitest run",
+    "parity": "node scripts/parity.mjs",
+    "test": "npm run typecheck && npm run build && vitest run && npm run parity"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
+  }
+}

@@ -1,0 +1,113 @@
+<!--page
+{
+  "path": "method.html",
+  "title": "Method: how BiasClear works and what is tested",
+  "description": "How the BiasClear rules run, what the tests check, what the rules miss, and what has not been measured yet.",
+  "nav": "method",
+  "css": [],
+  "js": []
+}
+-->
+<main id="main">
+<section class="page-head" aria-labelledby="page-h">
+ <div class="wrap">
+  <div class="g12">
+    <p class="lab kicker">Method</p>
+    <h1 id="page-h">How it works, <em>and what is tested.</em></h1>
+    <div class="dek">
+      <p>BiasClear is a set of fixed rules, not a model. This page says how the rules run, what the tests check, what the rules miss, and what nobody has measured yet.</p>
+    </div>
+  </div>
+ </div>
+</section>
+
+<section class="sec wrap" id="rules" aria-labelledby="rules-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">01 &nbsp;The rules</p>
+    <h2 id="rules-h">One file of rules, <em>read the same way everywhere.</em></h2>
+    <div class="body">
+      <p>Every rule lives in one file, the rule pack: <a href="https://github.com/biasclear/biasclear/blob/main/rules/biasclear-rules.json"><code>rules/biasclear-rules.json</code></a>, rules version <b>{{rulesVersion}}</b>. It holds {{ruleCount}} rules. Each rule is a set of patterns over English wording, with a name, a description, and a tier from Persistent Influence Theory: I, ideological; II, psychological; III, institutional.</p>
+      <p>Of these, {{generalCount}} are general and run on every scan. Another {{legalCount}} are for legal writing, {{mediaCount}} for news and {{financialCount}} for finance; they run only when a scan asks for that domain. The checker on this site runs the general rules. The <a href="guide/">Field Guide</a> covers all of them.</p>
+      <p>The rules are deterministic. The same text gives the same result every time with the same engine and the same runtime. The Python and TypeScript engines agree on every text the tests run; they can differ only on characters that one runtime&rsquo;s Unicode version assigns and the other&rsquo;s does not. Nothing is learned from what you paste, and no AI model is involved.</p>
+      <p>The rules match structure. No rule lists the names of people, parties, ideologies, faiths, countries, programs, outlets, institutions or schools, and a lint fails if a rule holds a name or group word from its reference list. There is one exception, which decides only where a sentence ends: a shared list of abbreviations that do not end a sentence holds titles of every major faith (&ldquo;Rev.&rdquo;, &ldquo;Fr.&rdquo;, &ldquo;Rab.&rdquo;, &ldquo;Ust.&rdquo;, &ldquo;Shri.&rdquo;, &ldquo;Ven.&rdquo;) and both parties&rsquo; &ldquo;Rep.&rdquo; and &ldquo;Dem.&rdquo;, treated alike; the lint allows exactly these, in that list only (<a href="https://github.com/biasclear/biasclear/blob/main/rules/RULE_CHANGES.md#party-and-country-abbreviations">why</a>). <a href="guide/#dissent-dismissal">Dissent dismissed</a> marks dismissal words that can be aimed at anyone, such as &ldquo;cranks&rdquo; or &ldquo;shills&rdquo;, and marks a group&rsquo;s name only inside a frame that takes any word, such as &ldquo;Only a ___ would say that&rdquo;.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="reading" aria-labelledby="reading-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">02 &nbsp;How a text is read</p>
+    <h2 id="reading-h">Patterns, then <em>a few plain checks.</em></h2>
+    <div class="body">
+      <ol class="ledger">
+        <li><span class="k">Match.</span><span class="v">Each rule&rsquo;s patterns run over the text. A rule marks a phrase when a pattern matches it. {{minMatchCount}} rules need two or more matches before they mark anything.</span></li>
+        <li><span class="k">Citations.</span><span class="v">{{citedCount}} rules stay quiet when every phrase they would mark has something shaped like a citation within {{citationWindow}} characters: a name and a year in brackets, a footnote number, a legal or page reference. The rules check the shape of a citation, not whether the source exists.</span></li>
+        <li><span class="k">Overlaps.</span><span class="v">Within one rule, overlapping matches are dropped: the earliest is kept, and of two that start together, the longer. Different rules may mark the same words; each one is listed.</span></li>
+        <li><span class="k">Tiers.</span><span class="v">Each move is counted under its tier. The count is a count, not a score.</span></li>
+        <li><span class="k">Length.</span><span class="v">The engines read up to {{engineMax}} characters. This site&rsquo;s checker reads the first {{uiMax}}.</span></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="tested" aria-labelledby="tested-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">03 &nbsp;What is tested</p>
+    <h2 id="tested-h">Same result in every engine. <em>Tested with sides swapped.</em></h2>
+    <div class="body">
+      <div class="figs">
+        <div class="fig"><p class="n">{{goldenV2}}</p><p class="d">texts with every move pinned: {{goldenV1}} from the first version&rsquo;s tests and samples, and {{goldenE3}} written for the current rules. {{goldenUnicode}} more pin how non-English characters are read.</p></div>
+        <div class="fig"><p class="n">{{symPairs}}</p><p class="d">swapped pairs: the same sentence with a name or label traded for its counterpart, from {{symSwaps}} pairs of names and labels. Both sides must raise exactly the same rules.</p></div>
+        <div class="fig"><p class="n">{{redTeamPairs}}</p><p class="d">more pairs from red-team reviews (separate AI review sessions run for this project) that tried to make the rules treat one side differently, and from the fixes that followed. All must pass.</p></div>
+      </div>
+      <ol class="ledger">
+        <li><span class="k">Two engines, one result.</span><span class="v">A Python engine and a TypeScript engine read the same rule pack. A script runs both on every pinned text and every swapped pair, in every domain, and fails on any difference. It runs on Python 3.10 to 3.14 on every change.</span><span class="src">packages/engine/scripts/parity.mjs</span></li>
+        <li><span class="k">This site runs that engine.</span><span class="v">The script this site loads is the engine package&rsquo;s own browser build, byte for byte, and the site&rsquo;s test checks that it gives the same results as the package.</span><span class="src">site/test/site.test.mjs</span></li>
+        <li><span class="k">Swapped sides.</span><span class="v">The swapped pairs trade names between parties and movements, government bodies and think tanks, colleges, news outlets, religions, nationalities, professions, and the two sides of contested questions, in both directions. The people, parties, organizations and outlets in them are made up, each with the shape of a real name; generic government bodies (such as a census bureau), faiths and nationalities are named as they are. {{knownLimits}} pairs that still differ are known limits: the same kind of wording is marked when it is aimed at one side and not when it is aimed at the other. Each has a written reason and runs as a test that is expected to fail, so a fix shows up at once. {{retiredPairs}} more red-team pairs are retired: they set a word no rule may hold (a group&rsquo;s own name, a movement&rsquo;s name, a faith&rsquo;s word) against a common word, or changed the kind of word rather than the side (&ldquo;experts&rdquo; against &ldquo;historians&rdquo;), so they are not mirrors. Each is listed with its reason, and where one has a true mirror, the mirror runs; none is run or counted as a limit. The pairs are also run inside the frames and slots where rules hold word shapes and short lists: &ldquo;Typical ___!&rdquo;, &ldquo;Ignore the ___.&rdquo;, &ldquo;Those ___ are at it again&rdquo;, the group after &ldquo;leading&rdquo;, and the object of &ldquo;destroying&rdquo;.</span><span class="src">tests/test_symmetry.py</span></li>
+        <li><span class="k">No names, no group words.</span><span class="v">A lint rejects any rule whose patterns list two or more proper nouns or acronyms from its reference list, and any rule that holds, even once, a word from its reference list of party, movement, ideology, faith, country and program names and the words built from them, such as &ldquo;anti-&rdquo; forms and slur blends. It cannot know every name, so the swapped pairs check the rules too.</span><span class="src">tests/test_neutrality_lint.py</span></li>
+        <li><span class="k">No side effects.</span><span class="v">The Python engine is checked to write no files, open no network connections and start no processes. The browser engine is built without access to the network or the page, and its bundle is run in an empty sandbox.</span><span class="src">tests/test_no_side_effects.py, packages/engine/test/bundle.test.ts</span></li>
+      </ol>
+      <p class="aside">The counts on this page are read from the repository each time the site is built, by <code>scripts/build-site.mjs</code> and <code>scripts/site_facts.py</code>. The window sizes and the Python versions below are checked against the rules and the CI workflow by <code>tests/test_doc_counts.py</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="misses" aria-labelledby="misses-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">04 &nbsp;What it misses</p>
+    <h2 id="misses-h">What the rules <em>cannot see.</em></h2>
+    <div class="body">
+      <ul class="ledger">
+        <li><span class="k">Other wording.</span><span class="v">The rules know the usual wording of a move. The same move in other words goes unmarked. Each <a href="guide/">Field Guide</a> entry shows examples.</span></li>
+        <li><span class="k">Tone, insinuation, pictures and layout.</span><span class="v">A suggestion made without a claim, or a story told by what is placed first, leaves no wording to match.</span></li>
+        <li><span class="k">Truth.</span><span class="v">It checks shape, not facts. A marked sentence can be true, and an unmarked one can be false.</span></li>
+        <li><span class="k">Who is speaking.</span><span class="v">A quoted dismissal is marked the same as one the writer makes.</span></li>
+        <li><span class="k">Whether a citation is real.</span><span class="v">Something shaped like a citation can quiet a rule, even if it points nowhere.</span></li>
+        <li><span class="k">A group&rsquo;s name used as a label.</span><span class="v">Dissent dismissed holds no group&rsquo;s name. It marks one only inside a frame that takes any word (&ldquo;Ignore the ___.&rdquo;, &ldquo;Typical ___!&rdquo;), so &ldquo;They&rsquo;re just&rdquo; followed by a group&rsquo;s name goes unmarked. A dismissal word it does not know goes unmarked too.</span></li>
+        <li><span class="k">Plain sentences with the same shape.</span><span class="v">A frame cannot tell a jibe from a plain remark, so some ordinary sentences are marked: &ldquo;The fire destroyed our home.&rdquo; and &ldquo;The frost destroyed the petals.&rdquo; read like a claim that one cause ruined everything, and &ldquo;The kids loved these puppets.&rdquo; like a label. They are marked the same way whoever the words are about.</span></li>
+        <li><span class="k">Long names.</span><span class="v">A name slot or a gap between two parts of a rule holds at most 16 words (32 for &ldquo;either &hellip; or&rdquo;; a few short phrase slots hold fewer). A longer name can stop a match, for any side.</span></li>
+        <li><span class="k">Capitalized words.</span><span class="v">A trigger word such as &ldquo;History&rdquo; or &ldquo;Research&rdquo; counts only at the start of a sentence, where a one-word name spelled the same way cannot be told apart from it.</span></li>
+        <li><span class="k">Other languages.</span><span class="v">The rules read English.</span></li>
+      </ul>
+      <p class="aside"><a href="https://github.com/biasclear/biasclear/blob/main/rules/RULE_CHANGES.md">rules/RULE_CHANGES.md</a> lists the {{knownLimits}} known limits and the {{retiredPairs}} retired pairs, each with its reason.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="accuracy" aria-labelledby="accuracy-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">05 &nbsp;Accuracy</p>
+    <h2 id="accuracy-h">Accuracy on new text: <em>not measured yet.</em></h2>
+    <div class="body">
+      <p>Nobody has yet measured how often these rules are right or wrong on text that someone else labeled. Until a script in this repository does that, this site quotes no accuracy figure. Read each mark as a prompt to look closer, not as a finding.</p>
+      <p>The first version of BiasClear published scores. They were measured on the same samples its rules were tuned on, so they said nothing about new text, and they are withdrawn.</p>
+      <p>The plan is to measure each rule on independently labeled data, starting with SemEval-2020 Task&nbsp;11, with a script that fetches the data and never republishes it. The results, and the script that made them, will appear here and in the repository.</p>
+    </div>
+  </div>
+</section>
+</main>

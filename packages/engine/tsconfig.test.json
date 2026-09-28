@@ -1,0 +1,9 @@
+{
+  // The tests. They use a few Node modules, typed by test/node.d.ts, so no
+  // @types/node dependency is needed.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true
+  },
+  "include": ["src", "test"]
+}

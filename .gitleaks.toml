@@ -1,0 +1,22 @@
+# gitleaks configuration: the default rules plus BiasClear-style keys.
+title = "BiasClear secret scan"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "biasclear-api-key"
+description = "BiasClear API key (bc_ prefix)"
+regex = '''bc_[A-Za-z0-9_-]{30,}'''
+keywords = ["bc_"]
+
+# One known false positive, in the retired v1 code at the tag v1-final: a
+# fake key literal that a v1 test hashes. It is not a real key. The allowlist
+# matches only that exact literal, only in that file, only for that rule.
+[[allowlists]]
+description = "Fake key literal in the v1-final snapshot's tests/test_infra.py"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''^tests/test_infra\.py$''']
+regexTarget = "secret"
+regexes = ['''^bc_test_key_12345$''']

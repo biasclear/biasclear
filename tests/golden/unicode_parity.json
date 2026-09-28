@@ -1,0 +1,319 @@
+{
+ "about": "Non-ASCII cases that pin the engines' Unicode semantics (Python's re, which the TypeScript engine emulates). moves are what scan() returns for domain 'all', as [rule_id, start, end] in Unicode code points. native_js_differs says whether plain JavaScript regexes (no translation, UTF-16 counting) would return different moves.",
+ "generated_by": "scripts/make_unicode_golden.py",
+ "rules_version": "2.0.0a4",
+ "cases": [
+  {
+   "src": "unicode:01",
+   "note": "\\b after a match: U+00E9 is a word character, so 'agrees' does not end a word.",
+   "native_js_differs": true,
+   "text": "Everyone agrees\u00e9 with the plan.",
+   "moves": []
+  },
+  {
+   "src": "unicode:02",
+   "note": "\\b before a match: U+00E9 is a word character, so 'Everyone' does not start a word.",
+   "native_js_differs": true,
+   "text": "The panel said \u00e9Everyone agrees with it.",
+   "moves": []
+  },
+  {
+   "src": "unicode:03",
+   "note": "A combining mark (U+0301) is not a word character, so the boundary holds.",
+   "native_js_differs": false,
+   "text": "Everyone agrees\u0301 with the plan.",
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     15
+    ]
+   ]
+  },
+  {
+   "src": "unicode:04",
+   "note": "A letter outside the BMP (U+1D400) is a word character, so no boundary before 'Everyone'.",
+   "native_js_differs": true,
+   "text": "\ud835\udc00Everyone agrees.",
+   "moves": []
+  },
+  {
+   "src": "unicode:05",
+   "note": "A CJK ideograph is a word character, so no boundary before 'Everyone'.",
+   "native_js_differs": true,
+   "text": "\u4e13\u5bb6Everyone agrees.",
+   "moves": []
+  },
+  {
+   "src": "unicode:06",
+   "note": "Offsets after an emoji ZWJ sequence: U+200D is not a word character.",
+   "native_js_differs": false,
+   "text": "\ud83d\udc69\u200d\ud83d\udc69\u200d\ud83d\udc67 Everyone agrees.",
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     6,
+     21
+    ]
+   ]
+  },
+  {
+   "src": "unicode:07",
+   "note": "MEDIA_BURIED_QUALIFIER's .{5,150}? counts code points: 100 emoji fit; 200 UTF-16 units would not.",
+   "native_js_differs": true,
+   "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx However, \ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42 no evidence was found.",
+   "moves": [
+    [
+     "MEDIA_BURIED_QUALIFIER",
+     201,
+     322
+    ]
+   ]
+  },
+  {
+   "src": "unicode:08",
+   "note": "MEDIA_BURIED_QUALIFIER's (?<=.{200}) counts code points: 151 are not enough, though they are 301 UTF-16 units.",
+   "native_js_differs": true,
+   "text": "\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42 However, the report could not be verified.",
+   "moves": []
+  },
+  {
+   "src": "unicode:09",
+   "note": "MEDIA_BURIED_QUALIFIER with exactly 200 code points before the qualifier.",
+   "native_js_differs": false,
+   "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42 However, the report could not be verified.",
+   "moves": [
+    [
+     "MEDIA_BURIED_QUALIFIER",
+     200,
+     241
+    ]
+   ]
+  },
+  {
+   "src": "unicode:10",
+   "note": "FALSE_BINARY's 'either ... or' takes up to 32 words: U+FEFF is not \\s, so 'one\\ufefftwo' is one word and the gap is 32 words; where U+FEFF counts as a space it would be 33.",
+   "native_js_differs": true,
+   "text": "Either one\ufefftwo word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word or we lose.",
+   "moves": [
+    [
+     "FALSE_BINARY",
+     0,
+     172
+    ]
+   ]
+  },
+  {
+   "src": "unicode:11",
+   "note": "\\d matches any decimal digit: Arabic-Indic digits in FIN_ANCHORING.",
+   "native_js_differs": true,
+   "text": "The stock is down \u0665\u0660% from its all-time high.",
+   "moves": [
+    [
+     "FIN_ANCHORING",
+     13,
+     44
+    ]
+   ]
+  },
+  {
+   "src": "unicode:12",
+   "note": "\\d in a citation pattern: an Arabic-Indic digit in brackets is a citation, so the claim is suppressed.",
+   "native_js_differs": true,
+   "text": "Studies show [\u0663] that sleep helps.",
+   "moves": []
+  },
+  {
+   "src": "unicode:13",
+   "note": "\\s includes U+001C (INFORMATION SEPARATOR FOUR).",
+   "native_js_differs": true,
+   "text": "Everyone\u001cagrees with the plan.",
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     15
+    ]
+   ]
+  },
+  {
+   "src": "unicode:14",
+   "note": "\\s includes U+0085 (NEXT LINE).",
+   "native_js_differs": true,
+   "text": "Everyone\u0085agrees with the plan.",
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     15
+    ]
+   ]
+  },
+  {
+   "src": "unicode:15",
+   "note": "\\s excludes U+FEFF (ZERO WIDTH NO-BREAK SPACE), which JavaScript's \\s includes.",
+   "native_js_differs": true,
+   "text": "Everyone\ufeffagrees with the plan.",
+   "moves": []
+  },
+  {
+   "src": "unicode:16",
+   "note": "\\s includes U+00A0 (NO-BREAK SPACE) in both languages.",
+   "native_js_differs": false,
+   "text": "Everyone\u00a0agrees with the plan.",
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     0,
+     15
+    ]
+   ]
+  },
+  {
+   "src": "unicode:17",
+   "note": ". with the s flag matches U+2028 (LINE SEPARATOR).",
+   "native_js_differs": false,
+   "text": "Either we act\u2028now or never.",
+   "moves": [
+    [
+     "FALSE_BINARY",
+     0,
+     20
+    ],
+    [
+     "FEAR_URGENCY",
+     10,
+     17
+    ]
+   ]
+  },
+  {
+   "src": "unicode:18",
+   "note": "Under i, 's' matches U+017F (LONG S).",
+   "native_js_differs": true,
+   "text": "The town was totally de\u017ftroyed.",
+   "moves": [
+    [
+     "TOTALIZING_HARM_LANGUAGE",
+     13,
+     30
+    ]
+   ]
+  },
+  {
+   "src": "unicode:19",
+   "note": "Under i, 'k' matches U+212A (KELVIN SIGN).",
+   "native_js_differs": true,
+   "text": "Just thin\u212a of the children.",
+   "moves": [
+    [
+     "EMOTIONAL_SUBSTITUTION",
+     5,
+     26
+    ]
+   ]
+  },
+  {
+   "src": "unicode:20",
+   "note": "Under i, 'i' matches U+0131 (DOTLESS I).",
+   "native_js_differs": true,
+   "text": "The town was utterly ru\u0131ned.",
+   "moves": [
+    [
+     "TOTALIZING_HARM_LANGUAGE",
+     13,
+     27
+    ]
+   ]
+  },
+  {
+   "src": "unicode:21",
+   "note": "Under i, 'i' matches U+0130 (CAPITAL I WITH DOT ABOVE).",
+   "native_js_differs": true,
+   "text": "The town was utterly ru\u0130ned.",
+   "moves": [
+    [
+     "TOTALIZING_HARM_LANGUAGE",
+     13,
+     27
+    ]
+   ]
+  },
+  {
+   "src": "unicode:22",
+   "note": "Under i, [a-z] matches U+0130 and U+0131 (MEDIA_SELECTIVE_QUOTATION needs two matches).",
+   "native_js_differs": true,
+   "text": "Their \u201c\u0130deal\u201d plan and the \u201c\u0131deal\u201d approach.",
+   "moves": [
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     0,
+     13
+    ],
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     23,
+     34
+    ]
+   ]
+  },
+  {
+   "src": "unicode:23",
+   "note": "\\W is Unicode-aware: a scare-quoted label with accented letters ([^\\W\\d_]) counts toward MEDIA_SELECTIVE_QUOTATION's two quotes; where \\W is ASCII-only it would not.",
+   "native_js_differs": true,
+   "text": "The so-called \"Qu\u00e9b\u00e9cois\" pushed their \"values\" again.",
+   "moves": [
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     4,
+     25
+    ],
+    [
+     "MEDIA_SELECTIVE_QUOTATION",
+     33,
+     47
+    ]
+   ]
+  },
+  {
+   "src": "unicode:24",
+   "note": "The citation window counts code points: the citation is 106 code points (206 UTF-16 units) past the claim.",
+   "native_js_differs": true,
+   "text": "Studies show that \ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42 (Smith, 2020).",
+   "moves": []
+  },
+  {
+   "src": "unicode:25",
+   "note": "Lookup quirk: U+0130 lowercases to two code points, and the index found in the lowercased text is used in the original, so the window shifts right and reaches this citation.",
+   "native_js_differs": false,
+   "text": "\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130 studies show and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and (Smith, 2020).",
+   "moves": []
+  },
+  {
+   "src": "unicode:26",
+   "note": "Control for the case above: without the shift, the same citation is out of reach.",
+   "native_js_differs": false,
+   "text": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII studies show and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and and (Smith, 2020).",
+   "moves": [
+    [
+     "CLAIM_WITHOUT_CITATION",
+     61,
+     73
+    ]
+   ]
+  },
+  {
+   "src": "unicode:27",
+   "note": "A lone surrogate counts as one code point and is not a word character.",
+   "native_js_differs": false,
+   "text": "\ud800 Everyone agrees.",
+   "moves": [
+    [
+     "CONSENSUS_AS_EVIDENCE",
+     2,
+     17
+    ]
+   ]
+  }
+ ]
+}
