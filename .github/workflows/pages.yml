@@ -48,7 +48,7 @@ jobs:
       # Only pytest (for scripts/site_facts.py), pinned by hash with its
       # dependencies, so no unpinned package runs in the job that builds the site.
       - name: Install pytest (pinned by hash)
-        run: python -m pip install --quiet --no-deps --only-binary=:all: --require-hashes -r .github/requirements-site.txt
+        run: python -m pip install --quiet --no-deps --only-binary=":all:" --require-hashes -r .github/requirements-site.txt
 
       - name: Install the engine's build tools
         working-directory: packages/engine
