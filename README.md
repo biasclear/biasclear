@@ -174,6 +174,11 @@ The tiers come from Persistent Influence Theory. To cite the preprint:
 }
 ```
 
-## Contact
+## Support and contact
 
-hello@biasclear.com
+BiasClear is free and open source, and it stays that way.
+
+- **Follow along:** star or watch this repository to see new rules, the first measured numbers and the first release.
+- **Questions and ideas:** start a thread in [Discussions](https://github.com/biasclear/biasclear/discussions), or [open an issue](https://github.com/biasclear/biasclear/issues).
+- **Support the work:** [sponsor it on GitHub](https://github.com/sponsors/bws82). Sponsorship pays for the time to write and test new rules and to measure every rule on data someone else labeled.
+- **Email:** hello@biasclear.com
