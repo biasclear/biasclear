@@ -1,7 +1,7 @@
 {
  "about": "What the current rule pack returns on every v1 golden text (and on the e3: texts written for the rules E3 added or changed), for domain 'all', as [rule_id, start, end] in Unicode code points. changed_rules are the rules whose matching changed after v1 (rules/RULE_CHANGES.md); for them this file replaces v1 parity. For every other rule the moves here equal v1_parity.json's.",
  "generated_by": "scripts/make_v2_golden.py",
- "rules_version": "2.0.0a4",
+ "rules_version": "2.0.0a5",
  "changed_rules": [
   "APPEAL_TO_TRADITION",
   "CAUSAL_TOTALIZATION",

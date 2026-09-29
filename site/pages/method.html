@@ -43,7 +43,7 @@
     <div class="body">
       <ol class="ledger">
         <li><span class="k">Match.</span><span class="v">Each rule&rsquo;s patterns run over the text. A rule marks a phrase when a pattern matches it. {{minMatchCount}} rules need two or more matches before they mark anything.</span></li>
-        <li><span class="k">Citations.</span><span class="v">{{citedCount}} rules stay quiet when every phrase they would mark has something shaped like a citation within {{citationWindow}} characters: a name and a year in brackets, a footnote number, a legal or page reference. The rules check the shape of a citation, not whether the source exists.</span></li>
+        <li><span class="k">Citations.</span><span class="v">{{citedCount}} rules check for citation shapes around the first case-insensitive occurrence of each matching phrase, within {{citationWindow}} characters on either side. These include a name and a year in brackets, a footnote number, a legal or page reference. A rule stays quiet only when all these windows contain a citation shape; otherwise citation suppression removes none of its matches. The rules check the shape, not whether the source exists. <a href="#citation-limits">Repeated wording can hide an unsourced claim</a>.</span></li>
         <li><span class="k">Overlaps.</span><span class="v">Within one rule, overlapping matches are dropped: the earliest is kept, and of two that start together, the longer. Different rules may mark the same words; each one is listed.</span></li>
         <li><span class="k">Tiers.</span><span class="v">Each move is counted under its tier. The count is a count, not a score.</span></li>
         <li><span class="k">Length.</span><span class="v">The engines read up to {{engineMax}} characters. This site&rsquo;s checker reads the first {{uiMax}}.</span></li>
@@ -82,6 +82,7 @@
     <h2 id="misses-h">What the rules <em>cannot see.</em></h2>
     <div class="body">
       <ul class="ledger">
+        <li id="citation-limits"><span class="k">Repeated wording and citations.</span><span class="v">Citation checks use the first occurrence of a matching phrase, even for a later copy. A cited &ldquo;Studies show&rdquo; near the start can silence an unsourced &ldquo;Studies show&rdquo; much later. Lowercasing can also shift these windows for characters such as &ldquo;&#304;&rdquo;. These are inherited engine limits.</span></li>
         <li><span class="k">Other wording.</span><span class="v">The rules know the usual wording of a move. The same move in other words goes unmarked. Each <a href="guide/">Field Guide</a> entry shows examples.</span></li>
         <li><span class="k">Tone, insinuation, pictures and layout.</span><span class="v">A suggestion made without a claim, or a story told by what is placed first, leaves no wording to match.</span></li>
         <li><span class="k">Truth.</span><span class="v">It checks shape, not facts. A marked sentence can be true, and an unmarked one can be false.</span></li>

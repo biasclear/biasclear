@@ -37,7 +37,7 @@ Each move has a `rule_id`, a `name`, a `tier`, a `domain`, a `severity` (a hand-
 - **Not a fact-checker.** It checks the shape of the wording, not the facts. A marked sentence can be true, and an unmarked one can be false.
 - **No truth score, no verdict.** It names moves and counts them by tier.
 - **Not an AI model.** The rules are fixed patterns, and nothing is learned from what you scan.
-- **Not complete.** It misses persuasion put in other words, tone and insinuation, and anything not in English.
+- **Not complete.** It misses persuasion put in other words, tone and insinuation. It is designed for English; coverage in other languages has not been evaluated.
 
 The rules are an alpha and will change. How often they are right on new text has not been measured yet.
 

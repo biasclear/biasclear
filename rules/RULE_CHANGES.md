@@ -11,6 +11,12 @@ The examples below are test inputs, each paired with its mirror, and some quote 
 
 The rule behind all of it is "Neutrality" in `AGENTS.md`: rules match structure, never named people, parties, outlets, institutions, schools or ideologies. What the tests show for rules 2.0.0a4, as `scripts/site_facts.py` counts it: 9,793 swapped pairs raise the same rules on both sides (8,313 template pairs and 1,480 red-team pairs), 20 known limits are listed with their reasons (below), and name slots and gaps hold up to 16 tokens, so a longer name can still stop a match. That is what "names are read more alike" means here, and no more.
 
+## Rules version 2.0.0a5 (preview review)
+
+`INSTITUTIONAL_POSITION_AS_SETTLED` checks for a lowercase continuation after all whitespace following a sentence-ending period or exclamation mark. Previously its sentence start checked only the next character, while its body skipped the whole whitespace run. Repeating `a.  a ` therefore started a new search at every period and rescanned the remaining input. The correction makes both checks treat repeated and mixed whitespace alike.
+
+The Python and TypeScript regression fixtures include repeated spaces, tab-plus-space and nonbreaking-space-plus-space. Semantic controls retain uppercase assertions, lowercase continuations, abbreviations and evidence-backed exceptions. The existing 693 golden cases have unchanged text and expected moves; only their rules-version metadata changes. The Method page and all six affected Field Guide entries also disclose the inherited first-occurrence citation limit; citation behavior is unchanged.
+
 ## Left out of 2.0.0a1
 
 v1 had 42 deterministic rules. 2.0.0a1 left out every rule whose regexes contain an alternation of two or more proper nouns, because a rule like that treats the same sentence differently depending on which name is in it. The pairs below were run through the v1 engine (`v1-final`), with a name from the rule's list on the left and a name not on it on the right: each left sentence was flagged and each right one was not.
@@ -50,7 +56,7 @@ The rules were case-insensitive and could not tell where a name ends, so "The Ce
 
 "Before" is v1 (rules 2.0.0a1). "Now" is rules 2.0.0a4, after the red team's five rounds, the site review and the first fix round; the sections below say which round changed what.
 
-| Rule | Before | Now (rules 2.0.0a4) |
+| Rule | Before | Now (rules 2.0.0a5) |
 |---|---|---|
 | `CREDENTIAL_AS_PREMISE` | v1's `CREDENTIAL_AS_PROOF` named five schools and two prizes | New. Any `<word>-educated/-trained/-schooled/-taught` (or `<Name> educated/trained/schooled`) or `<word>-winning` credential; any capitalized name before "winner", "recipient", "laureate", "Fellow" or "Scholar"; or a status word ("renowned", "leading", "respected", "tenured", "ordained", "licensed", "registered", "chartered", "emeritus"), followed within 16 name tokens by "says", "insists", "knows" and similar. "as a/an <role>, I know / can tell you" (a role of up to 16 name tokens; "as a first step" and "as a general rule" are left out, "as a first responder" counts); "with 30 / five / twenty-five years of experience, I know"; "my credentials speak for themselves". A capitalized status word that starts a speaker's name ("Distinguished Professor Smith says") is part of the name. Lists no school, prize or role. |
 | `INSTITUTIONAL_POSITION_AS_SETTLED` | v1's `INSTITUTIONAL_NEUTRALITY` flagged "the <agency> has concluded" for ten named agencies only | New. Any subject, capitalized or not ("the CIC", "the unions", "organized labor", "wren oakes", "450.org", "Élysée"), followed by "has/have concluded / confirmed / determined / established / found / made clear that", with no evidence clause in the same sentence ("because", "based on", "according to", "citing", "in light of", or a lowercase evidence noun that heads its phrase: "the data agree", "after a review of the data", but not "a hearth research council briefing") and no citation nearby. Pronouns ("I", "we", "they") and documents after a determiner ("the study") are not subjects. A dotted initialism or an abbreviation ("U.S.", "Dr.") does not end the sentence. |

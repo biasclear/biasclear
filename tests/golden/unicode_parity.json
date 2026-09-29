@@ -1,7 +1,7 @@
 {
  "about": "Non-ASCII cases that pin the engines' Unicode semantics (Python's re, which the TypeScript engine emulates). moves are what scan() returns for domain 'all', as [rule_id, start, end] in Unicode code points. native_js_differs says whether plain JavaScript regexes (no translation, UTF-16 counting) would return different moves.",
  "generated_by": "scripts/make_unicode_golden.py",
- "rules_version": "2.0.0a4",
+ "rules_version": "2.0.0a5",
  "cases": [
   {
    "src": "unicode:01",

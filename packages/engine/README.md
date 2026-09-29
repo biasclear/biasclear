@@ -96,11 +96,11 @@ npm run build
 
 | File | What | Size | Gzipped |
 |---|---|---|---|
-| `dist/index.js` | ES module (not minified) | 558.7 KB | 53.0 KB |
+| `dist/index.js` | ES module (not minified) | 558.8 KB | 53.0 KB |
 | `dist/biasclear.iife.min.js` | minified browser bundle (global `BiasClear`) | 546.1 KB | 50.9 KB |
 | `dist/*.d.ts` | type declarations | | |
 
-Both bundles include the whole rule pack, which is most of their size. The sizes are what `scripts/build.mjs` prints for rules version 2.0.0a4 (1 KB is 1,024 bytes; gzip at level 9). The browser bundle's budget is 60 KB gzipped (`GZIP_BUDGET` in `scripts/build.mjs`), and it uses 50.9 KB, 85% of it. The build fails if the bundle goes over. `test/bundle.test.ts` checks this table, the rules version and the share of the budget against the built files, so a rule change that moves a size updates this table too.
+Both bundles include the whole rule pack, which is most of their size. The sizes are what `scripts/build.mjs` prints for rules version 2.0.0a5 (1 KB is 1,024 bytes; gzip at level 9). The browser bundle's budget is 60 KB gzipped (`GZIP_BUDGET` in `scripts/build.mjs`), and it uses 50.9 KB, 85% of it. The build fails if the bundle goes over. `test/bundle.test.ts` checks this table, the rules version and the share of the budget against the built files, so a rule change that moves a size updates this table too.
 
 The engine needs RegExp lookbehind and Unicode property escapes (Chrome 64, Firefox 78, Safari 16.4), and the bundles use ES2020 syntax such as `??` (Chrome 80, Firefox 72, Safari 13.1). So: Chrome 80, Firefox 78 or Safari 16.4 or later, and Node 22.12 or later for the tooling.
 

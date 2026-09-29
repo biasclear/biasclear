@@ -22,6 +22,11 @@ const SENTENCE_ENDS = [
   "Dr.) ",
   "A.\" ",
   "\u201cWhy?\u201d \u201cYes.\u201d \u201cIs it done?\u201d ",
+  // Rules 2.0.0a5: skip every following space before testing lowercase.
+  "a.  a ",
+  "a!  a ",
+  "a.\t a ",
+  "a.\u00a0 a ",
   " ",
   "\n",
   "\t",
@@ -90,6 +95,20 @@ function bestOfThree(re: RegExp, text: string): number {
   }
   return best;
 }
+
+it.each(["  ", "\t ", "\u00a0 "])("reads an institutional sentence boundary across %j", (separator) => {
+  const prefix = "The meeting ended." + separator;
+  const moves = scan(prefix + "The agency has concluded that it works.").moves
+    .filter((m) => m.ruleId === "INSTITUTIONAL_POSITION_AS_SETTLED");
+  expect(moves.map((m) => [m.start, m.match])).toEqual([
+    [prefix.length - 1, " The agency has concluded that"],
+  ]);
+  expect(scan(prefix + "the agency has concluded that it works.").moves
+    .filter((m) => m.ruleId === "INSTITUTIONAL_POSITION_AS_SETTLED")
+    .map((m) => [m.start, m.match])).toEqual([[0, prefix + "the agency has concluded that"]]);
+  expect(scan(prefix + "The agency has concluded that it works, based on research.").moves
+    .filter((m) => m.ruleId === "INSTITUTIONAL_POSITION_AS_SETTLED")).toEqual([]);
+});
 
 it("runs every regex in under 50 ms on 20,000-character adversarial strings", () => {
   const pack = readPack();

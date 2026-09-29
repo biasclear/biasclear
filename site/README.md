@@ -11,7 +11,7 @@ node scripts/build-site.mjs        # writes _site/ (gitignored)
 node scripts/serve-site.mjs        # http://127.0.0.1:8080/biasclear/
 ```
 
-`scripts/build-site.mjs` builds the engine first and copies its browser bundle (`packages/engine/dist/biasclear.iife.min.js`) into the site unchanged, so the site always runs the tested engine and the current rule pack. It reads the rule pack, `site/data/`, the citation in `README.md`, and the test counts from `scripts/site_facts.py`, then checks every claim the pages make from that data with the engine and stops if one fails. `PYTHON` picks the Python that runs `site_facts.py` (default `python3`).
+`scripts/build-site.mjs` builds the engine first and copies its browser bundle (`packages/engine/dist/biasclear.iife.min.js`) into the site unchanged, so the site always runs the tested engine and the current rule pack. It reads the rule pack, `site/data/`, the citation in `README.md`, and the test counts from `scripts/site_facts.py`, then checks the engine examples, rule coverage, tier labels and generated counts and stops if one fails. These checks do not verify every prose claim. `PYTHON` picks the Python that runs `site_facts.py` (default `python3`).
 
 `scripts/serve-site.mjs` serves `_site/` under `/biasclear/`, as GitHub Pages serves a project site, so the relative links are tried the way they will be used. It sends `no-store`, so an edit shows at once; `--pages-cache` sends GitHub Pages' ten-minute cache instead, which the request counter's behavior depends on.
 

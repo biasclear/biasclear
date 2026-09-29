@@ -21,7 +21,7 @@ Open **[biasclear.github.io/biasclear](https://biasclear.github.io/biasclear/)**
 - **No cookies, no accounts.** Nothing to sign up for.
 - **The moves are explained.** The [Field Guide](https://biasclear.github.io/biasclear/guide/) shows how they work, with examples and what the rules miss.
 
-It is an alpha: 43 rules, rules version 2.0.0a4. How often the rules are right on new text has not been measured yet. See [Status and roadmap](#status-and-roadmap).
+It is an alpha: 43 rules, rules version 2.0.0a5. How often the rules are right on new text has not been measured yet. See [Status and roadmap](#status-and-roadmap).
 
 ## What it catches
 
@@ -54,7 +54,7 @@ A tier says how a move works, not how serious it is. The [Field Guide](https://b
 - **Not about people or parties.** The rules match wording, not names. No rule lists the names of people, parties, ideologies, faiths, countries, programs, outlets, institutions or schools, and [a lint](tests/test_neutrality_lint.py) fails if a rule holds a word from its reference list of such names.
 - **One exception, for sentence ends.** A shared list of abbreviations that do not end a sentence holds titles of every major faith ("Rev.", "Fr.", "Rab.", "Ust.", "Shri.", "Ven.") and both parties' "Rep." and "Dem.", treated alike. It decides only where a sentence ends, and the lint allows exactly these, in that list only ([why](rules/RULE_CHANGES.md#party-and-country-abbreviations)).
 - **Not an AI model.** The rules are fixed patterns, and nothing is learned from what you paste. The same text gives the same result every time with the same engine and runtime. The Python and TypeScript engines agree on every text the tests run; they can differ only on characters newer than one runtime's Unicode version ([packages/engine](packages/engine/README.md)).
-- **Not complete.** It misses persuasion put in other words, tone and insinuation, and anything not in English. A quoted dismissal is marked the same as one the writer makes. The [Method page](https://biasclear.github.io/biasclear/method.html#misses) lists what the rules cannot see.
+- **Not complete.** It misses persuasion put in other words, tone and insinuation. It is designed for English; coverage in other languages has not been evaluated. A quoted dismissal is marked the same as one the writer makes. The [Method page](https://biasclear.github.io/biasclear/method.html#misses) lists what the rules cannot see.
 
 ## Swapped-side tests
 
@@ -125,7 +125,7 @@ The same engine in TypeScript, for browsers and Node, with no runtime dependenci
 
 ## Status and roadmap
 
-Public preview. The Python package is version 2.0.0a1 and the rules are version 2.0.0a4, both alphas. The rules will change. Every scan from the Python and TypeScript engines returns the rules version and a hash of the exact rules that ran; the site shows the version in its header. [CHANGELOG.md](CHANGELOG.md) has the details.
+Public preview. The Python package is version 2.0.0a1 and the rules are version 2.0.0a5, both alphas. The rules will change. Every scan from the Python and TypeScript engines returns the rules version and a hash of the exact rules that ran; the site shows the version in its header. [CHANGELOG.md](CHANGELOG.md) has the details.
 
 Next:
 
@@ -154,7 +154,7 @@ The first version of BiasClear made claims that did not hold. They are withdrawn
 - It called itself neutral, but two of its rules held lists of named institutions and schools, so the same sentence was flagged or not depending on the name in it.
 - It issued "certificates" that verified nothing.
 
-v2 replaced those rules with rules that match structure only, tests every rule with swapped pairs, and publishes no numbers until a script in this repo measures them on data someone else labeled. The retired v1 code, which the PIT preprint refers to, will be kept at the tag `v1-final`, which is added to this repository after this first version is published.
+v2 replaced those rules with rules that match structure only, tests every rule with swapped pairs, and publishes no accuracy figures until a script in this repo measures them on data someone else labeled. The retired v1 code, which the PIT preprint refers to, will be kept at the tag `v1-final`, which is added to this repository after this first version is published.
 
 ## License
 

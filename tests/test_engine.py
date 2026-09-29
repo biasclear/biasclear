@@ -202,6 +202,7 @@ def test_award_names_are_read_in_linear_time(mark):
 
 # Sentence ends with a closing mark, quoted dialogue and bare whitespace.
 SENTENCE_ENDS = ["A?\u201d ", "A.) ", "Dr.) ", "A.\" ", "\u201cWhy?\u201d \u201cYes.\u201d \u201cIs it done?\u201d ",
+                 "a.  a ", "a!  a ", "a.\t a ", "a.\u00a0 a ",
                  " ", "\n", "\t", "\u00a0"]
 
 
@@ -224,6 +225,25 @@ def test_leading_whitespace_before_a_long_first_sentence_is_linear():
     assert [m["rule_id"] for m in scan("   Shocking news today: the plan failed.", "media")["moves"]] == [
         "MEDIA_EMOTIONAL_LEAD"
     ]
+
+
+@pytest.mark.parametrize("separator", ["  ", "\t ", "\u00a0 "])
+def test_institutional_sentence_boundary_reads_all_following_whitespace(separator):
+    prefix = "The meeting ended." + separator
+    claim = "The agency has concluded that it works."
+    moves = [m for m in scan(prefix + claim)["moves"]
+             if m["rule_id"] == "INSTITUTIONAL_POSITION_AS_SETTLED"]
+    assert [(m["start"], m["match"]) for m in moves] == [
+        (len(prefix) - 1, " The agency has concluded that")
+    ]
+    # A lowercase continuation stays in the first sentence's span.
+    continuation = [m for m in scan(prefix + "the agency has concluded that it works.")["moves"]
+                    if m["rule_id"] == "INSTITUTIONAL_POSITION_AS_SETTLED"]
+    assert [(m["start"], m["match"]) for m in continuation] == [
+        (0, prefix + "the agency has concluded that")
+    ]
+    assert not [m for m in scan(prefix + claim[:-1] + ", based on research.")["moves"]
+                if m["rule_id"] == "INSTITUTIONAL_POSITION_AS_SETTLED"]
 
 
 def test_min_matches():
