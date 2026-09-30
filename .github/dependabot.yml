@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  # Packages pinned by hash in .github/: pytest and its dependencies for the
+  # Pages workflow (requirements-site.txt), and build, hatchling and theirs
+  # for the Release workflow (requirements-release.txt)
+  - package-ecosystem: "pip"
+    directory: "/.github"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  # the engine's build tools; esbuild makes the bundle the site serves
+  - package-ecosystem: "npm"
+    directory: "/packages/engine"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/biasclear/biasclear/blob/main/rules/schema.json",
+  "title": "BiasClear rule pack",
+  "description": "Deterministic rules that name structural persuasion moves. Every engine (Python, TypeScript) reads the same pack. Regexes are written in the common subset of Python `re` and ECMAScript `RegExp`: no inline flags, no named or capturing groups, no backreferences, no possessive quantifiers or atomic groups, fixed-width lookbehind only, and no escapes outside the subset (tests/test_regex_subset.py). Syntax is shared; a few character classes are not identical on non-ASCII text: Python's `\\w`, `\\b` and `\\d` are Unicode-aware while JavaScript's are ASCII-only, and `\\s` differs on U+001C to U+001F, U+0085 and U+FEFF. `rules_hash` is the SHA-256 of the pack in RFC 8785 canonical JSON, UTF-8 encoded.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "rules_version", "tiers", "citation_suppression", "rules"],
+  "properties": {
+    "schema_version": {
+      "description": "Version of this schema. Bumped only when the pack's shape changes.",
+      "const": "1"
+    },
+    "rules_version": {
+      "description": "Version of the rule content (PEP 440). Any change to any rule needs a new version.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+((a|b|rc)[0-9]+)?$"
+    },
+    "tiers": {
+      "description": "Persistent Influence Theory tiers, keyed by tier number, so a result can always show its tier as text.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["1", "2", "3"],
+      "properties": {
+        "1": { "$ref": "#/$defs/tier" },
+        "2": { "$ref": "#/$defs/tier" },
+        "3": { "$ref": "#/$defs/tier" }
+      }
+    },
+    "citation_suppression": {
+      "description": "Used only by rules with suppress_if_cited. A triggered rule is dropped when every one of its matches has a citation nearby. For each match: find the FIRST case-insensitive occurrence of the matched text in the whole input (lowercase both, then plain substring search; this can be an earlier occurrence than the match itself), take `window` characters before it and after its end, clipped to the input, and search that slice of the original text with each pattern. If the lowercased match is not found, it counts as not cited. Ported unchanged from v1.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["window", "flags", "patterns"],
+      "properties": {
+        "window": { "type": "integer", "minimum": 0 },
+        "flags": { "$ref": "#/$defs/flags" },
+        "patterns": {
+          "description": "A match of any one pattern counts as a citation.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/regex" }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/rule" }
+    }
+  },
+  "$defs": {
+    "flags": {
+      "description": "Regex flags: i = case-insensitive, s = dot matches newlines. Engines add their own flag for finding every match.",
+      "enum": ["", "i", "s", "is"]
+    },
+    "regex": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "alias", "description"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "alias": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "name", "description", "pit_tier", "domain", "severity", "principle",
+        "indicators", "min_matches", "suppress_if_cited", "flags"
+      ],
+      "properties": {
+        "id": {
+          "description": "Stable identifier. Never reused for a different move.",
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "pit_tier": { "enum": [1, 2, 3] },
+        "domain": {
+          "description": "general rules always run; a domain's rules run when that domain (or all) is requested.",
+          "enum": ["general", "legal", "media", "financial"]
+        },
+        "severity": { "enum": ["low", "moderate", "high", "critical"] },
+        "principle": { "enum": ["Truth", "Justice", "Clarity", "Agency", "Identity"] },
+        "indicators": {
+          "description": "Every non-overlapping match of every indicator is found, in order. Zero-length matches are ignored.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/regex" }
+        },
+        "min_matches": {
+          "description": "The rule triggers when the total number of matches across all indicators (before overlap removal) is at least this.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "suppress_if_cited": {
+          "description": "If true, apply citation_suppression to this rule.",
+          "type": "boolean"
+        },
+        "flags": { "$ref": "#/$defs/flags" }
+      }
+    }
+  }
+}

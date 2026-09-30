@@ -1,0 +1,12 @@
+# Informational only. GitHub can't enforce code-owner review while every agent acts
+# through the owner's account, so code-owner review is off in the ruleset.
+# The rule lives in AGENTS.md ("Merging"): the owner merges any PR that touches these paths.
+# Keep this list identical to the protected-path list in AGENTS.md; change both together.
+# No owner is named: the file lists the protected paths only, and names no
+# personal account.
+/AGENTS.md
+/CLAUDE.md
+LICENSE*
+/README.md
+/.github/
+/ops/BLUEPRINT.md

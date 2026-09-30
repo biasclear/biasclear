@@ -1,0 +1,184 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# The ruleset on main requires these four checks by name: test, security,
+# secret-scan, sast. Keep the job names stable.
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: |
+            3.10
+            3.11
+            3.12
+            3.13
+            3.14
+
+      # Node for the JavaScript regex cross-check in pytest and for the
+      # TypeScript engine below.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      # One job, so the required check is exactly "test".
+      - name: pytest on Python 3.10, 3.11, 3.12, 3.13 and 3.14
+        run: |
+          set -euo pipefail
+          for v in 3.10 3.11 3.12 3.13 3.14; do
+            echo "::group::Python $v"
+            "python$v" -m venv "$RUNNER_TEMP/venv-$v"
+            "$RUNNER_TEMP/venv-$v/bin/python" -m pip install --quiet --upgrade pip
+            "$RUNNER_TEMP/venv-$v/bin/python" -m pip install --quiet ".[test]"
+            "$RUNNER_TEMP/venv-$v/bin/python" -m pytest -q
+            echo "::endgroup::"
+          done
+
+      # Typecheck, build, unit tests (golden files, ReDoS guard, bundle size
+      # and purity), then parity with the Python engine on every golden and
+      # symmetry text, once per Python version. Reuses the venvs above.
+      - name: TypeScript engine, with parity against Python 3.10 to 3.14
+        working-directory: packages/engine
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          PYTHON="$RUNNER_TEMP/venv-3.14/bin/python" npm test
+          for v in 3.10 3.11 3.12 3.13; do
+            echo "::group::Parity with Python $v"
+            PYTHON="$RUNNER_TEMP/venv-$v/bin/python" npm run parity
+            echo "::endgroup::"
+          done
+
+      # The website: builds it (engine included) in a temporary folder and
+      # checks what it would ship: the security policy on every page, no
+      # third-party requests, every link resolving, the engine bundle
+      # identical to the package's, and every claim in site/data/ against
+      # the engine. PYTHON counts the symmetry tests for the Method page.
+      - name: Website build and checks
+        run: |
+          set -euo pipefail
+          PYTHON="$RUNNER_TEMP/venv-3.14/bin/python" node --test site/test/site.test.mjs
+
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install build and pip-audit
+        run: python -m pip install --quiet "build==1.6.1" "pip-audit==2.10.1"
+
+      - name: Build the wheel
+        run: python -m build --wheel --outdir dist .
+
+      - name: List the wheel's runtime dependencies
+        run: |
+          python scripts/wheel_requirements.py dist/*.whl > wheel-requirements.txt
+          echo "Runtime dependencies declared by the wheel (expected: none):"
+          cat wheel-requirements.txt
+
+      - name: Audit them
+        run: pip-audit --strict --requirement wheel-requirements.txt
+
+      - name: Install the wheel and scan from outside the source tree
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-venv"
+          "$RUNNER_TEMP/wheel-venv/bin/python" -m pip install --quiet dist/*.whl
+          cd "$RUNNER_TEMP"
+          echo "Everyone agrees this is right." | "$RUNNER_TEMP/wheel-venv/bin/python" -m biasclear | grep -q CONSENSUS_AS_EVIDENCE
+
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+      # sha256 of gitleaks_8.30.1_linux_x64.tar.gz, from the release's checksums file
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # scan the full history
+
+      - name: Install gitleaks (pinned, checksum verified)
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/gitleaks.tar.gz"
+          curl -sSfL -o "$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $archive" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RUNNER_TEMP" gitleaks
+
+      - name: Scan every commit
+        run: |
+          "$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner --verbose --exit-code 1 .
+
+  sast:
+    name: sast
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SEMGREP_VERSION: "1.178.0"
+      # semgrep/semgrep-rules, develop branch, 2026-09-22
+      SEMGREP_RULES_SHA: "a84ff9cc2453ca91d581380de4b8b3f272f6f4be"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Semgrep (pinned)
+        run: python -m pip install --quiet "semgrep==${SEMGREP_VERSION}"
+
+      - name: Fetch the Semgrep community rules (pinned)
+        run: |
+          set -euo pipefail
+          git init -q "$RUNNER_TEMP/semgrep-rules"
+          cd "$RUNNER_TEMP/semgrep-rules"
+          git fetch -q --depth 1 https://github.com/semgrep/semgrep-rules "$SEMGREP_RULES_SHA"
+          git checkout -q FETCH_HEAD
+
+      - name: Semgrep on src/ (Python security, correctness, best practice)
+        run: |
+          rules="$RUNNER_TEMP/semgrep-rules/python/lang"
+          semgrep scan --metrics=off --disable-version-check --error \
+            --config "$rules/security" \
+            --config "$rules/correctness" \
+            --config "$rules/best-practice" \
+            src/
+
+      # The website's own scripts handle pasted and clipboard text; the site
+      # test also bans innerHTML, eval and the like by name.
+      - name: Semgrep on site/js (browser JavaScript security)
+        run: |
+          rules="$RUNNER_TEMP/semgrep-rules/javascript"
+          semgrep scan --metrics=off --disable-version-check --error \
+            --config "$rules/browser/security" \
+            --config "$rules/lang/security" \
+            site/js

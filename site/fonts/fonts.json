@@ -1,0 +1,35 @@
+{
+  "about": "The site's typefaces, copied from these npm packages by scripts/vendor-fonts.mjs. Each tarball was checked against the registry's sha512 integrity; sha256 is of each copied file. Both typefaces are licensed under the SIL Open Font License 1.1 (see the license files).",
+  "packages": [
+    {
+      "name": "@fontsource-variable/newsreader",
+      "version": "5.3.0",
+      "integrity": "sha512-rrzYi43qMpbzwuFtf9OkWH8sxAPVPcQQQEwXpPtwaKYeJ8yVg5aLs5kawmo1f2Q1t1M38TLmEKCkGVDsYwgdFw==",
+      "family": "Newsreader",
+      "license": "OFL-1.1",
+      "license_file": "OFL-Newsreader.txt",
+      "files": {
+        "newsreader-latin-opsz-normal.woff2": "6e4f2958c3a7c4a80acde4e5a679abe7e01bc1e30b92be3c7a8b696ef401d101",
+        "newsreader-latin-opsz-italic.woff2": "5dfcd10d24af8c82927ba57f7983dd997f7b200594c09c35a1b1ed9fc4597506",
+        "newsreader-latin-ext-opsz-normal.woff2": "45683de03de37187604102316c0b42c0cb2d8dc9c4140a20ad471c3148cc1278",
+        "newsreader-latin-ext-opsz-italic.woff2": "bb24f6648f75d909eb74535916015c97ef72a1344e532ec7bbaf3f80eb6f389f",
+        "OFL-Newsreader.txt": "26028ec4e13b650065fa525a09532176f8a668b76ff849ea01c564a7480f91e7"
+      }
+    },
+    {
+      "name": "@fontsource/dm-mono",
+      "version": "5.3.0",
+      "integrity": "sha512-OINjI8C1S/wpchhQxl7njZdMn4+hnDCpQ4YtvvOpKNARo+0J8O1x1IcrChxNjHOhfVv1by8C/FQoy3hXK+C1Ug==",
+      "family": "DM Mono",
+      "license": "OFL-1.1",
+      "license_file": "OFL-DM-Mono.txt",
+      "files": {
+        "dm-mono-latin-400-normal.woff2": "e1896b13b2b1bb112fac2f9571bd6c40e118746e77a4511edbf43fbb41bf3e1e",
+        "dm-mono-latin-500-normal.woff2": "9964608a849396bd00c4bfd7034afe03486469dcf20b4f6b8cbdfdd310369951",
+        "dm-mono-latin-ext-400-normal.woff2": "a52e19ebe0398c9c0f8fa28a0c5e9a6bc324f35d9f0881c9aa407d10af447175",
+        "dm-mono-latin-ext-500-normal.woff2": "8711f938c3f04f91e35ae64ebc7f2eecd800d2ae1c3542f6c837c758a50422f5",
+        "OFL-DM-Mono.txt": "d2766c396a8534cba53340f8af2037749b6a0a1dd3587348c917a70e779d2e32"
+      }
+    }
+  ]
+}

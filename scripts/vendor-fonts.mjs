@@ -1,0 +1,178 @@
+// Vendor the site's two typefaces, so the site serves them itself and no
+// page ever asks a third party for a font.
+//
+// Both come from their npm packages, which repackage the Google Fonts
+// releases under the SIL Open Font License 1.1:
+//
+//   @fontsource-variable/newsreader  Newsreader (variable: weight and optical size)
+//   @fontsource/dm-mono              DM Mono (static weights 400 and 500)
+//
+// For each pinned package this script runs `npm pack` (so npm's own proxy
+// and registry settings apply), checks the tarball against the pinned
+// sha512 integrity from the registry, and copies the listed woff2 files and
+// the package's license into site/fonts/. It then writes:
+//
+//   site/fonts/fonts.json   where each file came from, and its sha256
+//   site/css/fonts.css      the @font-face rules, with the packages' own
+//                           unicode ranges
+//
+// The site test (site/test/site.test.mjs) checks every vendored file against
+// fonts.json. Run this script only to change a font or its version.
+//
+// Usage: node scripts/vendor-fonts.mjs
+
+import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { gunzipSync } from "node:zlib";
+
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
+const FONTS = join(ROOT, "site", "fonts");
+const CSS = join(ROOT, "site", "css", "fonts.css");
+
+/** Pinned packages, their registry integrity, and the files the site uses. */
+export const PACKAGES = [
+  {
+    name: "@fontsource-variable/newsreader",
+    version: "5.3.0",
+    integrity:
+      "sha512-rrzYi43qMpbzwuFtf9OkWH8sxAPVPcQQQEwXpPtwaKYeJ8yVg5aLs5kawmo1f2Q1t1M38TLmEKCkGVDsYwgdFw==",
+    family: "Newsreader",
+    license: "OFL-Newsreader.txt",
+    // The "opsz" files carry both axes: weight 200 to 800 and optical size.
+    css: ["opsz.css", "opsz-italic.css"],
+    files: [
+      "newsreader-latin-opsz-normal.woff2",
+      "newsreader-latin-opsz-italic.woff2",
+      "newsreader-latin-ext-opsz-normal.woff2",
+      "newsreader-latin-ext-opsz-italic.woff2",
+    ],
+  },
+  {
+    name: "@fontsource/dm-mono",
+    version: "5.3.0",
+    integrity:
+      "sha512-OINjI8C1S/wpchhQxl7njZdMn4+hnDCpQ4YtvvOpKNARo+0J8O1x1IcrChxNjHOhfVv1by8C/FQoy3hXK+C1Ug==",
+    family: "DM Mono",
+    license: "OFL-DM-Mono.txt",
+    css: ["400.css", "500.css"],
+    files: [
+      "dm-mono-latin-400-normal.woff2",
+      "dm-mono-latin-500-normal.woff2",
+      "dm-mono-latin-ext-400-normal.woff2",
+      "dm-mono-latin-ext-500-normal.woff2",
+    ],
+  },
+];
+
+/** The files of a .tgz, as a map from path to bytes (ustar, as npm writes it). */
+function untar(tgz) {
+  const tar = gunzipSync(tgz);
+  const out = new Map();
+  for (let at = 0; at + 512 <= tar.length; ) {
+    const header = tar.subarray(at, at + 512);
+    if (header.every((b) => b === 0)) break;
+    const field = (start, length) => header.subarray(start, start + length).toString("utf8").replace(/\0.*$/s, "");
+    const name = field(0, 100);
+    const prefix = field(345, 155);
+    const size = parseInt(field(124, 12).trim() || "0", 8);
+    const type = field(156, 1);
+    const path = prefix ? `${prefix}/${name}` : name;
+    if (type === "0" || type === "") out.set(path, tar.subarray(at + 512, at + 512 + size));
+    at += 512 + Math.ceil(size / 512) * 512;
+  }
+  return out;
+}
+
+const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
+/** The @font-face blocks of a package's CSS file that use one of `files`, renamed to `family`. */
+function faces(css, files, family) {
+  const blocks = css.match(/@font-face\s*\{[^}]*\}/g) ?? [];
+  return blocks
+    .filter((block) => files.some((f) => block.includes(`/${f})`)))
+    .map((block) => {
+      const file = files.find((f) => block.includes(`/${f})`));
+      const pick = (prop) => (block.match(new RegExp(`${prop}:\\s*([^;]+);`)) ?? [])[1];
+      return [
+        "@font-face {",
+        `  font-family: "${family}";`,
+        `  font-style: ${pick("font-style")};`,
+        `  font-weight: ${pick("font-weight")};`,
+        "  font-display: swap;",
+        `  src: url("../fonts/${file}") format("woff2");`,
+        `  unicode-range: ${pick("unicode-range")};`,
+        "}",
+      ].join("\n");
+    });
+}
+
+function main() {
+  const work = mkdtempSync(join(tmpdir(), "biasclear-fonts-"));
+  mkdirSync(FONTS, { recursive: true });
+  const manifest = {
+    about:
+      "The site's typefaces, copied from these npm packages by scripts/vendor-fonts.mjs. " +
+      "Each tarball was checked against the registry's sha512 integrity; sha256 is of each copied file. " +
+      "Both typefaces are licensed under the SIL Open Font License 1.1 (see the license files).",
+    packages: [],
+  };
+  const css = [
+    "/* Generated by scripts/vendor-fonts.mjs from the @fontsource packages listed in",
+    "   site/fonts/fonts.json. Served from this site; no third-party request. */",
+    "",
+  ];
+  try {
+    for (const pkg of PACKAGES) {
+      const spec = `${pkg.name}@${pkg.version}`;
+      const run = spawnSync("npm", ["pack", spec, "--pack-destination", work, "--silent"], {
+        encoding: "utf8",
+      });
+      if (run.status !== 0) throw new Error(`npm pack ${spec} failed:\n${run.stderr}`);
+      const tgzName = run.stdout.trim().split("\n").pop();
+      const tgz = readFileSync(join(work, tgzName));
+      const integrity = `sha512-${createHash("sha512").update(tgz).digest("base64")}`;
+      if (integrity !== pkg.integrity) {
+        throw new Error(`${spec}: tarball integrity ${integrity} does not match the pinned ${pkg.integrity}`);
+      }
+      const files = untar(tgz);
+      const read = (path) => {
+        const bytes = files.get(`package/${path}`);
+        if (!bytes) throw new Error(`${spec} has no ${path}`);
+        return bytes;
+      };
+      const entry = {
+        name: pkg.name,
+        version: pkg.version,
+        integrity: pkg.integrity,
+        family: pkg.family,
+        license: "OFL-1.1",
+        license_file: pkg.license,
+        files: {},
+      };
+      for (const file of pkg.files) {
+        const bytes = read(`files/${file}`);
+        writeFileSync(join(FONTS, file), bytes);
+        entry.files[file] = sha256(bytes);
+      }
+      const license = read("LICENSE");
+      writeFileSync(join(FONTS, pkg.license), license);
+      entry.files[pkg.license] = sha256(license);
+      for (const sheet of pkg.css) {
+        css.push(...faces(read(sheet).toString("utf8"), pkg.files, pkg.family).map((b) => `${b}\n`));
+      }
+      manifest.packages.push(entry);
+      console.log(`${spec}: ${pkg.files.length} files, integrity checked`);
+    }
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+  writeFileSync(join(FONTS, "fonts.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  writeFileSync(CSS, css.join("\n"));
+  console.log(`wrote site/fonts/fonts.json and site/css/fonts.css`);
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();

@@ -1,0 +1,196 @@
+<!--page
+{
+  "path": "index.html",
+  "title": "BiasClear: see how a text is built to move you",
+  "description": "A free persuasion checker. It marks the moves a text makes to carry its reader along, and names each one. It runs in your browser; nothing you type is sent anywhere.",
+  "nav": "home",
+  "css": ["css/checker.css"],
+  "js": ["js/biasclear.iife.min.js", "js/site-data.js", "js/checker.js"]
+}
+-->
+<main id="main">
+<section class="hero" aria-labelledby="hero-h">
+ <div class="wrap">
+  <div class="g12 hero-top">
+    <h1 id="hero-h">See how a text is built <em>to move you.</em></h1>
+    <div class="dek">
+      <p>BiasClear marks the moves a text makes to carry its reader along, and names each one.</p>
+      <p class="dek-2">It points at structure, never at people, parties or institutions. It is not a fact-checker. There is no truth score.</p>
+      <p class="dek-s">Not a fact-checker. No truth score.</p>
+    </div>
+  </div>
+
+  <div class="g12 hero-body">
+    <div class="spec-col">
+      <div class="tabs" role="group" aria-label="Text under the loupe">
+{{sampleChips}}
+        <button type="button" class="chip own" data-k="own" aria-pressed="false" aria-expanded="false" aria-controls="editor">Check your own text</button>
+      </div>
+      <div class="spec-head">
+        <div class="sh-l">
+          <p class="lab"><span id="nMoves">{{firstMoves}}</span><span class="dotsep" aria-hidden="true">/</span><span class="sr-only">, </span><span id="nWords">{{firstWords}}</span></p>
+          <button type="button" class="edit-own" id="editOwn" hidden>Edit your text</button>
+        </div>
+        <button type="button" class="switch" id="markAll" role="switch" aria-checked="false"><span class="track" aria-hidden="true"><span class="knob"></span></span>Highlight every move</button>
+        <p class="cut" id="cutNote" hidden>Only the first {{maxCharsText}} characters were read. The rest was left out.</p>
+      </div>
+
+      <div class="editor" id="editor" hidden>
+        <label for="own">Paste or type your text. It is read here and goes nowhere.</label>
+        <textarea id="own" maxlength="{{maxChars}}" rows="6" spellcheck="false" autocomplete="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" placeholder="An email, a post, a pitch, a chatbot answer."></textarea>
+        <div class="ed-foot">
+          <span class="note" id="edNote" aria-live="polite">Up to {{maxCharsText}} characters. It stays in this tab.</span>
+          <span class="count" id="count">0 / {{maxCharsText}}</span>
+          <div class="ed-btns">
+            <button type="button" class="btn quiet" id="cancel">Cancel</button>
+            <button type="button" class="btn" id="go">Put it under the loupe</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" id="stage" data-size="l">
+        <p class="spec base" id="base">{{firstText}}</p>
+        <div class="nums" id="nums" aria-hidden="true"></div>
+        <div class="film" id="film" aria-hidden="true">
+          <p class="spec neg" id="neg"></p>
+          <div class="marks" id="marks"></div>
+        </div>
+        <div class="loupe" id="loupe" tabindex="0" role="application" aria-roledescription="loupe"
+             aria-label="Loupe. Arrow keys move it. Enter or Space jumps to the next move and reads it out. Shift with Enter goes back. Home and End go to the first and last move." hidden>
+          <div class="glass" id="glass"></div>
+          <svg id="ring" aria-hidden="true" focusable="false"></svg>
+        </div>
+      </div>
+
+      <div class="spec-foot">
+        <p class="engine-err" id="engineErr" role="alert" hidden>This browser could not run the rules, so it cannot check text of your own. The samples were marked when this site was built. The rules need Safari 16.4, Chrome 86 or Firefox 78, or a later version.</p>
+        <p class="handoff" id="handoff"><b>Your turn.</b> Drag the loupe (the magnifier)<span class="kbd">, or use the arrow keys</span><span class="touch">, or tap a phrase</span>.</p>
+        <p class="edit-foot" id="editFoot" hidden><button type="button" class="edit-own" id="editOwnFoot">Edit your text</button></p>
+        <p class="req"><span class="dot" aria-hidden="true"></span><span><span id="reqLab">Requests sent since the page and its typefaces</span> <span class="nw">loaded: <output id="reqN" aria-live="off">&ndash;</output></span></span></p>
+        <p class="cap">Outside the loupe, ordinary print. Inside it, the same words as a negative, each move outlined and named. For your own words, choose <i>Check your own text</i><span class="kbd"> or paste anywhere on the page (Ctrl+V, &#8984;V)</span>.</p>
+        <p class="dek-m">It points at structure, never at people, parties or institutions. It is not a fact-checker. There is no truth score.</p>
+      </div>
+      <p class="sr-only" id="live" aria-live="polite"></p>
+    </div>
+
+    <aside class="side" aria-label="Moves in this text">
+      <div class="readout" id="readout">
+        <div class="ro-top"><p class="lab">Under the loupe</p><p class="lab" id="roIdx"></p></div>
+        <p class="ro-name" id="roName">&nbsp;</p>
+        <p class="lab ro-tier" id="roTier"></p>
+        <p class="ro-desc" id="roDesc"></p>
+        <p class="ro-quote" id="roQuote"></p>
+        <p class="ro-more" id="roMore" hidden><a id="roLink" href="guide/">More in the Field Guide</a></p>
+      </div>
+      <div class="movelist">
+        <h2 class="lab" id="listLab"><span>In this text</span><span id="listCount"></span></h2>
+        <ol id="moves" aria-labelledby="listLab"></ol>
+        <noscript><ol class="nojs-list">{{firstMoveList}}</ol><p class="noscript">This list was made when the site was built. The loupe and the other samples need JavaScript; nothing you paste would be sent anywhere either way.</p></noscript>
+      </div>
+    </aside>
+  </div>
+ </div>
+</section>
+
+<section class="sec wrap" id="how" aria-labelledby="how-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">01 &nbsp;How it works</p>
+    <h2 id="how-h">It reads for shape, <em>not for truth.</em></h2>
+    <p class="lede">Persuasion leans on familiar wording. Borrowed agreement. Experts with no names. A deadline. A doubter made to look foolish. BiasClear looks for that wording, outlines each match, and tells you what the move is called.</p>
+    <p class="lede">It does not decide whether a claim is right. It does not score the text or the writer. It shows the build, and leaves the reading to you.</p>
+    <ol class="steps">
+      <li>You paste text. It never leaves this tab.</li>
+      <li>The {{generalCount}} general rules in the rule pack look for known wordings. A claim with a citation right beside it can be left unmarked.</li>
+      <li>Each move is outlined, named, and sorted into one of three tiers.</li>
+      <li>You decide what it means. Nothing is scored.</li>
+    </ol>
+  </div>
+
+  <div class="g12 tiers">
+    <article class="tier t1" aria-labelledby="t1h">
+      <div class="num"><p class="lab">Tier I</p><span class="sw" aria-hidden="true"></span></div>
+      <h3 id="t1h"><span class="hl">Ideological</span></h3>
+      <p class="plain">What you are told is settled. These moves make a claim feel agreed, proven or decided before you have weighed it, set unequal sides as even, or answer a worry with a promise.</p>
+{{tier1Pair}}
+      <p class="mhead">Moves in this tier</p>
+      <ul class="mline">
+{{tier1Moves}}
+      </ul>
+    </article>
+    <article class="tier t2" aria-labelledby="t2h">
+      <div class="num"><p class="lab">Tier II</p><span class="sw" aria-hidden="true"></span></div>
+      <h3 id="t2h"><span class="hl">Psychological</span></h3>
+      <p class="plain">How you are pushed. These moves put fear, shame, pride, decency or a deadline where a reason should be, cut the choices to two or the causes to one, or wave off the doubter.</p>
+{{tier2Pair}}
+      <p class="mhead">Moves in this tier</p>
+      <ul class="mline">
+{{tier2Moves}}
+      </ul>
+    </article>
+    <article class="tier t3" aria-labelledby="t3h">
+      <div class="num"><p class="lab">Tier III</p><span class="sw" aria-hidden="true"></span></div>
+      <h3 id="t3h"><span class="hl">Institutional</span></h3>
+      <p class="plain">Whose voice it borrows, and how large it makes things. These moves lean on credentials, unnamed bodies, findings given without reasons and process language to sound official, or call a harm total and final.</p>
+{{tier3Pair}}
+      <p class="mhead">Moves in this tier</p>
+      <ul class="mline">
+{{tier3Moves}}
+      </ul>
+    </article>
+  </div>
+  <p class="more">The <a href="guide/">Field Guide</a> takes each move in turn: how it works, examples, a fair use, and what the rule misses. <a href="method.html">The method</a> says how the rules run and what is tested.</p>
+</section>
+
+<section class="sec wrap" id="misses" aria-labelledby="miss-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">02 &nbsp;What it misses</p>
+    <h2 id="miss-h">What it catches, <em>and what it walks past.</em></h2>
+    <p class="lede">BiasClear knows the usual wording of a move. When the same move is made in other words, it can miss it. Here are two of the texts from above, read by the same rules, with the misses marked by hand.</p>
+  </div>
+
+  <div class="g12 exhibits">
+{{exhibits}}
+  </div>
+  <div class="legend" aria-hidden="true">
+    <span><span class="sws"><i class="sw t1"></i><i class="sw t2"></i><i class="sw t3"></i></span>Marked by the rules</span>
+    <span><i class="dots"></i>A move the rules missed</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="tbl">
+      <caption>Beyond its reach. Each example was read by the same rules when this page was built.</caption>
+      <thead><tr><th scope="col">Kind</th><th scope="col">Example</th><th scope="col">Marked</th><th scope="col">Why</th></tr></thead>
+{{limitsRows}}
+    </table>
+  </div>
+
+  <div class="measure g12">
+    <p class="lab m-lab">On measurement</p>
+    <div class="m-txt">
+      <p><strong>How often the rules are right on new text: not measured yet.</strong> Read the marks as prompts to look closer, not as findings.</p>
+      <p class="m-more">Figures published for an earlier version were measured on the same texts its rules were tuned on, so they said nothing about new text, and they have been withdrawn. The plan is to measure each rule on independently labeled data, starting with SemEval-2020 Task&nbsp;11, with a script in the repository. Until then this site quotes no accuracy figure. <a href="method.html#accuracy">More on the method</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="privacy" aria-labelledby="priv-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">03 &nbsp;Privacy</p>
+    <h2 id="priv-h">Your text stays <em>in this tab.</em></h2>
+  </div>
+  <div class="g12 facts">
+    <div class="fact"><h3>No uploads.</h3><p>The rules run inside this page. What you paste is read here and sent nowhere.</p></div>
+    <div class="fact"><h3>No cookies.</h3><p>The page sets none and stores nothing in your browser. It forgets your text when you close the tab.</p></div>
+    <div class="fact"><h3>No accounts.</h3><p>Nothing to sign up for. Nothing to sign in to. Nothing to hand over.</p></div>
+    <div class="check">
+      <h3>Check it yourself.</h3>
+      <p>The page, its scripts, its images and its two typefaces all come from this site. Once they are in, the page&rsquo;s own code asks for nothing more, and its security policy lets it load files only from this site and blocks the usual ways a script sends data (<code>connect-src 'none'</code>). The counter under the text starts once the typefaces are loaded, then counts every request your browser reports. Paste something and watch it stay at 0, or look at this page&rsquo;s requests in your browser&rsquo;s network panel. Browser extensions can make requests of their own; the counter may show some of those too.</p>
+      <p class="aside">Letters the typefaces do not include are drawn in your device&rsquo;s own fonts. <a href="privacy.html">The privacy page</a> has the rest, including what the host keeps.</p>
+    </div>
+  </div>
+</section>
+</main>
+
