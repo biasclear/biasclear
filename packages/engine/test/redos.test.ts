@@ -96,20 +96,6 @@ function bestOfThree(re: RegExp, text: string): number {
   return best;
 }
 
-it.each(["  ", "\t ", "\u00a0 "])("reads an institutional sentence boundary across %j", (separator) => {
-  const prefix = "The meeting ended." + separator;
-  const moves = scan(prefix + "The agency has concluded that it works.").moves
-    .filter((m) => m.ruleId === "INSTITUTIONAL_POSITION_AS_SETTLED");
-  expect(moves.map((m) => [m.start, m.match])).toEqual([
-    [prefix.length - 1, " The agency has concluded that"],
-  ]);
-  expect(scan(prefix + "the agency has concluded that it works.").moves
-    .filter((m) => m.ruleId === "INSTITUTIONAL_POSITION_AS_SETTLED")
-    .map((m) => [m.start, m.match])).toEqual([[0, prefix + "the agency has concluded that"]]);
-  expect(scan(prefix + "The agency has concluded that it works, based on research.").moves
-    .filter((m) => m.ruleId === "INSTITUTIONAL_POSITION_AS_SETTLED")).toEqual([]);
-});
-
 it("runs every regex in under 50 ms on 20,000-character adversarial strings", () => {
   const pack = readPack();
   const regexes = [
@@ -140,6 +126,20 @@ it("runs every regex in under 50 ms on 20,000-character adversarial strings", ()
   // The whole sweep (every regex on about 32,000 strings) takes several
   // seconds; the limit that matters is the 50 ms per regex above.
 }, 120_000);
+
+it.each(["  ", "\t ", "\u00a0 "])("reads an institutional sentence boundary across %j", (separator) => {
+  const prefix = "The meeting ended." + separator;
+  const moves = scan(prefix + "The agency has concluded that it works.").moves
+    .filter((m) => m.ruleId === "INSTITUTIONAL_POSITION_AS_SETTLED");
+  expect(moves.map((m) => [m.start, m.match])).toEqual([
+    [prefix.length - 1, " The agency has concluded that"],
+  ]);
+  expect(scan(prefix + "the agency has concluded that it works.").moves
+    .filter((m) => m.ruleId === "INSTITUTIONAL_POSITION_AS_SETTLED")
+    .map((m) => [m.start, m.match])).toEqual([[0, prefix + "the agency has concluded that"]]);
+  expect(scan(prefix + "The agency has concluded that it works, based on research.").moves
+    .filter((m) => m.ruleId === "INSTITUTIONAL_POSITION_AS_SETTLED")).toEqual([]);
+});
 
 it("reads a citation's dash-joined names in linear time", () => {
   // Rules 2.0.0a3: the token class of the author-year citation pattern held
