@@ -106,6 +106,11 @@ export class Ddb {
     });
   }
 
+  /** Writes (or overwrites) an item. Only for records whose rewrite is harmless: no counter. */
+  async put(item: Item): Promise<void> {
+    await this.call("PutItem", { Item: item });
+  }
+
   /** Writes an item only if none has this key. Returns false if one already exists. */
   async putIfAbsent(item: Item): Promise<boolean> {
     try {

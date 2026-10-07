@@ -109,27 +109,52 @@ function pauseItem(p: PauseDetail): Item {
   };
 }
 
-/** Persist every unresolved event, not just the first pause, without text or keys.
- * Atomic overwrite of fixed items is idempotent; no money ADD is retried. A debt
- * survives log expiry/month rollover until an owner reconciles and removes it. */
-export async function persistBillingPause(ddb: Ddb, p: PauseDetail): Promise<boolean> {
-  const item = pauseItem(p);
-  const debtKey = `billingdebt#${p.event.slice("billing#".length)}`;
-  const debt: Item = { ...item, pk: { S: debtKey } };
-  try {
-    await ddb.transact([{ Put: { Item: item } }, { Put: { Item: debt } }], randomUUID());
-    return true;
-  } catch {
-    try {
-      const known = await ddb.get(debtKey, 0, true);
-      return await billingPaused(ddb, p.nowMs) && stringAttr(known, "event") === p.event &&
-        numberAttr(known, "reserved") === p.reservedMicros && numberAttr(known, "actual") === p.actualMicros;
-    } catch { return false; }
-  }
+function debtItem(p: PauseDetail): Item {
+  return { ...pauseItem(p), pk: { S: `billingdebt#${p.event.slice("billing#".length)}` } };
 }
 
-/** Atomic CAS event + month + day; an optional anomaly pause commits with them. */
-export async function settle(ddb: Ddb, r: Reservation, actual: number, pause?: PauseDetail): Promise<boolean> {
+/** Attempts per durable record write (306 b). */
+export const PERSIST_ATTEMPTS = 4;
+
+/** Writes one record that is safe to overwrite (no counter), retrying a conflict, a throttle or a
+ * lost acknowledgment a bounded number of times, and reading back before each retry. */
+async function putDurably(ddb: Ddb, item: Item, landed: (found: Item | undefined) => boolean): Promise<boolean> {
+  const pk = stringAttr(item, "pk")!;
+  for (let attempt = 0; attempt < PERSIST_ATTEMPTS; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 25 * attempt + Math.floor(Math.random() * 25)));
+    try {
+      await ddb.put(item);
+      return true;
+    } catch { /* checked below, then written again */ }
+    try {
+      if (landed(await ddb.get(pk, 0, true))) return true;
+    } catch { /* unreadable: write again */ }
+  }
+  return false;
+}
+
+/** The shared fence. Every reserve checks it, so it is written alone, never in a transaction
+ * with another item (306 b); a later pause may overwrite an earlier one, as before. */
+export async function persistPause(ddb: Ddb, p: PauseDetail): Promise<boolean> {
+  return putDurably(ddb, pauseItem(p), (found) => found !== undefined);
+}
+
+/** Persist every unresolved event, not just the first pause, without text or keys. The event's
+ * own debt row (a key nothing else writes) goes first, then the shared pause, each on its own and
+ * retried: both are overwrites, and no money ADD is retried. A debt survives log expiry and month
+ * rollover until an owner reconciles and removes it. */
+export async function persistBillingPause(ddb: Ddb, p: PauseDetail): Promise<boolean> {
+  const debt = debtItem(p);
+  const debtKept = await putDurably(ddb, debt, (known) => stringAttr(known, "event") === p.event &&
+    numberAttr(known, "reserved") === p.reservedMicros && numberAttr(known, "actual") === p.actualMicros);
+  const paused = await persistPause(ddb, p);
+  return debtKept && paused;
+}
+
+/** Atomic CAS event + month + day. A bound breach commits its own debt row with them (a key
+ * nothing else writes); the caller then writes the shared pause on its own (persistPause), so the
+ * settlement never contends on the item every reserve checks (306 b). */
+export async function settle(ddb: Ddb, r: Reservation, actual: number, breach?: PauseDetail): Promise<boolean> {
   if (!Number.isSafeInteger(actual) || actual < 0) return false;
   const delta = actual - r.micros;
   const add = (pk: string) => ({ Key: { pk: { S: pk } }, UpdateExpression: "ADD #m :d", ExpressionAttributeNames: { "#m": "m" }, ExpressionAttributeValues: { ":d": { N: String(delta) } } });
@@ -137,7 +162,7 @@ export async function settle(ddb: Ddb, r: Reservation, actual: number, pause?: P
     { Update: { Key: { pk: { S: r.event } }, UpdateExpression: "SET #s = :settled, #a = :actual", ConditionExpression: "#s = :reserved", ExpressionAttributeNames: { "#s": "state", "#a": "actual" }, ExpressionAttributeValues: { ":reserved": { S: "reserved" }, ":settled": { S: "settled" }, ":actual": { N: String(actual) } } } },
     { Update: add(r.month) }, { Update: add(r.day) },
   ];
-  if (pause !== undefined) writes.push({ Put: { Item: pauseItem(pause) } });
+  if (breach !== undefined) writes.push({ Put: { Item: debtItem(breach) } });
   try {
     // Distinct token from reservation; the CAS is the durable idempotence fence.
     await ddb.transact(writes, r.token.replace(/.$/, r.token.endsWith("0") ? "1" : "0"));
@@ -145,9 +170,8 @@ export async function settle(ddb: Ddb, r: Reservation, actual: number, pause?: P
   } catch {
     try {
       const item = await ddb.get(r.event, 0, true);
-      const committed = matches(item, r) && stringAttr(item, "state") === "settled" && numberAttr(item, "actual") === actual;
-      if (!committed) return false;
-      return pause === undefined || await billingPaused(ddb, pause.nowMs);
+      // The debt row commits atomically with the event, so a settled event proves it.
+      return matches(item, r) && stringAttr(item, "state") === "settled" && numberAttr(item, "actual") === actual;
     } catch { return false; }
   }
 }

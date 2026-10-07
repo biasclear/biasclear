@@ -23,7 +23,7 @@ import { checkReply } from "./output.js";
 import { buildPrompt, type PromptMode } from "./prompt.js";
 import { checkRate, connectionHash, connectionKey, todaysSalt } from "./ratelimit.js";
 import { bodyText, parseJson, validateRequest, type ExplainRequest } from "./request.js";
-import { actualMicros, billingPaused, persistBillingPause, hasHeadroom, release, reserve, settle, worstCaseMicros, type Reservation } from "./spend.js";
+import { actualMicros, billingPaused, persistBillingPause, persistPause, hasHeadroom, release, reserve, settle, worstCaseMicros, type Reservation } from "./spend.js";
 import { SETTINGS_INTERVAL_MS, type InstanceState } from "./state.js";
 import { nextDayStart } from "./time.js";
 
@@ -408,9 +408,11 @@ async function explain(
   if (!(await settle(ddb, reservation, actual, pauseDetail))) return pause("E_SETTLE", actual);
   line.micros = actual;
   if (violated) {
+    // The settlement committed this event's debt row; the shared fence is written on its own.
     state.pausedUntil = Number.POSITIVE_INFINITY;
-    line.pausePersisted = 1;
-    detail.pausePersisted = true;
+    const persisted = await persistPause(ddb, pauseDetail!);
+    line.pausePersisted = persisted ? 1 : 0;
+    detail.pausePersisted = persisted;
     return stop("paused", "E_PROVIDER_BOUND");
   }
 
