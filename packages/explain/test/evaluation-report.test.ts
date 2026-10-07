@@ -37,6 +37,12 @@ describe("observable evaluation outcomes", () => {
     expect(classifySample({ status: 503, modelCalled: false, code: "E_RESERVE_MONTH" })).toBe("cap");
     expect(classifySample({ status: -1, invokeFailed: true })).toBe("call_failure");
   });
+  it("keeps the raw selection's bank hash apart from the displayed explanation", () => {
+    const f = fixtures(), raw = rows(f).map((l) => ({ ...l, evaluation: { ...(l.evaluation as object), bankHash: "b".repeat(64) } }));
+    const r = report(f, raw.length, raw, { model: MODEL, modelId: MODEL_ID });
+    expect((r.results.perAnswer as Array<{ bankHash: string | null }>).every((x) => x.bankHash === "b".repeat(64))).toBe(true);
+    expect(sampleOf(raw[0]!)).toMatchObject({ bankHash: "b".repeat(64), how: "The sentence asks for agreement as a reason." });
+  });
   it("preserves exact stop reason and actual cost independently of reserved cost", () => {
     expect(sampleOf({ status: 502, evaluation: { modelCalled: true, providerStopReason: "guardrail_intervened", providerText: "", actualMicros: 150, micros: 100, reservedMicros: 100, pausePersisted: true } })).toMatchObject({
       providerStopReason: "guardrail_intervened", providerText: "", actualMicros: 150, micros: 100, reservedMicros: 100, pausePersisted: true });

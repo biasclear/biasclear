@@ -11,6 +11,7 @@
 // the bank doesn't hold for this move, repeats one, or carries any other key or
 // text is refused.
 
+import { createHash } from "node:crypto";
 import phrasesJson from "../data/explain-phrases.json";
 import { sentenceCount } from "./text.js";
 
@@ -62,6 +63,13 @@ let bundled: PhraseBank | undefined;
 export function bundledBank(): PhraseBank {
   bundled ??= bankFrom(phrasesJson);
   return bundled;
+}
+
+let bundledHash: string | undefined;
+/** SHA-256 of the bundled bank as parsed, so a recorded selection names the exact bank its ids came from. */
+export function bankHash(): string {
+  bundledHash ??= createHash("sha256").update(JSON.stringify(phrasesJson)).digest("hex");
+  return bundledHash;
 }
 
 /** The -s form of a base verb, for a one-word mark ("The word "inevitable" presents ..."). */

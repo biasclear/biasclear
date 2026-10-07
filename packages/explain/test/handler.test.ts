@@ -2,7 +2,9 @@
 // Bedrock model, an in-memory DynamoDB that runs the function's own
 // expressions, and the two account settings.
 
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import phrases from "../data/explain-phrases.json";
 import { MODELS } from "../src/models.js";
 import { bundledMoves } from "../src/moves.js";
 import { SYSTEM_PROMPTS, buildPrompt } from "../src/prompt.js";
@@ -774,6 +776,9 @@ describe("the evaluation's direct invoke", () => {
     expect(r.evaluation.inTok).toBe(820);
     expect(r.evaluation.promptBytes).toBeGreaterThan(1000);
     expect(JSON.parse(r.evaluation.raw as string)).toEqual({ ...GOOD_CHOICE, plainer: GOOD_PLAINER });
+    // The raw selection names its bank; the displayed text is in the body only.
+    expect(r.evaluation.bankHash).toBe(createHash("sha256").update(JSON.stringify(phrases)).digest("hex"));
+    expect(r.evaluation.raw).not.toContain(GOOD_HOW);
     expect(lastLog(h).evaluation).toBe(1);
     expect(h.logs.join("\n")).not.toContain("economist");
   });

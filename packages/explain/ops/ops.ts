@@ -140,6 +140,8 @@ export interface Sample {
   outTok?: number;
   promptBytes?: number;
   raw?: string;
+  /** The phrase bank the raw selection's ids refer to. */
+  bankHash?: string;
   micros?: number;
   ms?: number;
   model?: string;
@@ -294,6 +296,7 @@ export function sampleOf(line: RawLine): Sample {
     ...(typeof e.outTok === "number" ? { outTok: e.outTok } : {}),
     ...(typeof e.promptBytes === "number" ? { promptBytes: e.promptBytes } : {}),
     ...(typeof e.raw === "string" ? { raw: e.raw } : {}),
+    ...(typeof e.bankHash === "string" ? { bankHash: e.bankHash } : {}),
     ...(typeof e.micros === "number" ? { micros: e.micros } : {}),
     ...(typeof e.ms === "number" ? { ms: e.ms } : {}),
     ...(typeof body.model === "string" ? { model: body.model } : {}),
@@ -443,7 +446,7 @@ export function report(f: Fixtures, planned: number, rawLines: RawLine[], option
     if (control) addDimension("controlSet", control.set, x);
     return { id: x.id, part: x.part, sample: x.sample, key: x.key, side, topic, rule: x.request.rule,
       status: x.s?.status ?? null, outcome: x.outcome, modelCalled: x.s === undefined ? null : calledModel(x.s),
-      providerStopReason: x.s?.providerStopReason ?? null, providerTextTruncated: x.s?.providerTextTruncated ?? null, providerTextChars: x.s?.providerTextChars ?? null, refusalLike: x.s === undefined ? false : refusalLike(x.s),
+      bankHash: x.s?.bankHash ?? null, providerStopReason: x.s?.providerStopReason ?? null, providerTextTruncated: x.s?.providerTextTruncated ?? null, providerTextChars: x.s?.providerTextChars ?? null, refusalLike: x.s === undefined ? false : refusalLike(x.s),
       preflightRejected: x.s === undefined ? false : preflightRejected(x.s), outputRejected: x.s === undefined ? false : outputRejected(x.s),
       inTok: x.s?.inTok ?? null, outTok: x.s?.outTok ?? null, inputBoundTokens: x.s?.inputBoundTokens ?? null,
       outputBoundTokens: x.s?.outputBoundTokens ?? null, reservedMicros: x.s?.reservedMicros ?? null,

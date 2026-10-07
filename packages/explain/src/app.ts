@@ -12,7 +12,7 @@ import { Ddb, DdbError } from "./aws/dynamodb.js";
 import { converseModel, modelRequest, readAccountSettings, type ModelOutcome } from "./aws/bedrock.js";
 import type { Transport } from "./aws/transport.js";
 import { CodedError, type Code, type ErrorName, type PlainerState } from "./codes.js";
-import { pickLimits, quotable } from "./compose.js";
+import { bankHash, pickLimits, quotable } from "./compose.js";
 import type { Config } from "./config.js";
 import type { EngineRegistry } from "./engines.js";
 import { STATUS, ROUTE_PATH, errorResponse, header, jsonResponse, preflight, type HttpEvent, type HttpResult } from "./http.js";
@@ -90,6 +90,8 @@ export interface EvaluationResult {
     ms?: number | undefined;
     /** The model's text, returned to the evaluation's IAM caller only. Never logged. */
     raw?: string | undefined;
+    /** The phrase bank the raw selection's ids refer to (src/compose.ts), kept apart from the displayed text. */
+    bankHash?: string | undefined;
   };
 }
 
@@ -302,6 +304,7 @@ async function explain(
   // same refusal the checker would give after the call (src/compose.ts), without spending.
   const mark = req.sentence.slice(req.start, req.end);
   if (pickLimits(req.rule, mark) === undefined) stop("no_answer", quotable(mark) ? "E_OUT_HOW" : "E_OUT_PLAIN_TEXT");
+  if (evaluation) detail.bankHash = bankHash();
   line.model = model.key;
   const prompt = buildPrompt(deps.promptMode, move, req.sentence, req.start, req.end, req.rule);
   detail.promptBytes = prompt.bytes;
