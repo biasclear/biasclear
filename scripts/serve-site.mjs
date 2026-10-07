@@ -1,7 +1,9 @@
 // Serve the built site (_site/) locally under a subpath, the way GitHub
-// Pages serves a project site (https://<owner>.github.io/<repo>/), so
-// relative links are tested the way they will be used. A missing path gets
-// 404.html with status 404, as on GitHub Pages. For previews only.
+// Pages serves a project site with no custom domain
+// (https://<owner>.github.io/<repo>/). The live site is at the root of
+// biasclear.com; a relative link that works under the subpath works there
+// too, so this is the stricter test. A missing path gets 404.html with
+// status 404, as on GitHub Pages. For previews only.
 //
 // Files are sent with "cache-control: no-store", so an edit shows at once.
 // --pages-cache sends GitHub Pages' "max-age=600" instead, so a browser

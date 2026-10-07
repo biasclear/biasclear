@@ -254,3 +254,16 @@ def test_pypi_readme_links_are_absolute_and_its_example_runs():
     assert out.getvalue() == m.group(2)
     for addr in re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", doc):
         assert addr == "hello@biasclear.com", addr
+
+
+def test_front_door_points_at_the_site():
+    """The README, the PyPI readme and the package's Homepage point at biasclear.com.
+
+    CHANGELOG.md says so, and the PyPI readme and Homepage can't be edited
+    after upload, so the old preview address must not come back.
+    """
+    for name in ("README.md", "docs/PYPI_README.md", "pyproject.toml"):
+        assert "github.io" not in (ROOT / name).read_text(encoding="utf-8"), name
+    assert "](https://biasclear.com/)" in README
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert re.search(r'^Homepage = "https://biasclear\.com"$', pyproject, re.MULTILINE)
