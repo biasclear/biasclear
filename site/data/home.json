@@ -1,0 +1,75 @@
+{
+  "about": "The example texts on the home page. The site build scans every one with the engine and fails if a result differs from what is written here: the moves each tier example raises, that each exhibit's missed phrase is really left unmarked, and what each row of the limits table raises. Non-breaking spaces (U+00A0) in the samples keep a short phrase on one line under the loupe; the engine reads them as spaces.",
+  "samples": [
+    {
+      "key": "pitch",
+      "label": "An ad",
+      "text": "Big news: the Aero 3 kettle goes on sale Monday.\nEveryone knows it is the best one yet. Experts say the old leak is fixed, and anyone who doubts it is a crank. Top groups agree. Only a fool would wait. Act now."
+    },
+    {
+      "key": "invest",
+      "label": "An investment pitch",
+      "text": "Industry-standard metrics confirm this is a safe investment. Studies show our approach consistently outperforms, and only a fool would bet against this trend. The future of finance is inevitable. Don't be the one left behind."
+    },
+    {
+      "key": "bot",
+      "label": "A chatbot answer",
+      "text": "Great question!\nExperts agree this is the right choice for you. This is widely accepted, and honestly, anyone who says otherwise simply has not done their research. You should feel confident moving forward today."
+    },
+    {
+      "key": "notice",
+      "label": "A plain notice",
+      "text": "The school bake sale runs from 9 to 1 on Saturday in the main hall. Parents can drop off baked goods on Friday afternoon; anything with nuts should be labelled. Last year’s sale paid for new library books."
+    }
+  ],
+  "tiers": {
+    "1": { "text": "Everyone knows the bake sale sells out.", "expect": ["CONSENSUS_AS_EVIDENCE"] },
+    "2": { "text": "Act now, or the season tickets will be gone.", "expect": ["FEAR_URGENCY"] },
+    "3": { "text": "Top agencies warn of a wet spring.", "expect": ["VAGUE_INSTITUTIONAL_APPEAL"] }
+  },
+  "exhibits": [
+    {
+      "id": "A",
+      "title": "An investment pitch",
+      "text": "Industry-standard metrics confirm this is a safe investment. Studies show our approach consistently outperforms, and only a fool would bet against this trend. The future of finance is inevitable. Don't be the one left behind.",
+      "missed": [
+        { "q": "Industry-standard metrics confirm", "why": "Vague authority, in words the rules do not know." },
+        { "q": "The future of finance is inevitable", "why": "Inevitability, said plainly. The rules look for set phrases." },
+        { "q": "Don't be the one left behind", "why": "Fear of missing out, with no fear words in it." }
+      ]
+    },
+    {
+      "id": "B",
+      "title": "A chatbot answer",
+      "text": "Great question! Experts agree this is the right choice for you. This is widely accepted, and honestly, anyone who says otherwise simply has not done their research. You should feel confident moving forward today.",
+      "missed": [
+        { "q": "anyone who says otherwise simply has not done their research", "why": "Competence dismissed, phrased outside the patterns." },
+        { "q": "You should feel confident moving forward today", "why": "A soft push to act now. No urgency words, so no mark." }
+      ]
+    }
+  ],
+  "limits": [
+    {
+      "group": "It will not see",
+      "rows": [
+        { "kind": "Tone and insinuation", "text": "Funny how the forecast changed right after the picnic was booked.", "expect": [], "why": "The suggestion is made without a single claim. There is no wording to match." },
+        { "kind": "Numbers with no base", "text": "Ticket sales rose 40% in March.", "expect": [], "why": "Forty percent of what? It reads words, not arithmetic." },
+        { "kind": "Whether it is true", "text": "The bridge opened to traffic in 1962.", "expect": [], "why": "If the bridge opened in 1970, this still passes clean. It checks shape, not facts." }
+      ]
+    },
+    {
+      "group": "It can over-mark",
+      "rows": [
+        { "kind": "A harmless either-or", "text": "Either the 8:15 bus comes or I walk.", "expect": ["FALSE_BINARY"], "why": "The shape is there. The pressure is not. It marks the shape; you judge the intent." },
+        { "kind": "A reported label", "text": "Some coaches call the new rule a hoax.", "expect": ["DISSENT_DISMISSAL"], "why": "A writer quoting a dismissal gets the same mark as a writer making one." },
+        { "kind": "A source named in words", "text": "Studies show the late bus is the busiest one, the city ridership survey found.", "expect": ["CLAIM_WITHOUT_CITATION"], "why": "The source is right there. The rules only know a citation by its form, such as a name and a year in brackets, so the claim is marked anyway." }
+      ]
+    },
+    {
+      "group": "It takes on trust",
+      "rows": [
+        { "kind": "A citation", "text": "Studies show the late bus is the busiest one (city ridership survey, 2023).", "expect": [], "why": "A name and a year in brackets count as a source, so the claim goes unmarked. The rules do not check that the source exists or says so." }
+      ]
+    }
+  ]
+}

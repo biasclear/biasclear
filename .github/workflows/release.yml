@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    # Version tags only (v2.0.0a1, v2.1.0, ...), not other tags such as v1-final.
+    tags: ["v[0-9]*"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Not named plain "test", so it can't be mistaken for CI's required check.
+    name: release-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      # The tests and their dependencies stay in their own virtual environment,
+      # apart from the job that builds the files we publish.
+      - name: Run the tests
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/test-venv"
+          "$RUNNER_TEMP/test-venv/bin/python" -m pip install --quiet --upgrade pip
+          "$RUNNER_TEMP/test-venv/bin/python" -m pip install --quiet ".[test]"
+          "$RUNNER_TEMP/test-venv/bin/python" -m pytest -q
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Check the tag matches the package version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG does not match version $version in pyproject.toml"
+            exit 1
+          fi
+
+      # The sdist ships CHANGELOG.md, and an uploaded file can't be changed.
+      - name: Check the changelog entry is dated
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
+          if ! grep -Eq "^## ${version//./\\.} \([0-9]{4}-[0-9]{2}-[0-9]{2}\)$" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md needs a heading '## $version (YYYY-MM-DD)', not '(unreleased)'"
+            exit 1
+          fi
+
+      # build, the hatchling backend and everything they import are pinned by
+      # hash in .github/requirements-release.txt and installed with --no-deps,
+      # and the build runs in that environment (--no-isolation), so nothing
+      # unpinned runs while the published files are made, and they can be
+      # rebuilt from the same packages.
+      - name: Build the sdist and wheel
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/build-venv"
+          "$RUNNER_TEMP/build-venv/bin/python" -m pip install --quiet --no-deps --only-binary=:all: --require-hashes -r .github/requirements-release.txt
+          "$RUNNER_TEMP/build-venv/bin/python" -m pip check
+          "$RUNNER_TEMP/build-venv/bin/python" -m build --no-isolation --outdir dist .
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  # The tests again, from the sdist we are about to upload, in their own
+  # environment: what a packager who unpacks it would run. Tests that need
+  # repository-only files (the site, the TypeScript engine, the images) skip.
+  sdist-test:
+    name: sdist-test
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - name: Run the tests from the sdist
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/sdist"
+          tar -xzf dist/*.tar.gz -C "$RUNNER_TEMP/sdist" --strip-components=1
+          cd "$RUNNER_TEMP/sdist"
+          python -m venv "$RUNNER_TEMP/sdist-venv"
+          "$RUNNER_TEMP/sdist-venv/bin/python" -m pip install --quiet --upgrade pip
+          "$RUNNER_TEMP/sdist-venv/bin/python" -m pip install --quiet ".[test]"
+          "$RUNNER_TEMP/sdist-venv/bin/python" -m pytest -q -p no:cacheprovider
+
+  publish:
+    name: publish
+    needs: [test, build, sdist-test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # PyPI Trusted Publishing (OIDC): no token is stored anywhere. The `pypi`
+    # environment admits only `v*` tags and waits for the owner's approval
+    # (an owner step; see ops/SEED_NOTES.md, "The first release").
+    environment:
+      name: pypi
+      url: https://pypi.org/project/biasclear/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

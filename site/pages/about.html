@@ -1,0 +1,101 @@
+<!--page
+{
+  "path": "about.html",
+  "title": "About BiasClear",
+  "description": "What BiasClear is, the theory its rules come from, why version 1's claims were withdrawn, and the license.",
+  "nav": "about",
+  "css": [],
+  "js": []
+}
+-->
+<main id="main">
+<section class="page-head" aria-labelledby="page-h">
+ <div class="wrap">
+  <div class="g12">
+    <p class="lab kicker">About</p>
+    <h1 id="page-h">A free checker <em>for how a text persuades.</em></h1>
+    <div class="dek">
+      <p>BiasClear marks the moves a text makes on its reader and names each one. It points at structure, never at people. The rules and the code are open.</p>
+    </div>
+  </div>
+ </div>
+</section>
+
+<section class="sec wrap" id="what" aria-labelledby="what-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">01 &nbsp;What it is</p>
+    <h2 id="what-h">A rule-based <em>persuasion checker.</em></h2>
+    <div class="body">
+      <p>BiasClear reads a text and names the structural moves it makes on its reader: consensus offered in place of evidence, urgency that leaves no time to think, a choice cut down to two doors, dissent dismissed with a label.</p>
+      <p>It is not a fact-checker. It gives no truth score and no verdict on the writer or their intent. A marked sentence can be true, and an unmarked one can be false. It shows the build, and leaves the reading to you.</p>
+      <p>The same rules run on this site, in your browser, and in a Python library. Both read one versioned rule pack, and tests hold them to the same results. <a href="method.html">The method</a> says how.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="pit" aria-labelledby="pit-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">02 &nbsp;The theory</p>
+    <h2 id="pit-h">Persistent <em>Influence Theory.</em></h2>
+    <div class="body">
+      <p>The tiers come from Persistent Influence Theory (PIT), a hierarchical framework for structural persuasion set out in a 2026 preprint. It sorts persuasion into three tiers. Tier I, ideological: the underlying narratives that decide what counts as legitimate before it is even weighed. Tier II, psychological: the mental and social habits that turn those narratives into personal filters, favoring what confirms them. Tier III, institutional: the structures that amplify some accounts and push dissent aside. BiasClear uses the tiers to sort the moves its rules find. A tier says how a move works, not how serious it is.</p>
+      <p>To cite the paper:</p>
+      <pre class="cite">{{bibtex}}</pre>
+      <p><a href="https://doi.org/{{doi}}">Read the preprint (doi:{{doi}})</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="v1" aria-labelledby="v1-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">03 &nbsp;Version 1</p>
+    <h2 id="v1-h">The first version&rsquo;s claims <em>are withdrawn.</em></h2>
+    <div class="body">
+      <p>The first version of BiasClear made claims that did not hold. It published accuracy scores measured on the same samples its rules were tuned on, so they said nothing about new text. It called itself neutral, but two of its rules held lists of named institutions and schools, so the same sentence was flagged or not depending on the name in it. It also issued &ldquo;certificates&rdquo; that verified nothing.</p>
+      <p>Those claims are withdrawn. The current rules match structure. Swapped-pair tests run the rules on {{symPairs}} pairs, and {{redTeamPairs}} more from red-team reviews, and list the {{knownLimits}} known cases where they still differ (and {{retiredPairs}} retired pairs that were not mirrors). The tests cover the pairs that were written; they cannot show that no other pair differs. No accuracy figure is published until a script in the repository measures it on data someone else labeled. <a href="https://github.com/biasclear/biasclear#v1-claims-withdrawn">The README explains the withdrawal</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="status" aria-labelledby="status-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">04 &nbsp;Status</p>
+    <h2 id="status-h">A public preview <em>of an alpha.</em></h2>
+    <div class="body">
+      <p>The rules are version {{rulesVersion}}, an alpha. They will change. This site shows the version in its header, and every scan from the Python and TypeScript engines returns the rules version and a hash of the exact rules that ran. <a href="https://github.com/biasclear/biasclear/blob/main/rules/RULE_CHANGES.md">rules/RULE_CHANGES.md</a> explains the changes and the reasons for them.</p>
+      <p>Still to come: the first measurements on independently labeled data, starting with SemEval-2020 Task&nbsp;11 (<a href="method.html#accuracy">see the method</a>).</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="license" aria-labelledby="license-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">05 &nbsp;License and source</p>
+    <h2 id="license-h">Open code, <em>open rules.</em></h2>
+    <div class="body">
+      <ul class="ledger">
+        <li><span class="k">Code: Apache License 2.0.</span><span class="v"><a href="https://github.com/biasclear/biasclear/blob/main/LICENSE">LICENSE</a></span></li>
+        <li><span class="k">Rule pack: Creative Commons Attribution 4.0 (CC BY 4.0).</span><span class="v"><a href="https://github.com/biasclear/biasclear/blob/main/rules/LICENSE">rules/LICENSE</a></span></li>
+        <li><span class="k">Typefaces: Newsreader and DM Mono, SIL Open Font License 1.1.</span><span class="v"><a href="fonts/OFL-Newsreader.txt">Newsreader license</a> &middot; <a href="fonts/OFL-DM-Mono.txt">DM Mono license</a></span></li>
+        <li><span class="k">Source.</span><span class="v"><a href="https://github.com/biasclear/biasclear">github.com/biasclear/biasclear</a></span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="contact" aria-labelledby="contact-h">
+  <div class="sec-rule"></div>
+  <div class="g12 sec-head">
+    <p class="lab">06 &nbsp;Contact</p>
+    <h2 id="contact-h">Write <em>to us.</em></h2>
+    <div class="body">
+      <p><a class="email" href="mailto:hello@biasclear.com">hello@biasclear.com</a></p>
+    </div>
+  </div>
+</section>
+</main>

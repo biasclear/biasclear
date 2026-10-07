@@ -1,0 +1,42 @@
+name: One side treated differently
+description: Two sentences, the same but for a name or a label, that the rules mark differently.
+title: "Asymmetric pair: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks. A pair like this becomes a permanent test (AGENTS.md), with made-up names of the same shape in place of real ones. Please leave out anything about private people.
+
+        Swap the side and keep the kind of word: one group's name for another's, or an insult for the one aimed at the other side. A pair that sets an insult against a group's own name tests two kinds of word, not two sides.
+  - type: input
+    id: first
+    attributes:
+      label: First sentence
+      placeholder: They're just socialists.
+    validations:
+      required: true
+  - type: input
+    id: second
+    attributes:
+      label: Second sentence, with the name or label swapped for the other side's
+      placeholder: They're just libertarians.
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      description: The checker on the website runs the general rules.
+      options:
+        - general (the website)
+        - legal
+        - media
+        - financial
+        - all
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What each one gives
+      description: The moves each sentence raises, and the rules version (shown at the top of the website, or `rules_version` in the result).

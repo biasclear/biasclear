@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local data and secrets: never commit these
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+
+# Website build output (scripts/build-site.mjs)
+_site/
+
+# Node tools (packages/engine keeps its own .gitignore too)
+node_modules/
