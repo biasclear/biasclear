@@ -1,6 +1,6 @@
 # Seed notes
 
-How the seed of `biasclear/biasclear` was built, how it lands, what it decided, and what the PM checks before opening its pull request. Written 2026-09-27; updated 2026-09-28.
+How the seed of `biasclear/biasclear` was built, how it lands, what it decided, and what the PM checks before opening its pull request. Written 2026-09-27; updated 2026-10-07.
 
 ## How the seed lands
 
@@ -38,7 +38,7 @@ How the seed of `biasclear/biasclear` was built, how it lands, what it decided, 
    - Citation suppression looks around the *first* occurrence of the matched text. Repeat a phrase with a citation next to the first copy, and the uncited second copy is suppressed too (golden `edge:11`).
    - `MONOCAUSAL_BLAME`'s "it's all X's fault" branch never matched a possessive in v1; E3 fixed that (`rules/RULE_CHANGES.md`).
 10. **Unicode.** The pack's syntax is in the common subset of Python's `re` and JavaScript's `RegExp`, but `\w`, `\b`, `\d` and parts of `\s` behave differently in JavaScript on non-ASCII text. E2 chose to emulate Python in TypeScript (board decision 24), pinned by `tests/golden/unicode_parity.json`.
-11. **No Homepage URL in 2.0.0a1.** The site is at a preview address until biasclear.com serves it, and a PyPI release page can't be edited, so `pyproject.toml` lists only the Repository URL. The first release after the site is at its own domain adds `Homepage`.
+11. **Homepage URL.** The seed left `Homepage` out of `pyproject.toml`: the site was at a preview address, and a PyPI release page can't be edited. The site moved to biasclear.com on 2026-10-06, before the first release, so 2.0.0a1 lists `Homepage = "https://biasclear.com"` beside the Repository URL.
 12. **The CLI decodes stdin itself, as strict UTF-8.** It reads bytes, so input that isn't valid UTF-8 exits with status 2 on every platform. Line endings reach `scan()` as given, so offsets match the input.
 
 ## The golden file (`tests/golden/v1_parity.json`)

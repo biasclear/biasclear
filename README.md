@@ -4,9 +4,9 @@
 
 **See how a text is built to move you.** BiasClear is a free persuasion checker. It marks the moves a text makes on its reader and names each one. It points at structure, never at people.
 
-**[Try it in your browser](https://biasclear.github.io/biasclear/)** (public preview). Nothing you type is sent anywhere.
+**[Try it in your browser](https://biasclear.com/)** (public preview). Nothing you type is sent anywhere.
 
-<a href="https://biasclear.github.io/biasclear/">
+<a href="https://biasclear.com/">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/hero-dark.png">
   <img src="docs/img/hero.png" alt="The BiasClear checker reading a sample ad for a kettle. Six phrases are highlighted and underlined in three tier colors, such as “Everyone knows” and “Only a fool”. A loupe over “Top groups agree” shows the words as a film negative, with that phrase outlined and named Vague authority, Tier III. A list beside the text names all six moves.">
@@ -15,11 +15,11 @@
 
 ## Try it
 
-Open **[biasclear.github.io/biasclear](https://biasclear.github.io/biasclear/)** and paste an email, a post, an ad or a chatbot answer. Each move is outlined, named and listed with its tier.
+Open **[biasclear.com](https://biasclear.com/)** and paste an email, a post, an ad or a chatbot answer. Each move is outlined, named and listed with its tier.
 
 - **It runs in your browser.** The rules run inside the page. The page's code sends nothing, and its security policy lets it load files only from its own site and blocks the usual ways a script sends data (fetch, XHR, beacons, WebSockets: `connect-src 'none'`). Nothing you type is sent anywhere.
 - **No cookies, no accounts.** Nothing to sign up for.
-- **The moves are explained.** The [Field Guide](https://biasclear.github.io/biasclear/guide/) shows how they work, with examples and what the rules miss.
+- **The moves are explained.** The [Field Guide](https://biasclear.com/guide/) shows how they work, with examples and what the rules miss.
 
 It is an alpha: 43 rules, rules version 2.0.0a5. How often the rules are right on new text has not been measured yet. See [Status and roadmap](#status-and-roadmap).
 
@@ -45,7 +45,7 @@ It is an alpha: 43 rules, rules version 2.0.0a5. How often the rules are right o
 - Credential as proof: "**As a roofer with 20 years of experience, I can tell you** the whole roof has to go."
 - Fog language: "**Pursuant to the implementation** of the revised plan, buses will come every 20 minutes."
 
-A tier says how a move works, not how serious it is. The [Field Guide](https://biasclear.github.io/biasclear/guide/) covers every rule, grouped by tier.
+A tier says how a move works, not how serious it is. The [Field Guide](https://biasclear.com/guide/) covers every rule, grouped by tier.
 
 ## What it is not
 
@@ -54,7 +54,7 @@ A tier says how a move works, not how serious it is. The [Field Guide](https://b
 - **Not about people or parties.** The rules match wording, not names. No rule lists the names of people, parties, ideologies, faiths, countries, programs, outlets, institutions or schools, and [a lint](tests/test_neutrality_lint.py) fails if a rule holds a word from its reference list of such names.
 - **One exception, for sentence ends.** A shared list of abbreviations that do not end a sentence holds titles of every major faith ("Rev.", "Fr.", "Rab.", "Ust.", "Shri.", "Ven.") and both parties' "Rep." and "Dem.", treated alike. It decides only where a sentence ends, and the lint allows exactly these, in that list only ([why](rules/RULE_CHANGES.md#party-and-country-abbreviations)).
 - **Not an AI model.** The rules are fixed patterns, and nothing is learned from what you paste. The same text gives the same result every time with the same engine and runtime. The Python and TypeScript engines agree on every text the tests run; they can differ only on characters newer than one runtime's Unicode version ([packages/engine](packages/engine/README.md)).
-- **Not complete.** It misses persuasion put in other words, tone and insinuation. It is designed for English; coverage in other languages has not been evaluated. A quoted dismissal is marked the same as one the writer makes. The [Method page](https://biasclear.github.io/biasclear/method.html#misses) lists what the rules cannot see.
+- **Not complete.** It misses persuasion put in other words, tone and insinuation. It is designed for English; coverage in other languages has not been evaluated. A quoted dismissal is marked the same as one the writer makes. The [Method page](https://biasclear.com/method.html#misses) lists what the rules cannot see.
 
 ## Swapped-side tests
 
