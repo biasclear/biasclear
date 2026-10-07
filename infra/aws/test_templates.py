@@ -209,6 +209,40 @@ class TestService:
             ).stdout.strip()
             assert got == str(SERVICE["Parameters"][name]["Default"])
 
+    def test_billing_filter_matches_lines_as_lambda_stores_them(self):
+        # Offline fixture of the documented envelopes; real alarm delivery is unproven until the AWS sitting.
+        terms = [t[1:] for t in one(SERVICE, "AWS::Logs::MetricFilter")["FilterPattern"].split()]
+        assert all(re.fullmatch(r"\w+", t) for t in terms)
+
+        def matches(event: str) -> bool:
+            return any(re.search(rf"(?<!\w){t}(?!\w)", event) for t in terms)
+
+        anomaly = [
+            {"outcome": "paused", "status": 503, "ms": 4, "code": "E_PROVIDER_BOUND", "billedBoundViolated": 1, "overrun": 1, "pausePersisted": 1},
+            {"outcome": "paused", "status": 503, "ms": 4, "code": "E_SETTLE", "pausePersisted": 0},
+            {"outcome": "paused", "status": 503, "ms": 4, "code": "E_MODEL_NO_USAGE", "pausePersisted": 1},
+        ]
+        ordinary = [
+            {"outcome": "ok", "status": 200, "ms": 4, "rule": "CONSENSUS_AS_EVIDENCE", "inTok": 820, "outTok": 120, "micros": 2596},
+            {"outcome": "paused", "status": 503, "ms": 1, "code": "E_HEADROOM"},
+            {"outcome": "no_answer", "status": 502, "ms": 4, "code": "E_OUT_SHAPE", "reservedMicros": 9205, "actualMicros": 2596},
+        ]
+
+        def stored(line: dict) -> list[str]:
+            text = json.dumps(line, separators=(",", ":"))
+            envelope = {"timestamp": "2026-10-07T00:00:00.000Z", "level": "INFO", "requestId": "00000000-0000-0000-0000-000000000000"}
+            return [
+                text,
+                json.dumps({**envelope, "message": text}),  # LogFormat JSON, console.log(string)
+                json.dumps({**envelope, "message": line}),  # the same if an object were logged
+                "2026-10-07T00:00:00.000Z\t00000000-0000-0000-0000-000000000000\tINFO\t" + text,  # LogFormat Text
+            ]
+
+        for line in anomaly:
+            assert all(matches(e) for e in stored(line)), line
+        for line in ordinary:
+            assert not any(matches(e) for e in stored(line)), line
+
     def test_logs_kept_seven_days(self):
         lg = one(SERVICE, "AWS::Logs::LogGroup")
         assert lg["RetentionInDays"] == 7
@@ -218,8 +252,8 @@ class TestService:
         metric = one(SERVICE, "AWS::Logs::MetricFilter")
         assert metric["LogGroupName"] == {"Ref": "LogGroup"}
         assert metric["FilterName"] == "biasclear-explain-billing-anomaly"
-        for condition in ["$.overrun = 1", "$.billedBoundViolated = 1", "$.pausePersisted = 0", "$.pausePersisted = 1", '$.code = "E_SETTLE"']:
-            assert condition in metric["FilterPattern"]
+        assert metric["FilterPattern"] == "?overrun ?billedBoundViolated ?pausePersisted ?E_SETTLE"
+        assert "$." not in metric["FilterPattern"]  # a top-level selector can't see inside Lambda's "message" (306 d)
         assert metric["MetricTransformations"] == [{"MetricNamespace": "BiasClear/Explain", "MetricName": "BillingAnomaly", "MetricValue": "1", "DefaultValue": 0, "Unit": "Count"}]
         alarm = one(SERVICE, "AWS::CloudWatch::Alarm")
         assert alarm["AlarmName"] == "biasclear-explain-billing-anomaly"

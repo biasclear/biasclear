@@ -164,7 +164,11 @@ Resources:
     Properties:
       FilterName: biasclear-explain-billing-anomaly
       LogGroupName: !Ref LogGroup
-      FilterPattern: '{ ($.overrun = 1) || ($.billedBoundViolated = 1) || ($.pausePersisted = 0) || ($.pausePersisted = 1) || ($.code = "E_SETTLE") }'
+      # Terms, not JSON selectors: with LogFormat JSON, Lambda stores the app's line as the string
+      # value of "message", so a top-level $.field never matches (306 d). These four words appear
+      # only in anomaly lines (src/log.ts writes the flags only when set); a term matches the line
+      # bare, inside the JSON envelope, or after the Text format's prefix.
+      FilterPattern: '?overrun ?billedBoundViolated ?pausePersisted ?E_SETTLE'
       MetricTransformations:
         - MetricNamespace: BiasClear/Explain
           MetricName: BillingAnomaly
