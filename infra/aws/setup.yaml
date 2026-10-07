@@ -1,0 +1,645 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  BiasClear Explain (Mode C), the one-time setup the owner creates in the
+  console: GitHub's keyless login and the role it may use, CloudFormation's own
+  role, the function's role, the table of counters (so removing and redeploying
+  the service can't reset the month's spending count), the monthly budget with
+  its automatic stops, and a private bucket for build files. Every role is here,
+  so the stack GitHub deploys (explain.yaml) can't create or change a role or
+  policy. One grant is fenced by review and tests rather than by IAM: which API
+  may invoke the function (IAM has no condition for it; see test_templates.py).
+
+# Stack name: biasclear-explain-setup. Region: us-east-1 only.
+# Every resource that can carry tags gets project=biasclear, feature=explain.
+# The PM fills GitHubOwnerId and GitHubRepositoryId (public numbers) into the
+# defaults below before the owner downloads this file.
+
+Rules:
+  OnlyUsEast1:
+    Assertions:
+      - Assert: !Equals [!Ref "AWS::Region", us-east-1]
+        AssertDescription: Explain runs in US East (N. Virginia), us-east-1, only.
+
+Parameters:
+  AlertEmail:
+    Type: String
+    Default: hello@biasclear.com
+    AllowedPattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+    Description: Where the budget emails go.
+  MonthlyBudgetUsd:
+    Type: Number
+    Default: 30
+    MinValue: 2
+    MaxValue: 30
+    Description: >-
+      The whole account's monthly budget, credits excluded: Explain's model
+      cap ($25) plus $5 for the small services around it. At 100% of it, the
+      budget takes the model away from the function until a person reverses it.
+  GitHubOwner:
+    Type: String
+    Default: biasclear
+    AllowedPattern: "^[A-Za-z0-9-]{1,39}$"
+  GitHubOwnerId:
+    Type: String
+    AllowedPattern: "^[0-9]{1,20}$"
+    ConstraintDescription: The GitHub organization's numeric ID (public; the PM fills it in).
+    Description: The GitHub organization's numeric ID.
+  GitHubRepository:
+    Type: String
+    Default: biasclear
+    AllowedPattern: "^[A-Za-z0-9._-]{1,100}$"
+  GitHubRepositoryId:
+    Type: String
+    AllowedPattern: "^[0-9]{1,20}$"
+    ConstraintDescription: The repository's numeric ID (public; the PM fills it in).
+    Description: The repository's numeric ID.
+  GitHubEnvironment:
+    Type: String
+    Default: explain-aws
+    AllowedPattern: "^[A-Za-z0-9._-]{1,100}$"
+    Description: The GitHub environment that waits for the owner's approval.
+  CreateGitHubLogin:
+    Type: String
+    AllowedValues: ["yes", "no"]
+    Default: "yes"
+    Description: >-
+      "yes" creates the account's GitHub login (OIDC provider). Choose "no"
+      only if this account already has one for token.actions.githubusercontent.com.
+
+Conditions:
+  MakeGitHubLogin: !Equals [!Ref CreateGitHubLogin, "yes"]
+
+Resources:
+  # ---- GitHub's keyless login -------------------------------------------
+
+  GitHubLogin:
+    Type: AWS::IAM::OIDCProvider
+    Condition: MakeGitHubLogin
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+      Tags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  # GitHub Actions may use this role only from the protected environment
+  # (which admits main only and waits for the owner) of this one repository,
+  # named by its immutable numeric IDs. No key exists anywhere.
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: biasclear-explain-deploy
+      Description: GitHub Actions, environment explain-aws only. Deploys, pauses, evaluates and removes the biasclear-explain stack.
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - MakeGitHubLogin
+                - !Ref GitHubLogin
+                - !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com"
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                "token.actions.githubusercontent.com:aud": sts.amazonaws.com
+                "token.actions.githubusercontent.com:sub": !Sub "repo:${GitHubOwner}@${GitHubOwnerId}/${GitHubRepository}@${GitHubRepositoryId}:environment:${GitHubEnvironment}"
+      Policies:
+        - PolicyName: deploy-one-stack
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Change the one stack, and only through CloudFormation's own role.
+              - Sid: ChangeTheStackThroughItsRole
+                Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:UpdateStack
+                  - cloudformation:DeleteStack
+                Resource: !Sub "arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/biasclear-explain/*"
+                Condition:
+                  StringEquals:
+                    "cloudformation:RoleArn": !GetAtt CloudFormationRole.Arn
+              - Sid: ReadAndRunTheStacksChangeSets
+                Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:ListChangeSets
+                  - cloudformation:GetTemplateSummary
+                  - cloudformation:TagResource
+                Resource: !Sub "arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/biasclear-explain/*"
+              - Sid: PassOnlyCloudFormationsRoleToCloudFormation
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt CloudFormationRole.Arn
+                Condition:
+                  StringEquals:
+                    "iam:PassedToService": cloudformation.amazonaws.com
+              - Sid: UploadBuildFiles
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub "${BuildBucket.Arn}/explain/*"
+              # Read-only, account-wide settings with no resource of their own.
+              - Sid: ReadBedrockPrivacySettings
+                Effect: Allow
+                Action:
+                  - bedrock:GetModelInvocationLoggingConfiguration
+                  - bedrock:GetAccountDataRetention
+                Resource: "*"
+              # The live evaluation invokes the function directly.
+              - Sid: InvokeTheFunctionForTheEvaluation
+                Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:biasclear-explain"
+      Tags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  # ---- CloudFormation's own role -----------------------------------------
+
+  # What the service stack may create: the one function, its log group and an
+  # HTTP API. No IAM at all, no table (the counters live in this stack), and
+  # never a public function URL.
+  CloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: biasclear-explain-cloudformation
+      Description: CloudFormation, for the biasclear-explain stack only.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref "AWS::AccountId"
+      Policies:
+        - PolicyName: manage-the-service-stack
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: TheFunction
+                Effect: Allow
+                Action:
+                  - lambda:CreateFunction
+                  - lambda:DeleteFunction
+                  - lambda:GetFunction
+                  - lambda:GetFunctionConfiguration
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                  - lambda:PutFunctionConcurrency
+                  - lambda:DeleteFunctionConcurrency
+                  - lambda:GetFunctionConcurrency
+                  - lambda:GetFunctionCodeSigningConfig
+                  - lambda:GetFunctionRecursionConfig
+                  - lambda:PutFunctionRecursionConfig
+                  - lambda:GetRuntimeManagementConfig
+                  - lambda:PutRuntimeManagementConfig
+                  - lambda:ListTags
+                  - lambda:TagResource
+                  - lambda:UntagResource
+                  - lambda:GetPolicy
+                  - lambda:RemovePermission
+                Resource: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:biasclear-explain"
+              # IAM has no condition key for AddPermission's SourceArn or
+              # SourceAccount, so this lets CloudFormation grant any API Gateway
+              # principal. The one grant explain.yaml makes is pinned to this
+              # account's API and route, and test_templates.py checks it exactly.
+              - Sid: LetOnlyApiGatewayInvokeIt
+                Effect: Allow
+                Action: lambda:AddPermission
+                Resource: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:biasclear-explain"
+                Condition:
+                  StringEquals:
+                    "lambda:Principal": apigateway.amazonaws.com
+              - Sid: NeverAPublicFunctionUrl
+                Effect: Deny
+                Action:
+                  - lambda:CreateFunctionUrlConfig
+                  - lambda:UpdateFunctionUrlConfig
+                Resource: "*"
+              - Sid: PassOnlyTheFunctionRoleToLambda
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt FunctionRole.Arn
+                Condition:
+                  StringEquals:
+                    "iam:PassedToService": lambda.amazonaws.com
+              - Sid: ReadBuildFiles
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: !Sub "${BuildBucket.Arn}/explain/*"
+              - Sid: TheLogGroup
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:PutRetentionPolicy
+                  - logs:DeleteRetentionPolicy
+                  - logs:TagResource
+                  - logs:UntagResource
+                  - logs:ListTagsForResource
+                  - logs:GetDataProtectionPolicy
+                  - logs:DescribeIndexPolicies
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/biasclear/explain"
+                  - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/biasclear/explain:*"
+              - Sid: ListLogGroups
+                Effect: Allow
+                Action: logs:DescribeLogGroups
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*"
+              - Sid: ReadLogResourcePolicies
+                Effect: Allow
+                Action: logs:DescribeResourcePolicies
+                Resource: "*"
+              - Sid: HttpApisInThisRegion
+                Effect: Allow
+                Action:
+                  - apigateway:GET
+                  - apigateway:POST
+                  - apigateway:PUT
+                  - apigateway:PATCH
+                  - apigateway:DELETE
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis"
+                  - !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis/*"
+                  - !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}::/tags/*"
+      Tags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  # ---- The function's role ----------------------------------------------
+
+  # Exactly what SPEC §5 lists: one model through one inference profile, two
+  # read-only settings, one table, one log group. Nothing wildcarded that need
+  # not be.
+  FunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: biasclear-explain-function
+      Description: The Explain function. The reviewed model table only, its own table and log group.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: explain-function
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # BEGIN_GENERATED_MODEL_IAM
+              - Sid: Profilegrok47
+                Effect: Allow
+                Action: [bedrock:InvokeModel, bedrock:GetInferenceProfile]
+                Resource: !Sub "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.xai.grok-4.7"
+              - Sid: Modelgrok47ThroughItsProfileOnly
+                Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:bedrock:us-east-1::foundation-model/xai.grok-4.7"
+                  - !Sub "arn:${AWS::Partition}:bedrock:us-east-2::foundation-model/xai.grok-4.7"
+                  - !Sub "arn:${AWS::Partition}:bedrock:us-west-2::foundation-model/xai.grok-4.7"
+                Condition:
+                  StringEquals:
+                    "bedrock:InferenceProfileArn": !Sub "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.xai.grok-4.7"
+              - Sid: Profilesonnet55
+                Effect: Allow
+                Action: [bedrock:InvokeModel, bedrock:GetInferenceProfile]
+                Resource: !Sub "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.anthropic.claude-sonnet-5-5"
+              - Sid: Modelsonnet55ThroughItsProfileOnly
+                Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-5-5"
+                  - !Sub "arn:${AWS::Partition}:bedrock:us-east-2::foundation-model/anthropic.claude-sonnet-5-5"
+                  - !Sub "arn:${AWS::Partition}:bedrock:us-west-2::foundation-model/anthropic.claude-sonnet-5-5"
+                Condition:
+                  StringEquals:
+                    "bedrock:InferenceProfileArn": !Sub "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.anthropic.claude-sonnet-5-5"
+              - Sid: Profilesol61
+                Effect: Allow
+                Action: [bedrock:InvokeModel, bedrock:GetInferenceProfile]
+                Resource: !Sub "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.openai.gpt-6.1-sol"
+              - Sid: Modelsol61ThroughItsProfileOnly
+                Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:bedrock:us-east-1::foundation-model/openai.gpt-6.1-sol"
+                  - !Sub "arn:${AWS::Partition}:bedrock:us-east-2::foundation-model/openai.gpt-6.1-sol"
+                  - !Sub "arn:${AWS::Partition}:bedrock:us-west-2::foundation-model/openai.gpt-6.1-sol"
+                Condition:
+                  StringEquals:
+                    "bedrock:InferenceProfileArn": !Sub "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.openai.gpt-6.1-sol"
+              # END_GENERATED_MODEL_IAM
+              - Sid: ReadBedrockPrivacySettings
+                Effect: Allow
+                Action:
+                  - bedrock:GetModelInvocationLoggingConfiguration
+                  - bedrock:GetAccountDataRetention
+                Resource: "*"
+              - Sid: TheCounters
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource: !GetAtt Table.Arn
+              - Sid: TheLogGroup
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/biasclear/explain:*"
+      Tags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  # ---- The counters -----------------------------------------------------
+
+  # Spend (month and day), per-connection counts (under salted hashes) and the
+  # day's salt. Every item has a TTL. No backups, no point-in-time recovery, no
+  # stream. It lives here, not in the service stack, so removing and
+  # redeploying the service in the same month keeps the month's count (the $25
+  # stop). Deleting this setup stack deletes it.
+  Table:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TableName: biasclear-explain
+      BillingMode: PAY_PER_REQUEST
+      OnDemandThroughput:
+        MaxReadRequestUnits: 50
+        MaxWriteRequestUnits: 50
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false
+      DeletionProtectionEnabled: false
+      Tags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  # ---- The budget and its automatic stops -------------------------------
+
+  # Not attached to anything until the budget action attaches it.
+  DenyBedrockPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: biasclear-explain-deny-bedrock
+      Description: Attached to the function's role by the budget action at 100% of the monthly budget. Takes the model away.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: NoBedrockAtAll
+            Effect: Deny
+            Action:
+              - bedrock:*
+              - bedrock-mantle:*
+            Resource: "*"
+
+  # Budgets uses this role to attach the deny policy, and to take it off
+  # again when a person reverses the action. It can do nothing else.
+  BudgetsActionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: biasclear-explain-budgets
+      Description: AWS Budgets, to attach or detach the deny-Bedrock policy on the Explain function's role only.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: budgets.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref "AWS::AccountId"
+      Policies:
+        - PolicyName: attach-the-deny-policy-only
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: TheOnePolicyOnTheOneRole
+                Effect: Allow
+                Action:
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                Resource: !GetAtt FunctionRole.Arn
+                Condition:
+                  ArnEquals:
+                    "iam:PolicyARN": !Ref DenyBedrockPolicy
+      Tags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  # The whole account, credits and refunds excluded, tax included (the
+  # default, so it fires a little early). Emails at 50% and 100% of actual
+  # spend and at a 100% forecast (forecasts need a few weeks of history).
+  Budget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: biasclear-explain
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: !Ref MonthlyBudgetUsd
+          Unit: USD
+        CostTypes:
+          IncludeCredit: false
+          IncludeRefund: false
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 50
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+        - Notification:
+            NotificationType: FORECASTED
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+      ResourceTags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  # At 100% of actual spend, attach the deny policy to the function's role,
+  # with no approval step. Explain then answers "paused" until a person
+  # reverses the action (Budgets > biasclear-explain > Actions > Reverse).
+  # Budgets stops checking a reversed action until the next month, so the
+  # second action below is the last stop after a reversal.
+  BudgetAction:
+    Type: AWS::Budgets::BudgetsAction
+    # BudgetName is a plain name, so the budget must exist first. The roles and
+    # the policy are ordered by the references below.
+    DependsOn: Budget
+    Properties:
+      BudgetName: biasclear-explain
+      NotificationType: ACTUAL
+      ActionType: APPLY_IAM_POLICY
+      ActionThreshold:
+        Type: PERCENTAGE
+        Value: 100
+      ApprovalModel: AUTOMATIC
+      ExecutionRoleArn: !GetAtt BudgetsActionRole.Arn
+      Definition:
+        IamActionDefinition:
+          PolicyArn: !Ref DenyBedrockPolicy
+          Roles:
+            - !Ref FunctionRole
+      Subscribers:
+        - Type: EMAIL
+          Address: !Ref AlertEmail
+      ResourceTags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  # The last stop: the same deny policy at 150% (about $45 at the default
+  # budget, the worst month the owner's guide plans for). It still checks after
+  # the action above has been reversed mid-month.
+  BudgetActionLastStop:
+    Type: AWS::Budgets::BudgetsAction
+    DependsOn: Budget
+    Properties:
+      BudgetName: biasclear-explain
+      NotificationType: ACTUAL
+      ActionType: APPLY_IAM_POLICY
+      ActionThreshold:
+        Type: PERCENTAGE
+        Value: 150
+      ApprovalModel: AUTOMATIC
+      ExecutionRoleArn: !GetAtt BudgetsActionRole.Arn
+      Definition:
+        IamActionDefinition:
+          PolicyArn: !Ref DenyBedrockPolicy
+          Roles:
+            - !Ref FunctionRole
+      Subscribers:
+        - Type: EMAIL
+          Address: !Ref AlertEmail
+      ResourceTags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  # ---- Build files ------------------------------------------------------
+
+  # Private, encrypted, owner-enforced. Build files are kept (each is about
+  # 70 KB), so a failed update can always roll the function back to the zip
+  # it was running, however long ago that was deployed. Emptying the bucket is
+  # part of deleting everything (infra/aws/README.md).
+  BuildBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub "biasclear-explain-build-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: abort-incomplete-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      Tags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  BuildBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BuildBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: HttpsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !GetAtt BuildBucket.Arn
+              - !Sub "${BuildBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+Outputs:
+  AccountId:
+    Description: Put this number in the GitHub environment's AWS_ACCOUNT_ID variable. It is not a secret.
+    Value: !Ref "AWS::AccountId"
+  DeployRoleArn:
+    Value: !GetAtt DeployRole.Arn
+  CloudFormationRoleArn:
+    Value: !GetAtt CloudFormationRole.Arn
+  FunctionRoleArn:
+    Value: !GetAtt FunctionRole.Arn
+  TableName:
+    Value: !Ref Table
+  BuildBucket:
+    Value: !Ref BuildBucket

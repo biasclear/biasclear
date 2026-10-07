@@ -1,0 +1,30 @@
+{
+  // The Explain function and its tests. lib has the Web platform types Node
+  // also provides (fetch, AbortSignal, TextEncoder); src/node.d.ts types the
+  // few Node modules the code uses, so no @types/node dependency is needed.
+  // The engine's own source is compiled here too, through the import in
+  // src/generated/engines.ts; its stricter ECMAScript-only check lives in
+  // packages/engine/tsconfig.json.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2024", "DOM"],
+    "types": [],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src", "test", "ops"]
+}

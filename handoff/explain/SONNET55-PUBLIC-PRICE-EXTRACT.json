@@ -1,0 +1,138 @@
+{
+  "origin": "public AWS offer file; not signed-in console",
+  "source_url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrockFoundationModels/20260930001912/us-east-1/index.json",
+  "publicationDate": "2026-09-30T00:19:12Z",
+  "source_sha256": "356953700c7a74778c03d5bc4e9738f6d5bf42057c775e4f6d210c030db93d64",
+  "products": {
+    "6TG78WT6WYJUVS72": {
+      "sku": "6TG78WT6WYJUVS72",
+      "attributes": {
+        "location": "US East (N. Virginia)",
+        "locationType": "AWS Region",
+        "usagetype": "USE1-MP:USE1_input_tokens_standard-Units",
+        "operation": "",
+        "regionCode": "us-east-1",
+        "servicename": "Claude Sonnet 5.5 (Amazon Bedrock Edition)"
+      }
+    },
+    "ZNY2E4B6MTPHYXVH": {
+      "sku": "ZNY2E4B6MTPHYXVH",
+      "attributes": {
+        "location": "US East (N. Virginia)",
+        "locationType": "AWS Region",
+        "usagetype": "USE1-MP:USE1_output_tokens_standard-Units",
+        "operation": "",
+        "regionCode": "us-east-1",
+        "servicename": "Claude Sonnet 5.5 (Amazon Bedrock Edition)"
+      }
+    },
+    "PXMCKMF8EGSRB3GB": {
+      "sku": "PXMCKMF8EGSRB3GB",
+      "attributes": {
+        "location": "US East (N. Virginia)",
+        "locationType": "AWS Region",
+        "usagetype": "USE1-MP:USE1_input_tokens_global_standard-Units",
+        "operation": "",
+        "regionCode": "us-east-1",
+        "servicename": "Claude Sonnet 5.5 (Amazon Bedrock Edition)"
+      }
+    },
+    "HP32J6RXJZ3XYFUM": {
+      "sku": "HP32J6RXJZ3XYFUM",
+      "attributes": {
+        "location": "US East (N. Virginia)",
+        "locationType": "AWS Region",
+        "usagetype": "USE1-MP:USE1_output_tokens_global_standard-Units",
+        "operation": "",
+        "regionCode": "us-east-1",
+        "servicename": "Claude Sonnet 5.5 (Amazon Bedrock Edition)"
+      }
+    }
+  },
+  "terms": {
+    "6TG78WT6WYJUVS72": {
+      "6TG78WT6WYJUVS72.4799GE89SK": {
+        "offerTermCode": "4799GE89SK",
+        "sku": "6TG78WT6WYJUVS72",
+        "effectiveDate": "2026-09-01T00:00:00Z",
+        "priceDimensions": {
+          "6TG78WT6WYJUVS72.4799GE89SK.6YS6EN2CT7": {
+            "rateCode": "6TG78WT6WYJUVS72.4799GE89SK.6YS6EN2CT7",
+            "description": "AWS Marketplace software usage|us-east-1|Input Tokens - Standard",
+            "beginRange": "0",
+            "endRange": "Inf",
+            "unit": "1M tokens",
+            "pricePerUnit": {
+              "USD": "2.2000000000"
+            },
+            "appliesTo": []
+          }
+        },
+        "termAttributes": {}
+      }
+    },
+    "ZNY2E4B6MTPHYXVH": {
+      "ZNY2E4B6MTPHYXVH.4799GE89SK": {
+        "offerTermCode": "4799GE89SK",
+        "sku": "ZNY2E4B6MTPHYXVH",
+        "effectiveDate": "2026-09-01T00:00:00Z",
+        "priceDimensions": {
+          "ZNY2E4B6MTPHYXVH.4799GE89SK.6YS6EN2CT7": {
+            "rateCode": "ZNY2E4B6MTPHYXVH.4799GE89SK.6YS6EN2CT7",
+            "description": "AWS Marketplace software usage|us-east-1|Output Tokens - Standard",
+            "beginRange": "0",
+            "endRange": "Inf",
+            "unit": "1M tokens",
+            "pricePerUnit": {
+              "USD": "11.0000000000"
+            },
+            "appliesTo": []
+          }
+        },
+        "termAttributes": {}
+      }
+    },
+    "PXMCKMF8EGSRB3GB": {
+      "PXMCKMF8EGSRB3GB.4799GE89SK": {
+        "offerTermCode": "4799GE89SK",
+        "sku": "PXMCKMF8EGSRB3GB",
+        "effectiveDate": "2026-09-01T00:00:00Z",
+        "priceDimensions": {
+          "PXMCKMF8EGSRB3GB.4799GE89SK.6YS6EN2CT7": {
+            "rateCode": "PXMCKMF8EGSRB3GB.4799GE89SK.6YS6EN2CT7",
+            "description": "AWS Marketplace software usage|us-east-1|Input Tokens - Standard, Global",
+            "beginRange": "0",
+            "endRange": "Inf",
+            "unit": "1M tokens",
+            "pricePerUnit": {
+              "USD": "2.0000000000"
+            },
+            "appliesTo": []
+          }
+        },
+        "termAttributes": {}
+      }
+    },
+    "HP32J6RXJZ3XYFUM": {
+      "HP32J6RXJZ3XYFUM.4799GE89SK": {
+        "offerTermCode": "4799GE89SK",
+        "sku": "HP32J6RXJZ3XYFUM",
+        "effectiveDate": "2026-09-01T00:00:00Z",
+        "priceDimensions": {
+          "HP32J6RXJZ3XYFUM.4799GE89SK.6YS6EN2CT7": {
+            "rateCode": "HP32J6RXJZ3XYFUM.4799GE89SK.6YS6EN2CT7",
+            "description": "AWS Marketplace software usage|us-east-1|Output Tokens - Standard, Global",
+            "beginRange": "0",
+            "endRange": "Inf",
+            "unit": "1M tokens",
+            "pricePerUnit": {
+              "USD": "10.0000000000"
+            },
+            "appliesTo": []
+          }
+        },
+        "termAttributes": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,205 @@
+{
+  "dryRun": true,
+  "actualSpendUsd": 0,
+  "qualityMeasured": false,
+  "releaseApproved": false,
+  "humanReviewRequired": true,
+  "fixtureHash": "ead45b914609c9ff8720f8efc2e86189996601ffbfe534e34e657391e668bd59",
+  "sameFixedSetForEveryModel": true,
+  "stubInvocations": 2424,
+  "reservedBeforeEveryCall": true,
+  "networkAttempts": 0,
+  "fullReportSha256": "542f009eff6ab5c93fd26645f8472375b816315346cc93e9911ed7f290bbcc58",
+  "fullReportReproduction": "npm run eval:dry; CI artifact explain-offline-evaluation includes full per-answer JSON/Markdown",
+  "models": [
+    {
+      "id": "us.xai.grok-4.7",
+      "displayName": "Grok 4.7",
+      "fixtureHash": "ead45b914609c9ff8720f8efc2e86189996601ffbfe534e34e657391e668bd59",
+      "planned": 811,
+      "liveConfigurationBlocked": true,
+      "liveBlockReason": "Bedrock billed reasoning-token bound is unverified; visible maxTokens is not assumed to bound total cost.",
+      "stubReservationTotalUsd": 7.410015,
+      "knownLiveWorstCaseUsd": null,
+      "injectedVerdictProbes": 9,
+      "injectedVerdictRejected": 9,
+      "unsafeRewriteProbes": 6,
+      "unsafeRewriteDropped": 6,
+      "safeRewriteProbes": 12,
+      "safeRewriteKept": 12,
+      "simulationChecksPass": true,
+      "categories": [
+        {
+          "part": "a",
+          "planned": 365,
+          "ran": 365,
+          "answered": 365,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "simulatedUsd": 0.27302,
+          "simulatedMs": 365
+        },
+        {
+          "part": "b",
+          "planned": 365,
+          "ran": 365,
+          "answered": 365,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "simulatedUsd": 0.27302,
+          "simulatedMs": 365
+        },
+        {
+          "part": "i",
+          "planned": 63,
+          "ran": 63,
+          "answered": 42,
+          "refusalLike": 0,
+          "preflightRejected": 3,
+          "outputRejected": 18,
+          "simulatedUsd": 0.04488,
+          "simulatedMs": 60
+        },
+        {
+          "part": "r",
+          "planned": 18,
+          "ran": 18,
+          "answered": 18,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "simulatedUsd": 0.013464,
+          "simulatedMs": 18
+        }
+      ]
+    },
+    {
+      "id": "us.anthropic.claude-sonnet-5-5",
+      "displayName": "Claude Sonnet 5.5",
+      "fixtureHash": "ead45b914609c9ff8720f8efc2e86189996601ffbfe534e34e657391e668bd59",
+      "planned": 811,
+      "liveConfigurationBlocked": false,
+      "liveBlockReason": "",
+      "stubReservationTotalUsd": 8.837375,
+      "knownLiveWorstCaseUsd": 8.837375,
+      "injectedVerdictProbes": 9,
+      "injectedVerdictRejected": 9,
+      "unsafeRewriteProbes": 6,
+      "unsafeRewriteDropped": 6,
+      "safeRewriteProbes": 12,
+      "safeRewriteKept": 12,
+      "simulationChecksPass": true,
+      "categories": [
+        {
+          "part": "a",
+          "planned": 365,
+          "ran": 365,
+          "answered": 365,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "simulatedUsd": 0.4015,
+          "simulatedMs": 365
+        },
+        {
+          "part": "b",
+          "planned": 365,
+          "ran": 365,
+          "answered": 365,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "simulatedUsd": 0.4015,
+          "simulatedMs": 365
+        },
+        {
+          "part": "i",
+          "planned": 63,
+          "ran": 63,
+          "answered": 42,
+          "refusalLike": 0,
+          "preflightRejected": 3,
+          "outputRejected": 18,
+          "simulatedUsd": 0.066,
+          "simulatedMs": 60
+        },
+        {
+          "part": "r",
+          "planned": 18,
+          "ran": 18,
+          "answered": 18,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "simulatedUsd": 0.0198,
+          "simulatedMs": 18
+        }
+      ]
+    },
+    {
+      "id": "us.openai.gpt-6.1-sol",
+      "displayName": "GPT-6.1 Sol",
+      "fixtureHash": "ead45b914609c9ff8720f8efc2e86189996601ffbfe534e34e657391e668bd59",
+      "planned": 811,
+      "liveConfigurationBlocked": true,
+      "liveBlockReason": "Bedrock lowest reasoning setting and billed total-token bound are unverified.",
+      "stubReservationTotalUsd": 8.837375,
+      "knownLiveWorstCaseUsd": null,
+      "injectedVerdictProbes": 9,
+      "injectedVerdictRejected": 9,
+      "unsafeRewriteProbes": 6,
+      "unsafeRewriteDropped": 6,
+      "safeRewriteProbes": 12,
+      "safeRewriteKept": 12,
+      "simulationChecksPass": true,
+      "categories": [
+        {
+          "part": "a",
+          "planned": 365,
+          "ran": 365,
+          "answered": 365,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "simulatedUsd": 0.4015,
+          "simulatedMs": 365
+        },
+        {
+          "part": "b",
+          "planned": 365,
+          "ran": 365,
+          "answered": 365,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "simulatedUsd": 0.4015,
+          "simulatedMs": 365
+        },
+        {
+          "part": "i",
+          "planned": 63,
+          "ran": 63,
+          "answered": 42,
+          "refusalLike": 0,
+          "preflightRejected": 3,
+          "outputRejected": 18,
+          "simulatedUsd": 0.066,
+          "simulatedMs": 60
+        },
+        {
+          "part": "r",
+          "planned": 18,
+          "ran": 18,
+          "answered": 18,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "simulatedUsd": 0.0198,
+          "simulatedMs": 18
+        }
+      ]
+    }
+  ]
+}

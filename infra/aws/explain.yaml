@@ -1,0 +1,276 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  BiasClear Explain (Mode C), the service: an HTTP API, one Lambda function
+  and one log group. GitHub Actions deploys it after the owner approves
+  (infra/aws/README.md). It creates no IAM and no table: every role, the
+  budget and the counters live in the owner's setup stack (setup.yaml).
+  Every deploy passes every parameter below except Explain and MonthlyCapUsd
+  from this file's defaults, so a reviewed change to a default is what reaches
+  AWS.
+
+# Stack name: biasclear-explain. Region: us-east-1 only.
+# Every resource that can carry tags gets project=biasclear, feature=explain
+# (the workflow also sets them as stack tags, which CloudFormation copies down).
+
+Rules:
+  OnlyUsEast1:
+    Assertions:
+      - Assert: !Equals [!Ref "AWS::Region", us-east-1]
+        AssertDescription: Explain runs in US East (N. Virginia), us-east-1, only.
+
+Parameters:
+  Explain:
+    Type: String
+    AllowedValues: ["on", "off"]
+    Default: "off"
+    Description: >-
+      The kill switch. "off" makes every request answer "Explain is paused"
+      before anything else runs. The workflow's pause and resume actions
+      change only this; deploy and evaluate switch it on for their live calls
+      and back to what it was afterward. It keeps its value between deploys.
+  MonthlyCapUsd:
+    Type: Number
+    Default: 25
+    MinValue: 1
+    MaxValue: 25
+    Description: >-
+      Hard monthly cap on model spending, in US dollars at list price,
+      whatever credits the account has. Above 25 needs a reviewed change here
+      and in the setup stack's budget, together.
+  DailyPercent:
+    Type: Number
+    Default: 10
+    MinValue: 1
+    MaxValue: 100
+    Description: The most one UTC day may spend, as a percentage of the monthly cap.
+  # BEGIN_GENERATED_MODEL_PARAMETER
+  Model:
+    Type: String
+    AllowedValues: ["grok47","sonnet55","sol61"]
+    Default: grok47
+    Description: >-
+      One reviewed model key. Default Grok 4.7; alternatives Claude Sonnet 5.5
+      and GPT-6.1 Sol. Converse uses the approved US profile selected below.
+      Unknown/unverified model settings refuse startup; no fallback exists.
+  # END_GENERATED_MODEL_PARAMETER
+  AllowedOrigins:
+    Type: String
+    AllowedValues:
+      - https://biasclear.com
+      - https://biasclear.github.io,https://biasclear.com
+      - https://biasclear.github.io
+    Default: https://biasclear.com
+    Description: >-
+      The only web pages a browser lets call the API (CORS). Scripts are not
+      stopped by this; the limits and the spend cap are what bound them.
+      https://biasclear.github.io is shared by every GitHub Pages site of the
+      biasclear organization (any repository with Pages on), so choose it only
+      while no other repository there has Pages switched on.
+  RetentionMode:
+    Type: String
+    AllowedValues: [none]
+    Default: none
+    Description: >-
+      The account's Bedrock data-retention mode Explain expects ("none" is
+      zero data retention). The function pauses itself if the account's mode
+      differs.
+  RateLimitPer10Minutes:
+    Type: Number
+    Default: 10
+    MinValue: 1
+    MaxValue: 100
+    Description: Explains per internet connection per 10 minutes.
+  RateLimitPerDay:
+    Type: Number
+    Default: 50
+    MinValue: 1
+    MaxValue: 1000
+    Description: Explains per internet connection per UTC day.
+  ThrottleRatePerSecond:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    MaxValue: 10
+    Description: Requests per second across everyone, enforced by API Gateway before the function runs.
+  ThrottleBurst:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 20
+    Description: Burst allowance for the throttle above.
+  ReservedConcurrency:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 20
+    Description: >-
+      0 leaves the function on the account's shared concurrency (new accounts
+      can't reserve any). A number from 1 reserves that many, which also caps
+      how many copies run at once. The emergency stop is separate: Lambda
+      console > Throttle.
+  EvaluationKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+    AllowedPattern: "^([0-9a-f]{64})?$"
+    ConstraintDescription: 64 lowercase hex characters, or empty.
+    Description: >-
+      Drawn at random by the workflow for each deploy and evaluation run and
+      never stored anywhere else. The evaluation's direct invoke must carry it.
+      Empty refuses every evaluation invoke. Not an AWS credential.
+  CodeKey:
+    Type: String
+    AllowedPattern: "^explain/[0-9a-f]{64}\\.zip$"
+    ConstraintDescription: explain/<sha256 of the zip>.zip, uploaded by the workflow.
+    Description: The deployment zip's key in the setup stack's build bucket.
+
+# BEGIN_GENERATED_MODEL_MAPPINGS
+Mappings:
+  ReviewedModels:
+    grok47:
+      InvocationId: "us.xai.grok-4.7"
+      InputPrice: "2.2"
+      OutputPrice: "6.6"
+    sonnet55:
+      InvocationId: "us.anthropic.claude-sonnet-5-5"
+      InputPrice: "2.2"
+      OutputPrice: "11"
+    sol61:
+      InvocationId: "us.openai.gpt-6.1-sol"
+      InputPrice: "2.2"
+      OutputPrice: "11"
+# END_GENERATED_MODEL_MAPPINGS
+
+Conditions:
+  HasReservedConcurrency: !Not [!Equals [!Ref ReservedConcurrency, "0"]]
+
+Resources:
+  # One line per request, counts and fixed codes only, kept 7 days.
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /biasclear/explain
+      RetentionInDays: 7
+      Tags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: biasclear-explain
+      Description: BiasClear Explain (Mode C). Re-checks one marked sentence and asks the selected model on Bedrock how its wording works.
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      Handler: index.handler
+      MemorySize: 512
+      Timeout: 28
+      # The role lives in the setup stack; this stack can't change it.
+      Role: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/biasclear-explain-function"
+      Code:
+        S3Bucket: !Sub "biasclear-explain-build-${AWS::AccountId}"
+        S3Key: !Ref CodeKey
+      ReservedConcurrentExecutions: !If [HasReservedConcurrency, !Ref ReservedConcurrency, !Ref "AWS::NoValue"]
+      Environment:
+        Variables:
+          EXPLAIN_SWITCH: !Ref Explain
+          # The counters' table lives in the setup stack.
+          EXPLAIN_TABLE: biasclear-explain
+          EXPLAIN_MODEL_ID: !FindInMap [ReviewedModels, !Ref Model, InvocationId]
+          EXPLAIN_PRICE_IN: !FindInMap [ReviewedModels, !Ref Model, InputPrice]
+          EXPLAIN_PRICE_OUT: !FindInMap [ReviewedModels, !Ref Model, OutputPrice]
+          EXPLAIN_MONTHLY_CAP_USD: !Ref MonthlyCapUsd
+          EXPLAIN_DAILY_PERCENT: !Ref DailyPercent
+          EXPLAIN_ORIGINS: !Ref AllowedOrigins
+          EXPLAIN_RETENTION_MODE: !Ref RetentionMode
+          EXPLAIN_RATE_10MIN: !Ref RateLimitPer10Minutes
+          EXPLAIN_RATE_DAY: !Ref RateLimitPerDay
+          EXPLAIN_EVAL_KEY: !Ref EvaluationKey
+      LoggingConfig:
+        LogGroup: !Ref LogGroup
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: WARN
+      # No X-Ray tracing, no Lambda Insights layer, no Application Signals:
+      # each could capture request data.
+      TracingConfig:
+        Mode: PassThrough
+      Tags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: biasclear-explain
+      Description: BiasClear Explain (Mode C). One route, POST /v1/explain.
+      ProtocolType: HTTP
+      # API Gateway answers CORS preflight itself, for these origins only.
+      CorsConfiguration:
+        AllowOrigins: !Split [",", !Ref AllowedOrigins]
+        AllowMethods: [POST]
+        AllowHeaders: [content-type]
+        AllowCredentials: false
+        MaxAge: 600
+      Tags:
+        project: biasclear
+        feature: explain
+
+  Integration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt Function.Arn
+      PayloadFormatVersion: "2.0"
+      TimeoutInMillis: 29000
+
+  Route:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /v1/explain
+      AuthorizationType: NONE
+      Target: !Sub "integrations/${Integration}"
+
+  # The whole-service throttle runs before the function, so a flood costs no
+  # function time. Access logging is off: it would record IP addresses.
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingRateLimit: !Ref ThrottleRatePerSecond
+        ThrottlingBurstLimit: !Ref ThrottleBurst
+        DetailedMetricsEnabled: false
+      Tags:
+        project: biasclear
+        feature: explain
+
+  # API Gateway may invoke the function for this one route of this account's
+  # API. Nothing else is given a way in: there is no function URL. IAM can't
+  # pin SourceArn or SourceAccount on CloudFormation's AddPermission, so
+  # infra/aws/test_templates.py checks both exactly, and review keeps them.
+  InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref Function
+      Principal: apigateway.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Sub "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/POST/v1/explain"
+
+Outputs:
+  ApiUrl:
+    Description: The address the site's explain.json points at (without /v1/explain).
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  FunctionName:
+    Value: !Ref Function
