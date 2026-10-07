@@ -23,9 +23,12 @@ export const ORIGIN = "https://biasclear.github.io";
 /** A made-up evaluation key (64 hex characters), not a credential. */
 export const EVAL_KEY = "e".repeat(64);
 
+/** The model's choice for the documented example: reviewed phrase ids (data/explain-phrases.json). */
+export const GOOD_CHOICE = { does: ["d1"], unsaid: ["u1", "u2"] };
+/** The explanation the server writes from GOOD_CHOICE (src/compose.ts). */
 export const GOOD_HOW =
-  'The words "Every serious economist agrees" offer agreement as the reason to accept the forecast. ' +
-  "The sentence does not say what evidence those economists rely on.";
+  'The words \u{201C}Every serious economist agrees\u{201D} treat agreement as if it were evidence. ' +
+  "The sentence does not say who exactly agrees or what evidence the agreement rests on.";
 export const GOOD_PLAINER = "Many economists say that the Harlan Valley plan will lower rents within two years.";
 
 export const ENV: Record<string, string> = {
@@ -101,7 +104,10 @@ export function httpEvent(o: EventOptions = {}): Record<string, unknown> {
 }
 
 export interface ModelReplyOptions {
+  /** A free-text explanation: the old reply shape, which the checker now refuses. */
   how?: string;
+  does?: unknown;
+  unsaid?: unknown;
   plainer?: string | null;
   text?: string;
   stop_reason?: string;
@@ -112,7 +118,8 @@ export interface ModelReplyOptions {
 }
 
 export function modelReply(o: ModelReplyOptions = {}): Record<string, unknown> {
-  const payload: Record<string, unknown> = { how: o.how ?? GOOD_HOW };
+  const payload: Record<string, unknown> =
+    o.how !== undefined ? { how: o.how } : { does: o.does ?? GOOD_CHOICE.does, unsaid: o.unsaid ?? GOOD_CHOICE.unsaid };
   if (o.plainer !== null) payload.plainer = o.plainer ?? GOOD_PLAINER;
   return {
     id: "msg_test",

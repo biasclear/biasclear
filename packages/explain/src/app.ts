@@ -12,6 +12,7 @@ import { Ddb, DdbError } from "./aws/dynamodb.js";
 import { converseModel, modelRequest, readAccountSettings, type ModelOutcome } from "./aws/bedrock.js";
 import type { Transport } from "./aws/transport.js";
 import { CodedError, type Code, type ErrorName, type PlainerState } from "./codes.js";
+import { pickLimits, quotable } from "./compose.js";
 import type { Config } from "./config.js";
 import type { EngineRegistry } from "./engines.js";
 import { STATUS, ROUTE_PATH, errorResponse, header, jsonResponse, preflight, type HttpEvent, type HttpResult } from "./http.js";
@@ -297,8 +298,12 @@ async function explain(
   if (!marks.some((m) => m.ruleId === req.rule && m.start === req.start && m.end === req.end)) {
     stop("invalid", "E_NOT_A_MARK", 422);
   }
+  // A mark the server can't quote exactly, or one too long for any reviewed choice, gets the
+  // same refusal the checker would give after the call (src/compose.ts), without spending.
+  const mark = req.sentence.slice(req.start, req.end);
+  if (pickLimits(req.rule, mark) === undefined) stop("no_answer", quotable(mark) ? "E_OUT_HOW" : "E_OUT_PLAIN_TEXT");
   line.model = model.key;
-  const prompt = buildPrompt(deps.promptMode, move, req.sentence, req.start, req.end);
+  const prompt = buildPrompt(deps.promptMode, move, req.sentence, req.start, req.end, req.rule);
   detail.promptBytes = prompt.bytes;
   detail.inputBoundTokens = prompt.bytes + model.inputTokenBound.framingTokens;
   detail.outputBoundTokens = model.billedMaxTokens;

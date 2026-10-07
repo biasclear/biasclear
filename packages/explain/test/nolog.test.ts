@@ -72,10 +72,7 @@ describe("no user text in any log", () => {
     const h = harness();
     h.aws.model = () => ({
       status: 200,
-      json: modelReply({
-        how: `The words "Every serious economist agrees" ask the reader to trust agreement about the ${CANARY} plan.`,
-        plainer: `Many economists say that the ${CANARY} plan will lower rents within two years.`,
-      }),
+      json: modelReply({ plainer: `Many economists say that the ${CANARY} plan will lower rents within two years.` }),
     });
     const r = await h.call(httpEvent({ body: canaryBody() }));
     expect(r.statusCode).toBe(200);
