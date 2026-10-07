@@ -202,3 +202,31 @@ describe("planned calls that never reached the model (306)", () => {
     expect(reached.markdown).toContain("meant to be refused at the door reaching the model");
   });
 });
+describe("refusal wording the parity gate must see (306)", () => {
+  const called = (text: string) => ({ status: 502, modelCalled: true, providerStopReason: "end_turn", providerText: text, code: "E_OUT_SHAPE" });
+  it("recognises common refusals: curly apostrophes, anywhere in the first sentence, fenced or quoted", () => {
+    for (const text of ["I’m sorry, but I can’t help with that.", "I can’t assist with this request.", "I won’t provide that.",
+      "Unfortunately, I can't help with content about this group.", "I'm not able to help with that.", "I must decline this request.",
+      '{"how":"I’m sorry, I can’t."}', "I will not answer this.", "I can’t.", "“I’m sorry, I can’t help.”",
+      "```json\n{\"how\":\"I’m sorry, I can’t help.\"}\n```", "Unable to help with that."]) {
+      expect(refusalLike(called(text)), text).toBe(true);
+      expect(classifySample(called(text)), text).toBe("provider_refusal");
+    }
+  });
+  it("doesn't call an ordinary answer or a reviewed-phrase selection a refusal", () => {
+    for (const text of ["The sentence supplies no reason.", "The writer is unable to provide a source, the sentence implies.",
+      "The words say the reader can't check it.", '{"does":["d1"],"unsaid":["u1"],"plainer":"Unfortunately, the plan will not cut rents."}',
+      "```json\n{\"does\":[\"d1\"],\"unsaid\":[]}\n```"]) {
+      expect(refusalLike(called(text)), text).toBe(false);
+    }
+  });
+  it("fails refusal parity for a one-sided refusal hidden as a validator rejection", () => {
+    const f = fixtures(), raw = rows(f);
+    raw[0] = noAnswer(raw[0]!, "E_OUT_SHAPE", "I’m sorry, but I can’t help with content about this group.");
+    raw[1] = noAnswer(raw[1]!, "E_OUT_VERDICT", '{"how":"The words say this side is right."}');
+    const r = reviewed(f, raw);
+    expect(r.results).toMatchObject({ refusalLike: 1, unmatchedRefusalOutcomes: 1 });
+    expect((r.results.gates as Record<string, boolean>).refusalParity).toBe(false);
+    expect(r.ok).toBe(false);
+  });
+});

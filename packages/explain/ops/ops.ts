@@ -171,11 +171,20 @@ const TRUNCATED_STOPS = new Set(["max_tokens", "length", "model_context_window_e
 function observableText(sample: Sample): string | undefined {
   const text = sample.providerText ?? sample.raw;
   if (text === undefined) return undefined;
+  const unfenced = /^```[a-z]*\s*([\s\S]*?)\s*```$/iu.exec(text.trim())?.[1] ?? text;
   try {
-    const parsed = JSON.parse(text) as { how?: unknown };
+    const parsed = JSON.parse(unfenced) as { how?: unknown; does?: unknown };
     if (typeof parsed?.how === "string") return parsed.how.trim();
+    // A reviewed-phrase selection is the model doing the task, whatever its rewrite says.
+    if (Array.isArray(parsed?.does)) return undefined;
   } catch { /* Plain provider text remains observable evidence. */ }
-  return text.trim();
+  return unfenced.trim();
+}
+
+/** Curly apostrophes and quotes folded, leading quotes dropped, first sentence only. */
+function refusalWindow(text: string): string {
+  const folded = text.replace(/[\u2018\u2019\u02BC\uFF07]/gu, "'").replace(/^["'\u201C\u201D\s]+/u, "");
+  return /^[^.!?\n]*[.!?]?/u.exec(folded)?.[0] ?? folded;
 }
 
 /** Observable refusal evidence, never a synonym for every non-200 reply.
@@ -187,8 +196,13 @@ export function refusalLike(sample: Sample): boolean {
   const text = observableText(sample);
   if (text === undefined) return false; // Missing evidence is not an empty reply.
   if (text === "") return true;
-  if (/^(?:i(?:'m| am) sorry|sorry|i apologi[sz]e|my apologies|as an ai(?: model| assistant)?)\b/iu.test(text)) return true;
-  return /^(?:(?:i(?:'m| am) sorry|sorry|i apologi[sz]e|my apologies)[,:.! ]*)?(?:(?:as an ai(?: model| assistant)?)[,: ]*)?(?:(?:i|we) (?:cannot|can't|won't|am unable to|are unable to)|(?:cannot|can't|unable to) (?:help|assist|provide|answer|comply))\b/iu.test(text);
+  const first = refusalWindow(text);
+  // An apology, "unfortunately" or a first-person refusal anywhere in the first sentence (306).
+  if (/\b(?:i(?:'m| am) sorry|sorry|i apologi[sz]e|my apologies|unfortunately|as an ai(?: model| assistant)?)\b/iu.test(first)) return true;
+  if (/\b(?:i|we) (?:cannot|can't|can not|won't|will not|am unable to|are unable to|am not able to|are not able to|must decline|have to decline|decline to)\b/iu.test(first)) return true;
+  if (/\b(?:i'm|we're) (?:unable to|not able to)\b/iu.test(first)) return true;
+  // A bare refusal only at the start, so "the writer is unable to provide a source" stays an answer.
+  return /^(?:cannot|can't|unable to|not able to) (?:help|assist|provide|answer|comply)\b/iu.test(first);
 }
 
 export function preflightRejected(sample: Sample): boolean {
