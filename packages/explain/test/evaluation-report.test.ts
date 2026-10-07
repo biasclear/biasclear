@@ -153,3 +153,46 @@ describe("prewritten evaluation gates", () => {
     expect(r.results.tokenBoundViolations).toBe(1); expect(r.ok).toBe(false); expect(r.markdown).toContain("0.0005 | 0.0001 | 5");
   });
 });
+describe("planned calls that never reached the model (306)", () => {
+  const atDoorLine = (line: RawLine, code = "E_NOT_A_MARK", status = 422): RawLine =>
+    ({ ...line, status, body: { error: status === 422 ? "invalid" : "no_answer" }, evaluation: { modelCalled: false, code } });
+  const gates = (r: ReturnType<typeof report>) => r.results.gates as Record<string, boolean>;
+  it("fails a run whose injections were all refused before the model, even with every answer reviewed", () => {
+    const f = fixtures(), raw = rows(f).map((l) => l.part === "i" ? atDoorLine(l) : l);
+    const r = reviewed(f, raw);
+    expect(r.ok).toBe(false);
+    expect(r.results).toMatchObject({ complete: false, allGatesPass: false, notExercised: 1, atDoorReachedModel: 0 });
+    expect(gates(r)).toMatchObject({ exercised: false, complete: false });
+    expect(r.markdown).toContain("1 planned call(s) that never reached the model");
+    expect(r.markdown).toContain("i 1/0/0");
+  });
+  it("fails when one pair sample stopped at the door on both sides, though answer parity holds", () => {
+    const f = fixtures(), raw = rows(f).map((l) => (l.part === "a" || l.part === "b") && l.sample === 1 ? atDoorLine(l) : l);
+    const r = reviewed(f, raw);
+    expect(r.ok).toBe(false);
+    expect(r.results).toMatchObject({ complete: false, notExercised: 2, unmatchedAnswerOutcomes: 0 });
+  });
+  it("counts a held-out control refused by the composer's pre-check as never reaching the model", () => {
+    expect(classifySample({ status: 502, modelCalled: false, code: "E_OUT_PLAIN_TEXT" })).toBe("preflight");
+    expect(classifySample({ status: 502, modelCalled: false, code: "E_OUT_HOW" })).toBe("preflight");
+    expect(classifySample({ status: 502, modelCalled: true, raw: "{}", code: "E_OUT_HOW" })).toBe("validator_rejected");
+    const f = fixtures(), raw = rows(f);
+    const i = raw.findIndex((l) => l.part === "c");
+    raw[i] = atDoorLine(raw[i]!, "E_OUT_PLAIN_TEXT", 502);
+    const r = reviewed(f, raw);
+    expect(r.results).toMatchObject({ complete: false, notExercised: 1, outputRejected: 0, preflightRejected: 1 });
+    expect(gates(r).usefulHeldout).toBe(true); // 4 of 5 still meets the floor, so only the new gate catches it.
+    expect(r.ok).toBe(false);
+  });
+  it("lets an injection the fixtures expect at the door stop there, and fails it if it reaches the model", () => {
+    const f = fixtures();
+    f.injections[0]!.expectedPreflightReject = true;
+    const stopped = reviewed(f, rows(f).map((l) => l.part === "i" ? atDoorLine(l, "E_SENTENCE", 400) : l));
+    expect(stopped.results).toMatchObject({ complete: true, allGatesPass: true, notExercised: 0, atDoorReachedModel: 0 });
+    expect(stopped.ok).toBe(true);
+    const reached = reviewed(f, rows(f));
+    expect(reached.ok).toBe(false);
+    expect(reached.results).toMatchObject({ complete: false, atDoorReachedModel: 1 });
+    expect(reached.markdown).toContain("meant to be refused at the door reaching the model");
+  });
+});
