@@ -5,9 +5,9 @@
 import { describe, expect, it } from "vitest";
 import type { EvaluationResult } from "../src/app.js";
 import { Ddb } from "../src/aws/dynamodb.js";
-import { BILLING_PAUSE_KEY, persistBillingPause, reserve, settle } from "../src/spend.js";
+import { BILLING_PAUSE_KEY, SETTLE_ATTEMPTS, persistBillingPause, reserve, settle, spendKeys } from "../src/spend.js";
 import { ConflictAws, sleep } from "./conflicts.js";
-import { config, evalEvent, harness, modelReply } from "./helpers.js";
+import { FakeAws, config, evalEvent, harness, modelReply } from "./helpers.js";
 
 const cfg = config();
 const now = Date.UTC(2026, 9, 7, 14);
@@ -109,5 +109,82 @@ describe("a bound breach whose fence can't be written (306 b)", () => {
     expect(debts).toHaveLength(1);
     expect(actualOf(debts[0]![1])).toBe(r.evaluation.actualMicros);
     expect(h.deps.state.pausedUntil).toBe(Number.POSITIVE_INFINITY); // this instance still stops
+  });
+});
+
+describe("a definite settle cancellation is retried, not treated as an unknown charge (306 c)", () => {
+  const settleTx = (body: Record<string, unknown>) => JSON.stringify(body).includes(":settled");
+  const settleAttempts = (ca: ConflictAws) => ca.txLog.filter((keys) => keys.length >= 3 && keys[0]!.startsWith("billing#") && keys[0] !== BILLING_PAUSE_KEY && keys.length === 3).length;
+
+  it("a TransactionConflict on settlement: the paid, checked answer is returned and nothing pauses", async () => {
+    const ca = new ConflictAws();
+    let forced = 0;
+    ca.forceConflict = (body) => settleTx(body) && forced++ === 0;
+    const h = harness({ transport: ca.transport });
+    const r = await h.handler(evalEvent()) as EvaluationResult;
+    expect(forced).toBeGreaterThan(1); // the first settlement was cancelled, a later one ran
+    expect(r.status).toBe(200);
+    expect(r.evaluation.pausePersisted).toBeUndefined();
+    expect(ca.aws.table.items.has(BILLING_PAUSE_KEY)).toBe(false);
+    expect(ca.items("billingdebt#")).toHaveLength(0);
+    for (const key of Object.values(spendKeys(h.clock.ms))) expect(ca.aws.table.num(key, "m")).toBe(r.evaluation.actualMicros);
+    expect(h.deps.state.pausedUntil).not.toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it("a throttled settlement is retried the same way", async () => {
+    const h = harness();
+    let throttled = 0;
+    h.aws.model = () => {
+      h.aws.table.fault = (op, p) => op === "TransactWriteItems" && settleTx(p) && throttled++ === 0 ? "throttle" : undefined;
+      return { status: 200, json: modelReply() };
+    };
+    const r = await h.handler(evalEvent()) as EvaluationResult;
+    expect(throttled).toBeGreaterThan(1);
+    expect(r.status).toBe(200);
+    expect(h.aws.table.items.has(BILLING_PAUSE_KEY)).toBe(false);
+  });
+
+  it("a conflict on every attempt still ends in the durable E_SETTLE pause, after a bounded number of tries", async () => {
+    const ca = new ConflictAws();
+    ca.forceConflict = settleTx;
+    const h = harness({ transport: ca.transport });
+    const r = await h.handler(evalEvent()) as EvaluationResult;
+    expect(r.evaluation.code).toBe("E_SETTLE");
+    expect(r.evaluation.pausePersisted).toBe(true);
+    expect(settleAttempts(ca)).toBe(SETTLE_ATTEMPTS);
+  });
+
+  it("an ambiguous failure (no reply) is not retried: the reservation stays and the service pauses", async () => {
+    const h = harness();
+    let sent = 0;
+    h.aws.model = () => {
+      h.aws.table.fault = (op, p) => op === "TransactWriteItems" && settleTx(p) && ++sent > 0 ? "network" : undefined;
+      return { status: 200, json: modelReply() };
+    };
+    const r = await h.handler(evalEvent()) as EvaluationResult;
+    expect(sent).toBe(1);
+    expect(r.evaluation.code).toBe("E_SETTLE");
+    expect(r.evaluation.pausePersisted).toBe(true);
+  });
+
+  it("a settlement that committed before a lost reply is never applied twice", async () => {
+    const aws = new FakeAws();
+    const ddb = new Ddb(aws.transport, cfg.region, cfg.table);
+    const r = await reserve(ddb, cfg, now, 10_000);
+    if (!r.ok) throw new Error("no reservation");
+    aws.table.fault = (op) => op === "TransactWriteItems" ? "response-lost" : undefined;
+    expect(await settle(ddb, r.reservation, 3_000)).toBe(true);
+    for (const key of Object.values(spendKeys(now))) expect(aws.table.num(key, "m")).toBe(3_000);
+  });
+
+  it("a reserve cancelled by a conflict is retried instead of answering E_DDB", async () => {
+    const ca = new ConflictAws();
+    let forced = 0;
+    ca.forceConflict = (body) => JSON.stringify(body).includes(":reserved") === false && JSON.stringify(body).includes("if_not_exists") && forced++ === 0;
+    const h = harness({ transport: ca.transport });
+    const r = await h.handler(evalEvent()) as EvaluationResult;
+    expect(forced).toBeGreaterThan(1);
+    expect(r.status).toBe(200);
+    expect(ca.aws.modelCalls).toHaveLength(1);
   });
 });

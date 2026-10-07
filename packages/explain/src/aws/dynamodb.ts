@@ -12,10 +12,13 @@ export type Item = Record<string, Attr>;
 export class DdbError extends Error {
   readonly kind: "condition" | "other";
   readonly cancellationReasons: readonly string[];
-  constructor(kind: "condition" | "other", cancellationReasons: readonly string[] = []) {
+  /** DynamoDB's error type ("TransactionCanceledException"), or "" when no reply arrived. */
+  readonly type: string;
+  constructor(kind: "condition" | "other", cancellationReasons: readonly string[] = [], type = "") {
     super(kind);
     this.kind = kind;
     this.cancellationReasons = cancellationReasons;
+    this.type = type;
     this.name = "DdbError";
   }
 }
@@ -54,7 +57,7 @@ export class Ddb {
       const reasons = Array.isArray(obj.CancellationReasons) ? obj.CancellationReasons.map((r: unknown) =>
         r !== null && typeof r === "object" && typeof (r as { Code?: unknown }).Code === "string"
           ? (r as { Code: string }).Code : "Unknown") : [];
-      throw new DdbError(type.endsWith("#ConditionalCheckFailedException") ? "condition" : "other", reasons);
+      throw new DdbError(type.endsWith("#ConditionalCheckFailedException") ? "condition" : "other", reasons, type.split("#").pop() ?? "");
     }
     return obj;
   }
