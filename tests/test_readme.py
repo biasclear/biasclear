@@ -221,7 +221,7 @@ def test_repo_settings_fit_github():
     description = block("Description")
     assert "\n" not in description and len(description) < 120
     assert f"**Description** ({len(description)} characters)" in doc
-    assert block("Website:") == "https://biasclear.github.io/biasclear/"
+    assert block("Website:") == "https://biasclear.com/"
     topics = block("Topics").split("\n")
     assert 6 <= len(topics) <= 10 and len(set(topics)) == len(topics)
     assert f"**Topics** ({len(topics)})" in doc
@@ -243,7 +243,7 @@ def test_pypi_readme_links_are_absolute_and_its_example_runs():
     targets = re.findall(r"\]\(([^)\s]+)\)", doc) + re.findall(r'(?:src|srcset)="([^"]+)"', doc)
     assert targets
     for target in targets:
-        assert re.match(r"https://(github\.com/biasclear/biasclear|biasclear\.github\.io/biasclear/)", target), target
+        assert re.match(r"https://(github\.com/biasclear/biasclear|biasclear\.com/)", target), target
     for stale in ("coming", "until then", "not on npm", "from source", "first release"):
         assert stale not in doc.lower(), stale
     m = re.search(r"```python\n(.*?)```\s*```text\n(.*?)```", doc, re.DOTALL)

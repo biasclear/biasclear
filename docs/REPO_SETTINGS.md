@@ -29,10 +29,10 @@ A free persuasion checker. It marks the moves a text makes on its reader and nam
 **Website:**
 
 ```text
-https://biasclear.github.io/biasclear/
+https://biasclear.com/
 ```
 
-Ticking **Use your GitHub Pages website** fills in the same address. After the move to biasclear.com, change it to `https://biasclear.com/`.
+The site moved from the preview address `https://biasclear.github.io/biasclear/` to biasclear.com on 2026-10-06; GitHub redirects the old address. Ticking **Use your GitHub Pages website** fills in the same address.
 
 **Topics** (9):
 
