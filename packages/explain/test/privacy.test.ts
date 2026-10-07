@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { MODELS } from "../src/models.js";
+import { SALT_TTL_MS } from "../src/ratelimit.js";
+import { SETTINGS_INTERVAL_MS } from "../src/state.js";
+import { DAY_MS } from "../src/time.js";
 import { DRAFT_FILE, privacyDraft, renderDrafts } from "../scripts/privacy-drafts.mjs";
 
 describe("model-bound unpublished privacy copy", () => {
@@ -16,6 +19,22 @@ describe("model-bound unpublished privacy copy", () => {
       expect(draft.privacy).toContain(id);
       expect(draft.privacy).toContain("BiasClear does not request");
       expect(draft.privacy).toContain("Publishing this wording requires");
+    }
+  });
+
+  it("says how long a settings change takes to stop Explain and what happens to the network address (306)", () => {
+    // The copy is held to the code: each instance rechecks settings every SETTINGS_INTERVAL_MS, and the salt that
+    // could link a stored hash to an address expires after SALT_TTL_MS.
+    expect(SETTINGS_INTERVAL_MS).toBe(15 * 60 * 1000);
+    expect(SALT_TTL_MS).toBe(2 * DAY_MS);
+    for (const [id, model] of Object.entries(MODELS)) {
+      const draft = privacyDraft(id, model);
+      expect(draft.consent).toContain("Explain stops within 15 minutes if that setting changes");
+      expect(draft.consent).not.toContain("Explain pauses if that setting changes");
+      expect(draft.consent).toContain("network address");
+      for (const words of ["network address", "salted hash", "The address itself is never stored or logged", "expires after two days", "within 15 minutes"]) {
+        expect(draft.privacy).toContain(words);
+      }
     }
   });
 

@@ -51,7 +51,7 @@ Because of check 4, the service's own mark check never surprises a visitor.
 
 The first press in a page visit opens an inline box. It quotes the exact text that will be sent, then shows the consent line derived from the selected reviewed model table entry and verified zero-retention configuration (see section 1):
 
-> Explain sends this sentence, and nothing else you pasted, to BiasClear's service on Amazon Web Services. It asks {model display name}, an AI model made by {maker}, through Amazon Bedrock, how the wording works. Amazon may process it in {locations from the selected reviewed model entry}. We keep no copy. Our Amazon account uses Bedrock's zero data retention setting; Explain pauses if that setting changes.
+> Explain sends this sentence, and nothing else you pasted, to BiasClear's service on Amazon Web Services. It asks {model display name}, an AI model made by {maker}, through Amazon Bedrock, how the wording works. Amazon may process it in {locations from the selected reviewed model entry}. We keep no copy. Our Amazon account uses Bedrock's zero data retention setting; Explain stops within 15 minutes if that setting changes. The service sees your network address but keeps only a code made from it, to count requests.
 >
 > **[Send this sentence]** **[Not now]** · [How Explain handles text](privacy.html#explain)
 

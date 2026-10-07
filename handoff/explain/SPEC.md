@@ -404,7 +404,7 @@ Otherwise the row shows the plain note: "Explain works on one sentence at a time
 
 **Consent, exactly.** The first press in a page visit opens an inline box. It quotes the exact text that will be sent, then shows this line and two buttons:
 
-> Explain sends this sentence, and nothing else you pasted, to BiasClear's service on Amazon Web Services. It asks {model display name}, an AI model made by {maker}, through Amazon Bedrock, how the wording works. Amazon may process it in {locations from the selected reviewed model entry}. We keep no copy. Our Amazon account uses Bedrock's zero data retention setting; Explain pauses if that setting changes.
+> Explain sends this sentence, and nothing else you pasted, to BiasClear's service on Amazon Web Services. It asks {model display name}, an AI model made by {maker}, through Amazon Bedrock, how the wording works. Amazon may process it in {locations from the selected reviewed model entry}. We keep no copy. Our Amazon account uses Bedrock's zero data retention setting; Explain stops within 15 minutes if that setting changes. The service sees your network address but keeps only a code made from it, to count requests.
 > **[Send this sentence]** **[Not now]** · [How Explain handles text](privacy.html#explain)
 
 - The choice lasts until the page is closed or reloaded. The site stores nothing, so a later visit asks again.
