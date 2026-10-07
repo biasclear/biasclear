@@ -12,26 +12,22 @@
 
 import type { Code, PlainerState } from "./codes.js";
 import type { Domain, EngineBuild } from "./engines.js";
+import { HOW_MAX_CHARS, HOW_MAX_SENTENCES, HOW_MAX_WORDS, compose } from "./compose.js";
 import { parseJsonOrUndefined } from "./json.js";
 import { SYSTEM_PROMPTS, type PromptMode } from "./prompt.js";
 import {
   codePointLength,
   collapse,
-  foldQuote,
-  foldWithMap,
   isCapitalised,
   normWord,
-  quotedSpans,
   sentenceCount,
   startsSentence,
   wordSet,
   wordsOf,
-  type Quoted,
 } from "./text.js";
 
-export const HOW_MAX_CHARS = 400;
-export const HOW_MAX_WORDS = 60;
-export const HOW_MAX_SENTENCES = 3;
+// The explanation limits live with the composer, which sizes each request's picks to them.
+export { HOW_MAX_CHARS, HOW_MAX_SENTENCES, HOW_MAX_WORDS };
 /** Check 9b: this many words in a row copied from the sentence, outside quotation marks, is an echo. */
 export const ECHO_WORDS = 6;
 
@@ -112,7 +108,7 @@ const SIDE_EXCEPTIONS =
 const HYPHEN = "[- ]?";
 type Family = readonly [string, RegExp];
 const wing = (side: "left" | "right"): RegExp => new RegExp(
-  `\\bthe ${side}\\b${SIDE_EXCEPTIONS}|\\b${side}${HYPHEN}(?:wing(?:ers?)?|leaning)\\b|\\b${side}is(?:ts?|m)\\b|\\b${side}(?:-| )of(?:-| )cent(?:er|re)\\b`, "iu",
+  `\\bthe ${side}\\b${SIDE_EXCEPTIONS}|\\bthe (?:far|hard|radical|extreme|new|old)${HYPHEN}${side}\\b|\\b${side}${HYPHEN}(?:wing(?:ers?)?|leaning)\\b|\\b${side}is(?:ts?|m)\\b|\\b${side}(?:-| )of(?:-| )cent(?:er|re)\\b|\\bcent(?:er|re)${HYPHEN}${side}\\b|\\b${side}(?:ies|y)\\b`, "iu",
 );
 const ideology = (stem: string): RegExp => new RegExp(
   `\\b(?:${stem}(?:e(?:s|ly)?|ism|ists?)|${stem.replace(/iv$/u, "")}ism)\\b`, "iu",
@@ -124,13 +120,13 @@ export const SIDE_PAIRS: ReadonlyArray<readonly [Family, Family]> = [
     ["right", wing("right")],
   ],
   [["progressive", ideology("progressiv")], ["conservative", ideology("conservativ")]],
-  [["liberal", /\bliberal(?:s|ism|ly)?\b/iu], ["libertarian", /\blibertarian(?:s|ism|ly)?\b/iu]],
+  [["liberal", /\bliberal(?:s|ism|ly)?\b|\blibs\b/iu], ["libertarian", /\blibertarian(?:s|ism|ly)?\b/iu]],
   [["socialist", ism("social")], ["capitalist", ism("capital")]],
   [["communist", ism("commun")], ["fascist", ism("fasc")]],
   [["marxist", ism("marx")], ["nazi", /\bnazi(?:s|sm|ism)?\b/iu]],
   [["populist", /\bpopulis(?:ts?|m)\b/iu], ["establishment", /\bthe establishment\b|\bestablishment (?:figures?|politicians?|types?)\b/iu]],
   [["nationalist", ism("national")], ["globalist", ism("global")]],
-  [["democrat", /\bdemocrat(?:s|ic|ically|ism)?\b/iu], ["republican", /\brepublican(?:s|ism|ly)?\b/iu]],
+  [["democrat", /\bdemocrat(?:s|ic|ically|ism)?\b|\bdems\b/iu], ["republican", /\brepublican(?:s|ism|ly)?\b|\bgop\b/iu]],
   [["woke", /\bwoke\b/iu], ["maga", /\bmaga\b/iu]],
   [["antifa", /\bantifa\b/iu], ["alt-right", /\balt[-\u2010\u2011 ]?right\b/iu]],
   [["feminist", /\bfeminis(?:ts?|m)\b/iu], ["traditionalist", /\btraditionalis(?:ts?|m)\b/iu]],
@@ -141,7 +137,7 @@ export const SIDE_PAIRS: ReadonlyArray<readonly [Family, Family]> = [
   ],
   [["radical", /\bradical(?:s|ism|ly)?\b/iu], ["moderate", /\bmoderate(?:s|ly)?\b|\bmoderatism\b|\bcentris(?:ts?|m)\b/iu]],
   [
-    ["immigrant", /\b(?:im)?migrants?\b|\brefugees?\b|\basylum[- ]seekers?\b/iu],
+    ["immigrant", /\b(?:im)?migrants?\b|\brefugees?\b|\basylum[- ]seekers?\b|\billegals\b/iu],
     ["native-born", /\bnatives\b|\bnative[-\u2010\u2011 ]born\b|\bnativis(?:ts?|m)\b|\blocals\b/iu],
   ],
   [
@@ -330,56 +326,20 @@ function sideFamilies(text: string): Set<string> {
   return found;
 }
 
-/** The quotations of `how` whose text is words of the sentence, as they are there. */
-function exactQuotes(how: string, sentence: string): Quoted[] {
-  const folded = foldWithMap(sentence).folded;
-  return quotedSpans(how).filter((q) => {
-    const parts = foldQuote(q.text)
-      .split(/\.\.\.|\u{2026}/u)
-      .map((p) => foldQuote(p))
-      .filter((p) => /[\p{L}\p{N}]/u.test(p));
-    return parts.length > 0 && parts.every((p) => folded.includes(p));
-  });
-}
-
 /**
  * Check 8. In `how`, a verdict word may stand only inside a quotation that
  * is the sentence's own words: quoting "misinformation" is pointing at it,
  * saying it is using it. In the rewrite (the visitor's sentence, rewritten)
  * it may stand only where the sentence has the same words.
  */
-function noVerdicts(field: string, sentence: string, quotes: readonly Quoted[] | undefined): boolean {
+function noVerdicts(field: string, sentence: string): boolean {
   const sentenceLine = wordLine(sentence);
   for (const pattern of VERDICT_PATTERNS) {
     for (const m of field.matchAll(pattern)) {
-      const at = m.index ?? 0;
-      if (quotes !== undefined) {
-        if (!quotes.some((q) => at >= q.start && at + m[0].length <= q.end && dataQuoteContext(field, q))) return false;
-      } else if (!sentenceLine.includes(wordLine(m[0]))) {
-        return false;
-      }
+      if (!sentenceLine.includes(wordLine(m[0]))) return false;
     }
   }
   return true;
-}
-
-/**
- * Check 9: `how` points at the marked words by quoting them: at least one
- * quotation that is the sentence's own words and overlaps the mark.
- */
-function quotesTheMark(quotes: readonly Quoted[], ctx: CheckContext): boolean {
-  const { folded, map } = foldWithMap(ctx.sentence);
-  for (const q of quotes) {
-    for (const part of foldQuote(q.text).split(/\.\.\.|\u{2026}/u).map((p) => foldQuote(p))) {
-      if (!/[\p{L}\p{N}]/u.test(part)) continue;
-      for (let at = folded.indexOf(part); at >= 0; at = folded.indexOf(part, at + 1)) {
-        const start = map[at]!;
-        const end = map[at + part.length - 1]! + 1;
-        if (start < ctx.end && end > ctx.start) return true;
-      }
-    }
-  }
-  return false;
 }
 
 /**
@@ -392,84 +352,7 @@ function quotesTheMark(quotes: readonly Quoted[], ctx: CheckContext): boolean {
  * a comma followed by "and", "but", "though", "although", "while",
  * "whereas" or "yet". (", so the reader..." stays with the part it follows.)
  */
-export const WORDING_REFS: ReadonlySet<string> = new Set([
-  "word", "words", "wording", "phrase", "phrases", "phrasing", "sentence", "sentences", "it", "its",
-  "this", "these", "they", "them", "reader", "readers", "reader's", "readers'", "line", "label", "labels",
-  "labelling", "labeling", "quote", "quotation", "move", "framing", "frame", "frames", "framed", "mark",
-  "marked", "term", "terms", "language", "expression", "wordings", "claim", "claims", "view", "views",
-]);
-const PART_BREAK =
-  /[.!?;:]+["'\u{2019}\u{201D})\]]*(?:\s+|$)|\s[\u{2013}\u{2014}-]\s|,\s+(?=(?:and|but|though|although|while|whereas|yet)\b)/giu;
 
-// A quoted verdict must be described as wording. Merely adding quotation
-// marks to an injected instruction's answer is not a safe quotation.
-const DESCRIBES_WORDING = /\b(?:quot(?:e[sd]?|ing)|call(?:s|ed|ing)?|label(?:s|led|ing|ing)?|labell(?:ed|ing)|fram(?:e[sd]?|ing)|treat(?:s|ed|ing)?|present(?:s|ed|ing)?|offer(?:s|ed|ing)?|ask(?:s|ed|ing)?|point(?:s|ed|ing)?|set(?:s|ting)?|tie(?:s|d|ing)?|link(?:s|ed|ing)?|make(?:s)?|made|cast(?:s|ing)?|use(?:s|d)?|using)\b/iu;
-const ADOPTS_QUOTE = /\b(?:confirm(?:s|ed|ing)?|prov(?:e[sd]?|ing)|establish(?:es|ed|ing)?|demonstrat(?:e[sd]?|ing)|reveal(?:s|ed|ing)?|endors(?:e[sd]?|ing)|validat(?:e[sd]?|ing)|correct(?:ly)?|rightly|accurate(?:ly)?|truthful(?:ly)?|factual(?:ly)?|valid(?:ly)?|sound|legitimate|true|false|good|bad|indeed|exactly|absolutely)\b|\bas\s+(?:a\s+)?fact\b/iu;
-
-/** Clauses with quoted contents blanked out, keeping indices intact. */
-function wordingParts(how: string): Array<{ start: number; end: number; text: string; quotes: Quoted[] }> {
-  const quotes = quotedSpans(how);
-  let masked = how;
-  for (const q of quotes) masked = masked.slice(0, q.start - 1) + " ".repeat(q.end - q.start + 2) + masked.slice(q.end + 1);
-  const parts: Array<{ start: number; end: number; text: string; quotes: Quoted[] }> = [];
-  let start = 0;
-  for (const m of masked.matchAll(PART_BREAK)) {
-    const end = m.index ?? masked.length;
-    parts.push({ start, end, text: masked.slice(start, end), quotes: quotes.filter((q) => q.start >= start && q.end <= end) });
-    start = end + m[0].length;
-  }
-  parts.push({ start, end: masked.length, text: masked.slice(start), quotes: quotes.filter((q) => q.start >= start) });
-  return parts;
-}
-
-function descriptivePart(text: string): boolean {
-  return (wordsOf(text).some((w) => WORDING_REFS.has(normWord(w.text))) || /\b(?:calling|called|labelled|labeled)\b/iu.test(text)) &&
-    DESCRIBES_WORDING.test(text) && !ADOPTS_QUOTE.test(text);
-}
-
-function dataQuoteContext(how: string, quote: Quoted): boolean {
-  // Ellipses may omit "not" or splice parts into another claim. The
-  // verdict exception requires one contiguous quotation, never that splice.
-  if (/\.\.\.|\u2026/u.test(quote.text)) return false;
-  const part = wordingParts(how).find((p) => quote.start >= p.start && quote.end <= p.end);
-  return part !== undefined && descriptivePart(part.text);
-}
-
-function everyPartAboutWording(how: string): boolean {
-  for (const part of wordingParts(how)) {
-    if (part.quotes.length > 0) {
-      if (!descriptivePart(part.text)) return false;
-    } else if (/\p{L}/u.test(part.text) && !wordsOf(part.text).some((w) => WORDING_REFS.has(normWord(w.text)))) return false;
-  }
-  return true;
-}
-
-/**
- * Check 9b: `how` describes the wording instead of repeating it. Outside
- * quotation marks, no run of ECHO_WORDS words may be copied from the sentence
- * in order (an answer that restates or obeys the sentence's own clauses).
- */
-function noEcho(how: string, sentence: string): boolean {
-  const sentenceWords = wordsOf(sentence).map((w) => normWord(w.text));
-  const runs = new Set<string>();
-  for (let i = 0; i + ECHO_WORDS <= sentenceWords.length; i++) runs.add(sentenceWords.slice(i, i + ECHO_WORDS).join(" "));
-  if (runs.size === 0) return true;
-  // Every quotation, matching or not, is set aside: only the answer's own words count.
-  let rest = "";
-  let from = 0;
-  for (const q of quotedSpans(how)) {
-    rest += `${how.slice(from, q.start - 1)} | `;
-    from = q.end + 1;
-  }
-  rest += how.slice(from);
-  for (const segment of rest.split("|")) {
-    const words = wordsOf(segment).map((w) => normWord(w.text));
-    for (let i = 0; i + ECHO_WORDS <= words.length; i++) {
-      if (runs.has(words.slice(i, i + ECHO_WORDS).join(" "))) return false;
-    }
-  }
-  return true;
-}
 
 /** Check 10: at least 60% of the rewrite's words of three or more letters appear in the sentence. */
 function sameSentence(plainer: string, sentenceWords: ReadonlySet<string>): boolean {
@@ -710,58 +593,55 @@ export function checkReply(reply: unknown, ctx: CheckContext): CheckResult {
   if (reply === null || typeof reply !== "object") return fail("E_OUT_SHAPE");
   // 1. It finished normally.
   if ((reply as { stop_reason?: unknown }).stop_reason !== "end_turn") return fail("E_OUT_STOP");
-  // 2. One text block holding one JSON object with exactly the expected string fields.
+  // 2. One text block holding one JSON object with exactly the expected fields.
   const obj = replyObject(reply);
   if (obj === undefined) return fail("E_OUT_SHAPE");
   const keys = Object.keys(obj).sort().join(",");
   const withPlainer = ctx.mode === "how-and-plainer";
-  if (keys !== (withPlainer ? "how,plainer" : "how")) return fail("E_OUT_SHAPE");
-  if (typeof obj.how !== "string" || (withPlainer && typeof obj.plainer !== "string")) return fail("E_OUT_SHAPE");
-  const how = collapse(obj.how);
+  if (keys !== (withPlainer ? "does,plainer,unsaid" : "does,unsaid")) return fail("E_OUT_SHAPE");
+  if (withPlainer && typeof obj.plainer !== "string") return fail("E_OUT_SHAPE");
+  // 3. The explanation is written by the server from reviewed phrases the model picked by id
+  //    (compose.ts). Nothing else the model wrote for it is shown.
+  const chosen = compose(ctx.ruleId, ctx.sentence.slice(ctx.start, ctx.end), obj.does, obj.unsaid);
+  if (!chosen.ok) return fail(chosen.reason === "shape" ? "E_OUT_SHAPE" : chosen.reason === "mark" ? "E_OUT_PLAIN_TEXT" : "E_OUT_HOW");
+  const how = chosen.how;
   const plainer = withPlainer ? collapse(obj.plainer as string) : null;
-  const fields = plainer === null ? [how] : [how, plainer];
 
-  // 5. Plain text only.
-  if (!fields.every(plainText)) return fail("E_OUT_PLAIN_TEXT");
-  // 3. Short.
+  // 5. Plain text only: the composed text (it quotes the mark) and the rewrite.
+  if (!plainText(how) || (plainer !== null && !plainText(plainer))) return fail("E_OUT_PLAIN_TEXT");
+  // 3. Short: the whole explanation as the visitor sees it, the quoted mark included, within
+  //    the same limits as before. The composer only accepts as many picks as fit with this mark
+  //    (pickLimits), so this is a backstop; a mark too long for any choice is refused, never shortened.
   const howChars = codePointLength(how);
-  if (
-    howChars < 1 ||
-    howChars > HOW_MAX_CHARS ||
-    how.split(" ").length > HOW_MAX_WORDS ||
-    sentenceCount(how) > HOW_MAX_SENTENCES
-  ) {
+  if (howChars < 1 || howChars > HOW_MAX_CHARS || how.split(" ").length > HOW_MAX_WORDS || sentenceCount(how) > HOW_MAX_SENTENCES) {
     return fail("E_OUT_HOW");
   }
-  // 4. The rewrite is about as long as the sentence.
-  if (plainer !== null) {
-    const max = Math.max(200, Math.floor(1.5 * codePointLength(ctx.sentence)));
-    const n = codePointLength(plainer);
-    if (n < 1 || n > max) return fail("E_OUT_PLAINER_LENGTH");
-  }
+  // 6, 6b and 7 on the composed text as a backstop: the mark is the sentence's own words
+  // and the bank is held to these rules (test/compose.test.ts), so they refuse only a bank
+  // edit that broke them or a mark the quoting rule let through by mistake.
   const sentenceWords = wordSet(ctx.sentence);
-  // 6. No names, places or groups the sentence doesn't have, at a sentence's start or anywhere else.
   const allowed = new Set([...sentenceWords, ...wordSet(ctx.moveName), ...wordSet(ctx.moveShort ?? "")]);
-  if (!fields.every((f) => noNewNames(f, allowed))) return fail("E_OUT_NAMES");
-  // 6b. No side or group the sentence doesn't name.
+  if (!noNewNames(how, allowed)) return fail("E_OUT_NAMES");
   const sentenceSides = sideFamilies(ctx.sentence);
-  if (fields.some((f) => [...sideFamilies(f)].some((family) => !sentenceSides.has(family)))) return fail("E_OUT_SIDES");
-  // 7. No brand voice.
-  if (!/biasclear/iu.test(ctx.sentence) && fields.some((f) => /biasclear/iu.test(f))) return fail("E_OUT_BRAND");
-  // 8. No verdicts, labels or motives, unless quoting the sentence's own words.
-  const quotes = exactQuotes(how, ctx.sentence);
-  if (!noVerdicts(how, ctx.sentence, quotes)) return fail("E_OUT_VERDICT");
-  if (plainer !== null && !noVerdicts(plainer, ctx.sentence, undefined)) return fail("E_OUT_VERDICT");
-  // 9. The explanation points at the mark: it quotes the marked words.
-  if (!quotesTheMark(quotes, ctx)) return fail("E_OUT_POINTS");
-  // 9b. It describes the wording instead of repeating the sentence's clauses.
-  if (!noEcho(how, ctx.sentence)) return fail("E_OUT_ECHO");
-  // 9c. Every part of it is about the wording, not about the sentence's subject.
-  if (!everyPartAboutWording(how)) return fail("E_OUT_POINTS");
-  // 10. The rewrite is the same sentence.
-  if (plainer !== null && !sameSentence(plainer, sentenceWords)) return fail("E_OUT_SAME_SENTENCE");
-
+  if ([...sideFamilies(how)].some((family) => !sentenceSides.has(family))) return fail("E_OUT_SIDES");
+  if (/biasclear/iu.test(how)) return fail("E_OUT_BRAND");
   if (plainer === null) return { ok: true, how, plainer: null, plainerState: "off" };
+
+  // 4. The rewrite is about as long as the sentence.
+  const max = Math.max(200, Math.floor(1.5 * codePointLength(ctx.sentence)));
+  const n = codePointLength(plainer);
+  if (n < 1 || n > max) return fail("E_OUT_PLAINER_LENGTH");
+  // 6. No names, places or groups the sentence doesn't have, at a sentence's start or anywhere else.
+  if (!noNewNames(plainer, allowed)) return fail("E_OUT_NAMES");
+  // 6b. No side or group the sentence doesn't name.
+  if ([...sideFamilies(plainer)].some((family) => !sentenceSides.has(family))) return fail("E_OUT_SIDES");
+  // 7. No brand voice.
+  if (!/biasclear/iu.test(ctx.sentence) && /biasclear/iu.test(plainer)) return fail("E_OUT_BRAND");
+  // 8. No verdicts, labels or motives the sentence doesn't have.
+  if (!noVerdicts(plainer, ctx.sentence)) return fail("E_OUT_VERDICT");
+  // 10. The rewrite is the same sentence.
+  if (!sameSentence(plainer, sentenceWords)) return fail("E_OUT_SAME_SENTENCE");
+
   // 11 and 12: a weak rewrite is dropped, the explanation stays.
   // 11b (after 12, so a rewrite that adds a move is reported as P_MOVE):
   // nothing but neutral words replaces the mark, and nothing is added.

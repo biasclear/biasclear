@@ -1,0 +1,809 @@
+{
+ "about": "Reviewed phrases for composed Explain answers (src/compose.ts). The model picks ids; the server writes: The words \"<mark>\" <does>[, and <does>]. The sentence does not say <unsaid list>. Each 'does' phrase starts with a base-form verb and describes what the marked wording does to a reader; each 'unsaid' item completes 'The sentence does not say ...'. No phrase says or hints that a claim is true or false, judges a person, group or side, or names anyone. Drafted and reviewed per move group, then checked across all moves, on 2026-10-07; a change to this file is a reviewed change.",
+ "common": {
+  "unsaid": {}
+ },
+ "moves": {
+  "CONSENSUS_AS_EVIDENCE": {
+   "does": {
+    "d1": "treat agreement as if it were evidence",
+    "d2": "rest the claim on how widely it is held, not on reasons",
+    "d3": "offer broad agreement as the reason to accept the claim",
+    "d4": "make the claim sound like common knowledge",
+    "d5": "make doubting the claim feel like standing apart from the group",
+    "d6": "lean on agreement without showing what it rests on"
+   },
+   "unsaid": {
+    "u1": "who exactly agrees",
+    "u2": "what evidence the agreement rests on",
+    "u3": "how many people agree",
+    "u4": "how the agreement was measured",
+    "u5": "how the agreement was reached",
+    "u6": "why those who agree hold that view"
+   }
+  },
+  "CLAIM_WITHOUT_CITATION": {
+   "does": {
+    "d1": "point to a source without saying which one",
+    "d2": "cite studies or experts without saying which ones",
+    "d3": "lend the claim the weight of research or authority",
+    "d4": "suggest that someone has checked the claim, without showing how",
+    "d5": "name a kind of support instead of a source to check",
+    "d6": "give the reader no reference to look up"
+   },
+   "unsaid": {
+    "u1": "which studies it means",
+    "u2": "which experts it means",
+    "u3": "which teaching it means",
+    "u4": "which source it draws on",
+    "u5": "where the data comes from",
+    "u6": "what exactly was found",
+    "u7": "how the result was measured",
+    "u8": "where a reader could find the source"
+   }
+  },
+  "DISSENT_DISMISSAL": {
+   "does": {
+    "d1": "label those who disagree instead of answering them",
+    "d2": "offer a label in place of a reason",
+    "d3": "attach a verdict to the opposing view",
+    "d4": "give a verdict without showing how it was reached",
+    "d5": "make agreeing with the opposing view feel careless",
+    "d6": "set the opposing view aside without addressing what it says"
+   },
+   "unsaid": {
+    "u1": "what the opposing view claims",
+    "u2": "why the view is set aside",
+    "u3": "what evidence the label rests on",
+    "u4": "whose view is being labeled",
+    "u5": "what those holding the view base it on",
+    "u6": "where a reader could check the verdict",
+    "u7": "what the label means here"
+   }
+  },
+  "FALSE_BINARY": {
+   "does": {
+    "d1": "present a pair of options as the only ones",
+    "d2": "leave no room for any option in between",
+    "d3": "narrow the choice to just these options without showing why",
+    "d4": "focus attention on picking between the options as given",
+    "d5": "let the framing of the choice carry the argument",
+    "d6": "cast one option as the only way to avoid the other"
+   },
+   "unsaid": {
+    "u1": "what shows these are the only options",
+    "u2": "whether other options were looked at",
+    "u3": "whether a middle course was considered",
+    "u4": "whether the options could be combined",
+    "u5": "how the options were chosen",
+    "u6": "what each option would cost"
+   }
+  },
+  "FEAR_URGENCY": {
+   "does": {
+    "d1": "raise the stakes without saying what the risk is",
+    "d2": "press for quick action through alarm or time pressure",
+    "d3": "shorten the clock on the reader's decision",
+    "d4": "describe the feared harm in the strongest terms",
+    "d5": "make stopping to check the claim feel like a risk",
+    "d6": "put alarm where an account of the stakes would go"
+   },
+   "unsaid": {
+    "u1": "how soon the deadline falls",
+    "u2": "where the deadline comes from",
+    "u3": "what the odds of the feared harm are",
+    "u4": "how large the harm would be",
+    "u5": "what acting now would change",
+    "u6": "what action it calls for",
+    "u7": "what evidence the warning rests on"
+   }
+  },
+  "SHAME_LEVER": {
+   "does": {
+    "d1": "make disagreeing or choosing otherwise feel foolish",
+    "d2": "put a judgment about the reader where a reason would go",
+    "d3": "tie agreeing to being seen as sensible or decent",
+    "d4": "turn a question about the claim into one about the reader",
+    "d5": "make going along feel safer than asking for proof",
+    "d6": "cast disagreeing as a lack of sense or care"
+   },
+   "unsaid": {
+    "u1": "what evidence the claim rests on",
+    "u2": "who counts as reasonable here",
+    "u3": "by what standard people are being judged",
+    "u4": "what disagreeing has to do with character",
+    "u5": "how the opposing view was weighed",
+    "u6": "why disagreeing or choosing otherwise would be foolish"
+   }
+  },
+  "EMOTIONAL_SUBSTITUTION": {
+   "does": {
+    "d1": "put a feeling where a reason would go",
+    "d2": "tell the reader how to feel in place of showing why",
+    "d3": "let a strong reaction stand in for the details",
+    "d4": "skip past the details straight to the feeling",
+    "d5": "lean on sorrow, anger or alarm in place of reasons",
+    "d6": "attach a strong feeling to the point being made"
+   },
+   "unsaid": {
+    "u1": "what exactly happened",
+    "u2": "who is affected and in what way",
+    "u3": "how many people are affected",
+    "u4": "how large the loss is",
+    "u5": "what facts the feeling responds to",
+    "u6": "what evidence the point rests on",
+    "u7": "what details would let the reader judge for themselves"
+   }
+  },
+  "CREDENTIAL_AS_PREMISE": {
+   "does": {
+    "d1": "offer a credential as the reason to believe the claim",
+    "d2": "put the speaker's standing where the evidence would go",
+    "d3": "ask the reader to trust the speaker instead of weighing the claim",
+    "d4": "borrow the standing of a school, award or profession",
+    "d5": "say who is speaking but not what the claim rests on",
+    "d6": "make the claim sound more certain because of who says it"
+   },
+   "unsaid": {
+    "u1": "what evidence the claim rests on",
+    "u2": "how the credential bears on this claim",
+    "u3": "how the speaker reached the conclusion",
+    "u4": "which credential it means",
+    "u5": "where a reader could check the claim",
+    "u6": "what data or study backs the claim"
+   }
+  },
+  "INSTITUTIONAL_POSITION_AS_SETTLED": {
+   "does": {
+    "d1": "report a conclusion without saying what it rests on",
+    "d2": "let the fact of a finding stand in for its reasons",
+    "d3": "let the source's standing take the place of evidence",
+    "d4": "make the finding sound like the result of a careful process",
+    "d5": "say a finding exists but not how it was reached",
+    "d6": "present the question as answered on the source's word"
+   },
+   "unsaid": {
+    "u1": "what evidence the conclusion rests on",
+    "u2": "how the conclusion was reached",
+    "u3": "which reasons led to the finding",
+    "u4": "what data the finding draws on",
+    "u5": "what method produced the finding",
+    "u6": "where the finding's grounds can be checked"
+   }
+  },
+  "NEUTRALITY_CLAIM": {
+   "does": {
+    "d1": "claim neutrality or objectivity without showing what backs it",
+    "d2": "describe the source's own stance in place of evidence",
+    "d3": "ask the reader to trust a label instead of evidence",
+    "d4": "offer impartiality as a reason to accept the view",
+    "d5": "cast the source as a referee with nothing at stake",
+    "d6": "make the view seem to need no checking"
+   },
+   "unsaid": {
+    "u1": "how the view was reached",
+    "u2": "what evidence the view rests on",
+    "u3": "how the evidence was weighed",
+    "u4": "which other views were considered",
+    "u5": "how the claim of neutrality could be checked",
+    "u6": "what shows the source has no stake"
+   }
+  },
+  "BUREAUCRATIC_OBSCURITY": {
+   "does": {
+    "d1": "wrap a plain point in stiff official language",
+    "d2": "lend the sentence an official voice instead of a person's",
+    "d3": "add a formal tone without adding any reason or evidence",
+    "d4": "use process wording where plain words would say the same",
+    "d5": "make the point harder to see at a glance",
+    "d6": "slow the reader down on the way to the point"
+   },
+   "unsaid": {
+    "u1": "who made the decision",
+    "u2": "what changes in practice",
+    "u3": "why the step is being taken",
+    "u4": "who is affected and how",
+    "u5": "what the point means in everyday terms",
+    "u6": "which earlier point the phrase refers to",
+    "u7": "what reason the point rests on"
+   }
+  },
+  "INEVITABILITY_FRAME": {
+   "does": {
+    "d1": "present the outcome as already decided",
+    "d2": "treat where things are heading as the reason to agree",
+    "d3": "offer a sense of momentum in place of a reason",
+    "d4": "make weighing the evidence feel like wasted effort",
+    "d5": "suggest there is no point in pushing back",
+    "d6": "make disagreeing feel out of step with the times"
+   },
+   "unsaid": {
+    "u1": "what the forecast rests on",
+    "u2": "whose forecast it is",
+    "u3": "how soon the outcome is expected",
+    "u4": "what the case for the outcome is",
+    "u5": "which past events are meant"
+   }
+  },
+  "APPEAL_TO_TRADITION": {
+   "does": {
+    "d1": "offer a practice's age as the reason to keep it",
+    "d2": "treat a long-held custom as needing no defense",
+    "d3": "point to a practice's history, not its results",
+    "d4": "make the usual way sound like common sense",
+    "d5": "give the choice a feeling of certainty drawn from custom",
+    "d6": "let precedent stand in for an argument about this case"
+   },
+   "unsaid": {
+    "u1": "why the practice started",
+    "u2": "what results the practice has produced",
+    "u3": "what would happen if the practice changed",
+    "u4": "whether the practice's original reasons still apply",
+    "u5": "which alternatives have been tried",
+    "u6": "what evidence bears on keeping the practice"
+   }
+  },
+  "FALSE_EQUIVALENCE": {
+   "does": {
+    "d1": "set the views side by side as equally supported",
+    "d2": "credit each view equally without showing what each rests on",
+    "d3": "skip the step of comparing the evidence behind each view",
+    "d4": "make an even split sound like the careful position",
+    "d5": "invite the reader to see the question as evenly balanced",
+    "d6": "call the question complicated without showing what complicates it"
+   },
+   "unsaid": {
+    "u1": "what evidence each view rests on",
+    "u2": "how the evidence for each view compares",
+    "u3": "which arguments are meant",
+    "u4": "who holds each view",
+    "u5": "how the views were weighed",
+    "u6": "why the views get equal weight",
+    "u7": "what the middle position would be"
+   }
+  },
+  "MORAL_HIGH_GROUND": {
+   "does": {
+    "d1": "frame one view as simply the decent one",
+    "d2": "turn a disagreement into a test of character",
+    "d3": "make disagreeing look like a moral failing",
+    "d4": "cast agreement as the price of being decent",
+    "d5": "make objecting feel like confessing a flaw",
+    "d6": "put an appeal to decency where a reason would go"
+   },
+   "unsaid": {
+    "u1": "what reasons the view rests on",
+    "u2": "what evidence bears on the question",
+    "u3": "what the other view's reasons are",
+    "u4": "what costs and benefits are at stake",
+    "u5": "what standard of decency is being applied",
+    "u6": "what practical question is at issue"
+   }
+  },
+  "SOFT_CONSENSUS": {
+   "does": {
+    "d1": "claim wide support without saying where it comes from",
+    "d2": "sound like a careful summary while naming no source",
+    "d3": "cite a majority without showing it",
+    "d4": "describe the support in terms the reader cannot check",
+    "d5": "suggest agreement is growing without saying whose",
+    "d6": "give the claim the weight of agreement without showing the agreement"
+   },
+   "unsaid": {
+    "u1": "who agrees",
+    "u2": "how large the support is",
+    "u3": "what findings the agreement is based on",
+    "u4": "which studies are meant",
+    "u5": "how the support was measured",
+    "u6": "over what period the support has grown",
+    "u7": "who was asked"
+   }
+  },
+  "COMPETENCE_DISMISSAL": {
+   "does": {
+    "d1": "answer a disagreement with a remark about the people who disagree",
+    "d2": "question people's grasp of the subject instead of their point",
+    "d3": "make holding the other view sound like a failure to understand",
+    "d4": "invite the reader to set aside the view without weighing it",
+    "d5": "assert a gap in understanding without showing how it was judged",
+    "d6": "leave the other view itself unanswered"
+   },
+   "unsaid": {
+    "u1": "what the people it describes argue",
+    "u2": "who exactly holds the other view",
+    "u3": "what exactly is said to be misunderstood",
+    "u4": "what reply there is to the point itself",
+    "u5": "what evidence bears on the question itself",
+    "u6": "how that judgment of understanding could be checked",
+    "u7": "what expertise the question would need"
+   }
+  },
+  "VAGUE_INSTITUTIONAL_APPEAL": {
+   "does": {
+    "d1": "lean on unnamed authorities to carry the weight of the claim",
+    "d2": "borrow the standing of organizations without naming any",
+    "d3": "use a label of importance in place of a name",
+    "d4": "offer authority in place of anything a reader can check",
+    "d5": "point to groups the reader has no way to look up",
+    "d6": "ask the reader to take unnamed backing on trust"
+   },
+   "unsaid": {
+    "u1": "who exactly the backers are",
+    "u2": "what exactly the backers said",
+    "u3": "where the backers' statements can be found",
+    "u4": "why the backers hold that view",
+    "u5": "what evidence the backing rests on",
+    "u6": "how many such groups hold this view",
+    "u7": "when the backers took this position"
+   }
+  },
+  "ASPIRATIONAL_DEFLECTION": {
+   "does": {
+    "d1": "offer an intention where a result might be expected",
+    "d2": "state a goal without saying how far it has been reached",
+    "d3": "put a promise where a number or a date could go",
+    "d4": "invite the reader to treat an intention as a result",
+    "d5": "describe commitment rather than anything already done",
+    "d6": "leave the reader a warm impression with nothing to check"
+   },
+   "unsaid": {
+    "u1": "what has been achieved so far",
+    "u2": "how progress toward the goal is measured",
+    "u3": "by when the goal is meant to be met",
+    "u4": "what result a reader could check",
+    "u5": "what the commitment has produced to date",
+    "u6": "what steps will carry out the stated aim",
+    "u7": "who will check whether the goal is met"
+   }
+  },
+  "DISMISSAL_BY_REFRAMING": {
+   "does": {
+    "d1": "let a restated version stand in for the original point",
+    "d2": "present a restatement as what the point really means",
+    "d3": "answer a new version of the point rather than the point itself",
+    "d4": "give no evidence that the restatement is what was meant",
+    "d5": "make rejecting the restatement feel like rejecting the original point",
+    "d6": "treat the point as standing for something beneath its words"
+   },
+   "unsaid": {
+    "u1": "how the original point was worded",
+    "u2": "who made the original point",
+    "u3": "what shows the restatement matches what was meant",
+    "u4": "whether the point's makers would accept the restatement",
+    "u5": "what answer there is to the original point",
+    "u6": "what the original point asked for",
+    "u7": "how the restatement was arrived at"
+   }
+  },
+  "CAUSAL_TOTALIZATION": {
+   "does": {
+    "d1": "pin a sweeping harm on a single cause",
+    "d2": "describe the damage with no limit on how far it reaches",
+    "d3": "give no account of how the cause would produce the harm",
+    "d4": "convey a sense of loss with nothing a reader can check",
+    "d5": "give the reader one cause to feel angry at",
+    "d6": "use broad harm words where specific damage could be named"
+   },
+   "unsaid": {
+    "u1": "what exactly the stated cause is said to have done",
+    "u2": "how the harm is said to come from the cause",
+    "u3": "how the stated scale of the harm was judged",
+    "u4": "which specific things are said to be harmed",
+    "u5": "whether anything else contributed to the harm",
+    "u6": "when the harm is said to have begun",
+    "u7": "what evidence ties the stated cause to the harm"
+   }
+  },
+  "MONOCAUSAL_BLAME": {
+   "does": {
+    "d1": "make a single cause the whole explanation for the outcome",
+    "d2": "name a single cause while mentioning no other factor",
+    "d3": "tie the whole result to a single cause without showing the link",
+    "d4": "offer a tidy story with one clear place to put the blame",
+    "d5": "invite the reader to stop asking whether anything else contributed",
+    "d6": "single out a cause as the main or sole reason"
+   },
+   "unsaid": {
+    "u1": "whether anything else played a part in the outcome",
+    "u2": "how this cause is said to produce the result",
+    "u3": "what evidence links this one cause to the whole result",
+    "u4": "how the size of this cause's role was judged",
+    "u5": "whether other possible causes were considered",
+    "u6": "how this cause was singled out",
+    "u7": "what exactly the outcome is said to be"
+   }
+  },
+  "TOTALIZING_HARM_LANGUAGE": {
+   "does": {
+    "d1": "describe the harm as total and final",
+    "d2": "give a verdict on the damage instead of a measure",
+    "d3": "offer a vivid picture of total loss",
+    "d4": "leave no room for the loss to be partial",
+    "d5": "set no limit on the harm described",
+    "d6": "invite the reader to accept the scale without asking what was counted"
+   },
+   "unsaid": {
+    "u1": "what exactly is said to be damaged",
+    "u2": "how the harm is said to have come about",
+    "u3": "what was checked before the harm was called total",
+    "u4": "how the stated scale was measured",
+    "u5": "who assessed the harm it describes",
+    "u6": "what evidence backs the stated scale",
+    "u7": "how far the damage reaches"
+   }
+  },
+  "LEGAL_SETTLED_DISMISSAL": {
+   "does": {
+    "d1": "present the question as already answered",
+    "d2": "lend the point the weight of past decisions",
+    "d3": "make asking the question again feel pointless",
+    "d4": "give the reader a verdict instead of a reason to check",
+    "d5": "offer a stamp of authority in place of an argument",
+    "d6": "close the discussion without showing how the rule fits this case"
+   },
+   "unsaid": {
+    "u1": "which rule or ruling it means",
+    "u2": "what the rule says",
+    "u3": "how the rule fits the case at hand",
+    "u4": "which authority it is pointing to",
+    "u5": "where a reader could find the rule",
+    "u6": "what reasoning stands behind the rule",
+    "u7": "how the rule answers the point that was raised"
+   }
+  },
+  "LEGAL_MERIT_DISMISSAL": {
+   "does": {
+    "d1": "label the argument without answering what it says",
+    "d2": "let a strong label do the work of a reason",
+    "d3": "carry the tone of a final ruling",
+    "d4": "lead the reader to assume someone already checked the argument",
+    "d5": "give a verdict on the argument in a few words",
+    "d6": "make answering the argument seem unnecessary"
+   },
+   "unsaid": {
+    "u1": "what fact, rule or record the label rests on",
+    "u2": "what reasoning leads to the label",
+    "u3": "which part of the argument it addresses",
+    "u4": "what reasons the argument itself gives",
+    "u5": "what standard the argument is measured against",
+    "u6": "how the argument's own points are answered",
+    "u7": "whether anyone has weighed the argument's points"
+   }
+  },
+  "LEGAL_WEIGHT_STACKING": {
+   "does": {
+    "d1": "treat the amount of authority as the reason to agree",
+    "d2": "let a pile of authority stand in for reasoning",
+    "d3": "give a sense of size without naming any source",
+    "d4": "make the point feel closed before the sources are examined",
+    "d5": "invite the reader to accept the summary instead of checking it",
+    "d6": "sum up many sources in a few words"
+   },
+   "unsaid": {
+    "u1": "which authorities it means",
+    "u2": "how many sources there are",
+    "u3": "what reasoning those sources gave",
+    "u4": "what facts those decisions turned on",
+    "u5": "how closely those cases match the present case",
+    "u6": "whether any authority reached a different result",
+    "u7": "where a reader could check the sources"
+   }
+  },
+  "LEGAL_SANCTIONS_THREAT": {
+   "does": {
+    "d1": "answer the argument with a warning of consequences",
+    "d2": "make keeping the argument feel risky",
+    "d3": "shift attention from the argument to the risk of pressing it",
+    "d4": "let concern about a penalty stand in for a reply",
+    "d5": "cast doubt on the argument without a reason the reader can check",
+    "d6": "bring the prospect of a penalty or referral into the discussion"
+   },
+   "unsaid": {
+    "u1": "which point in the argument it disputes",
+    "u2": "what grounds the penalty would rest on",
+    "u3": "which rule the penalty would come under",
+    "u4": "who would decide whether a penalty applies",
+    "u5": "what reply the argument gets on its own terms",
+    "u6": "what evidence bears on the argument itself",
+    "u7": "what the argument claims"
+   }
+  },
+  "LEGAL_PROCEDURAL_GATEKEEPING": {
+   "does": {
+    "d1": "answer with a procedural bar instead of the substance",
+    "d2": "turn the question from what happened to how it was raised",
+    "d3": "answer a question other than the point raised",
+    "d4": "let a procedural rule make the refusal easy to accept",
+    "d5": "invite the reader to treat the matter as closed",
+    "d6": "draw attention to how, when or by whom the matter was raised"
+   },
+   "unsaid": {
+    "u1": "which rule creates the bar",
+    "u2": "what the procedural rule requires",
+    "u3": "how the bar applies to this point",
+    "u4": "whether anyone has looked at the substance",
+    "u5": "whether the point can be raised another way",
+    "u6": "what answer the point would get on its merits"
+   }
+  },
+  "LEGAL_STRAW_MAN": {
+   "does": {
+    "d1": "restate the position in all-or-nothing terms",
+    "d2": "frame the position as having no limits or exceptions",
+    "d3": "make the restated position sound extreme",
+    "d4": "put a paraphrase in place of the position's own words",
+    "d5": "leave the reader to judge the position by this summary alone",
+    "d6": "make the position, as restated, easy to doubt"
+   },
+   "unsaid": {
+    "u1": "what the original argument said in its own words",
+    "u2": "which statement it is summarizing",
+    "u3": "whether the position allows any exceptions",
+    "u4": "what reasons the original argument gave",
+    "u5": "what the original argument asks for",
+    "u6": "what evidence bears on the original argument",
+    "u7": "where the original argument can be found"
+   }
+  },
+  "MEDIA_EDITORIAL_AS_NEWS": {
+   "does": {
+    "d1": "attach a judging label with no source named for it",
+    "d2": "fold a judgment into what reads as a plain description",
+    "d3": "make a judgment the starting point instead of a claim to test",
+    "d4": "present an opinion as part of the news itself",
+    "d5": "name the subject in a way that already judges it",
+    "d6": "give the reader a label to accept rather than weigh"
+   },
+   "unsaid": {
+    "u1": "who holds this view",
+    "u2": "what the label is based on",
+    "u3": "what the label means in this case",
+    "u4": "what standard the subject is measured against",
+    "u5": "how widely the view is shared",
+    "u6": "how those involved describe the subject"
+   }
+  },
+  "MEDIA_ANONYMOUS_ATTRIBUTION": {
+   "does": {
+    "d1": "credit the claim to people the reader cannot identify",
+    "d2": "leave the reader no way to check who is speaking",
+    "d3": "lend the claim the weight of sources without naming them",
+    "d4": "suggest inside knowledge without showing what it is",
+    "d5": "let a vague label stand in for a named source",
+    "d6": "make the claim sound reported while its source stays unseen"
+   },
+   "unsaid": {
+    "u1": "who the sources are",
+    "u2": "how the sources know this",
+    "u3": "why the sources are not named",
+    "u4": "what role the sources have in the matter",
+    "u5": "how many people are speaking",
+    "u6": "whether any records back the account",
+    "u7": "whether anyone else has confirmed the account"
+   }
+  },
+  "MEDIA_WEASEL_QUANTIFIERS": {
+   "does": {
+    "d1": "suggest a crowd agrees without saying who or how many",
+    "d2": "point to a group the reader cannot count or check",
+    "d3": "lend the claim the weight of an uncounted group",
+    "d4": "make a view sound widely held with no figure given",
+    "d5": "invite the reader to go along with an unnamed group",
+    "d6": "use a vague amount where a number could go"
+   },
+   "unsaid": {
+    "u1": "who holds the view",
+    "u2": "how many hold the view",
+    "u3": "how the size of the group is known",
+    "u4": "what the view is based on",
+    "u5": "how many hold a different view",
+    "u6": "what share of the whole the group makes up",
+    "u7": "how recent the view is"
+   }
+  },
+  "MEDIA_FALSE_BALANCE": {
+   "does": {
+    "d1": "frame the question as a debate between views",
+    "d2": "give each view equal footing in the sentence",
+    "d3": "set what some say against what experts say, as a debate",
+    "d4": "leave out how much evidence stands behind each view",
+    "d5": "let the sentence's layout suggest the views weigh the same",
+    "d6": "turn a question of evidence into a contest of voices"
+   },
+   "unsaid": {
+    "u1": "who the unnamed speakers are",
+    "u2": "how many hold each view",
+    "u3": "what evidence stands behind each view",
+    "u4": "how the evidence behind the views compares",
+    "u5": "whether research backs either view",
+    "u6": "how either view could be checked",
+    "u7": "which experts are meant"
+   }
+  },
+  "MEDIA_EMOTIONAL_LEAD": {
+   "does": {
+    "d1": "tell the reader how to feel before the details arrive",
+    "d2": "set a mood before the sentence gets to its news",
+    "d3": "put a reaction ahead of what it reacts to",
+    "d4": "color how the rest of the sentence is read",
+    "d5": "open on a feeling before the facts are given",
+    "d6": "carry a strong reaction but no evidence for it"
+   },
+   "unsaid": {
+    "u1": "who feels this way",
+    "u2": "what the reaction is based on",
+    "u3": "how many people share the reaction",
+    "u4": "how this compares with similar cases",
+    "u5": "how those involved describe the events",
+    "u6": "which facts the reaction is about"
+   }
+  },
+  "MEDIA_BURIED_QUALIFIER": {
+   "does": {
+    "d1": "arrive only after the opening has shaped the reader's view",
+    "d2": "come at a point a skimming reader may never reach",
+    "d3": "leave the first impression standing for most of the text",
+    "d4": "qualify the opening account only after it has been taken in",
+    "d5": "let the order of the text set what the reader remembers",
+    "d6": "sit at the end of a long build-up"
+   },
+   "unsaid": {
+    "u1": "how the later point bears on the opening account",
+    "u2": "which part of the opening the later point covers",
+    "u3": "what the later point is based on",
+    "u4": "what the opening account is based on",
+    "u5": "whether the opening account was checked",
+    "u6": "when the later point became known"
+   }
+  },
+  "MEDIA_SELECTIVE_QUOTATION": {
+   "does": {
+    "d1": "cast doubt through quotation marks without saying why",
+    "d2": "sit in quotation marks with no source named",
+    "d3": "signal doubt without offering a fact to weigh",
+    "d4": "offer no stated claim to check or dispute",
+    "d5": "leave the reader to guess what the quotation marks mean",
+    "d6": "carry a hint of doubt that is never stated"
+   },
+   "unsaid": {
+    "u1": "who is being quoted",
+    "u2": "why the term is in quotation marks",
+    "u3": "what the quotation marks signal here",
+    "u4": "what fact would show whether the term fits",
+    "u5": "where the quoted term comes from"
+   }
+  },
+  "MEDIA_ASYMMETRIC_ATTRIBUTION": {
+   "does": {
+    "d1": "add doubt or attitude where a plain verb would do",
+    "d2": "signal how to take a statement before its content is weighed",
+    "d3": "report speech with a verb that carries a judgment",
+    "d4": "shape how the speaker comes across through the verb alone",
+    "d5": "give one speaker a loaded verb where another gets a plain one",
+    "d6": "fold a judgment of the speaker into a reporting verb"
+   },
+   "unsaid": {
+    "u1": "what exactly the speaker said",
+    "u2": "what the statement is based on",
+    "u3": "what evidence the speaker offered",
+    "u4": "how the speaker would describe their own statement",
+    "u5": "what the speaker was responding to",
+    "u6": "what the choice of verb is based on"
+   }
+  },
+  "MEDIA_SPECULATIVE_FRAMING": {
+   "does": {
+    "d1": "present an outcome as the expected one",
+    "d2": "imply that someone has weighed the odds without naming who",
+    "d3": "state a forecast with no forecaster attached",
+    "d4": "give a hedged forecast the feel of a firm one",
+    "d5": "lean the reader toward expecting one outcome",
+    "d6": "frame the future in hedged words that cannot be checked yet"
+   },
+   "unsaid": {
+    "u1": "who expects this outcome",
+    "u2": "what the expectation is based on",
+    "u3": "how sure the forecast is",
+    "u4": "which other outcomes were considered",
+    "u5": "when the outcome would be known",
+    "u6": "how the forecast was made",
+    "u7": "how often such forecasts have held up"
+   }
+  },
+  "FIN_SURVIVORSHIP_BIAS": {
+   "does": {
+    "d1": "describe only the winners, not the whole group",
+    "d2": "look back from results that are already known",
+    "d3": "pair an outcome with a trait or a choice",
+    "d4": "invite the reader to draw a lesson from what is shown",
+    "d5": "leave out the ones that failed or dropped away",
+    "d6": "make a shared trait look like the reason for success"
+   },
+   "unsaid": {
+    "u1": "how many tried and failed",
+    "u2": "whether the ones that failed did the same thing",
+    "u3": "how the ones named were picked",
+    "u4": "how the whole group did",
+    "u5": "what else might explain the result",
+    "u6": "what happened to the ones that dropped away",
+    "u7": "how other choices from the same time turned out"
+   }
+  },
+  "FIN_ANCHORING": {
+   "does": {
+    "d1": "measure a figure against one reference point",
+    "d2": "make one reference point the yardstick for the figure",
+    "d3": "describe the figure only in relation to a reference point",
+    "d4": "make the figure seem large or small through one comparison",
+    "d5": "invite the reader to judge the figure by the reference point",
+    "d6": "compare the figure with a peak or a low point"
+   },
+   "unsaid": {
+    "u1": "what the figure is now",
+    "u2": "how old the reference point is",
+    "u3": "how typical the reference point is",
+    "u4": "what the figure has usually been",
+    "u5": "why that point is the one to compare with",
+    "u6": "how the reference value was worked out",
+    "u7": "how the figure compares with other reference points"
+   }
+  },
+  "FIN_CHERRY_PICKED_TIMEFRAME": {
+   "does": {
+    "d1": "measure a result over one chosen stretch of time",
+    "d2": "make where the count starts part of the claim",
+    "d3": "invite the reader to judge the result by one window alone",
+    "d4": "let the span of dates shape how the result reads",
+    "d5": "tie the result to a start date left unexplained",
+    "d6": "make the result look precise by tying it to dates"
+   },
+   "unsaid": {
+    "u1": "why the count starts where it does",
+    "u2": "what a longer stretch of time would show",
+    "u3": "how the result looks from other start dates",
+    "u4": "what happened just before the window began",
+    "u5": "how the result looks with a different end date",
+    "u6": "what else changed during the same time",
+    "u7": "how comparable things did over the same time"
+   }
+  },
+  "FIN_PROJECTION_AS_FACT": {
+   "does": {
+    "d1": "speak of a future result as certain",
+    "d2": "carry no word such as expected or estimated",
+    "d3": "give a single outcome with no range around it",
+    "d4": "invite the reader to treat a future result as known",
+    "d5": "state the outcome with no condition attached"
+   },
+   "unsaid": {
+    "u1": "what the claim about the future rests on",
+    "u2": "what range of outcomes is possible",
+    "u3": "what the outcome depends on",
+    "u4": "how similar past forecasts turned out",
+    "u5": "whether the outcome has already been decided",
+    "u6": "by what date this is to happen",
+    "u7": "who stands behind the guarantee",
+    "u8": "who made the forecast"
+   }
+  },
+  "FIN_RECENCY_EXTRAPOLATION": {
+   "does": {
+    "d1": "point to a run of results so far",
+    "d2": "describe a run or trend as still going",
+    "d3": "stress how steady or lasting the run is",
+    "d4": "invite the reader to carry the run forward",
+    "d5": "say nothing about why the run would last",
+    "d6": "imply a forecast without stating or defending it"
+   },
+   "unsaid": {
+    "u1": "how long the run has lasted",
+    "u2": "what caused the run",
+    "u3": "what could change from here",
+    "u4": "how similar runs have played out before",
+    "u5": "what links past results to future ones",
+    "u6": "what the record is measured against",
+    "u7": "whether the run has had any breaks"
+   }
+  }
+ }
+}
