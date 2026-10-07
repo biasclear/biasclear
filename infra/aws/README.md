@@ -4,12 +4,12 @@ This guide is for the project owner. It says what the optional **Explain** featu
 
 A short technical section for reviewers is at the end.
 
-**Nothing here is live yet.** Grok 4.7 is the reviewed default, but live startup is blocked: its requested visible output limit has not been shown to bound billed reasoning tokens. GPT-6.1 Sol is also blocked while its lowest reasoning setting and billed total-token bound remain unverified. The code does not switch to Sonnet by itself. Offline tests and the stub evaluation spend nothing.
+**Nothing here is live yet.** Grok 4.7 remains the default. All three real models are blocked while exact Converse reasoning-accounting and input-bound evidence is unknown. Grok and Sol also lack a documented total billed-output bound; Sol lacks verified lowest-effort settings. Sonnet's native output bound alone does not establish its normalized Converse accounting. The code never switches models by itself. Offline tests and the stub evaluation spend nothing.
 
 Before visitors can use Explain, all of these happen, in this order:
 
-1. The red team reviews this work, and you merge it.
-2. **The rulebook's privacy rule is rewritten** (ticket X0): `AGENTS.md` today says visitor text never leaves the browser, and a hosted AI mode needs that rule changed first. You merge that change.
+1. **Before merging this service PR, rewrite the rulebook's privacy rule** (ticket X0): `AGENTS.md` today says visitor text never leaves the browser, and a hosted AI mode needs that rule changed first. The unapplied owner proposal is `handoff/explain/OWNER-RULES.patch`. You review and merge that separate change first.
+2. The red team reviews this work, and you merge it only after step 1 is adopted. This draft has no merge or deploy approval.
 3. You do the one-time setup below, and approve the first deploy. It leaves Explain switched **off**.
 4. The live test (`evaluate`), and the red team reads every answer.
 5. The website change that shows the button and rewrites every privacy sentence (tickets X3 and X5). You merge it, then run **resume**.
@@ -48,15 +48,17 @@ These are estimates from Amazon's published prices. The live test (the `evaluate
 
 | Part | Normal month | Worst month |
 |---|---|---|
-| The selected AI model | Actual price and latency are measured in the owner-approved live evaluation. The program reserves money before each call and limits the ledger to **$25/month** and **$2.50/day**. | A documented bound on total billed output is required before live use; Grok and Sol are blocked until that is established. |
-| Everything else (web address, function, counters, log) | Under $1 | About $15 to $20, if someone flooded the service at full speed all month |
-| **Total** | **Under $26** | **About $45** |
+| The selected AI model | Actual price and latency are measured in the owner-approved live evaluation. The program reserves money before each call and limits the ledger to **$25/month** and **$2.50/day**. | Documented input-framing and total billed-output bounds plus verified Converse reasoning accounting are required before live use; all three models are blocked until that evidence is established. |
+| Everything else (web address, function, counters, log, billing-anomaly metric/alarm) | Not measured in this code-only draft. | No hard infrastructure or total-account ceiling. Recalculate the cost model before the AWS sitting; the old $15–$20 flood estimate predates atomic ledger writes and consistent pause reads. |
+| **Total** | **Unmeasured** | **No guaranteed total AWS bill** |
 
 - **The $25 stop is counted at full price, whatever credits you have.** Explain stops calling the model for the rest of the month once it reaches $25, and for the rest of the day once it reaches $2.50. The count lives in the setup, so it holds even if the service is removed and deployed again in the same month.
 - **Credits.** The owner checks the credit's applicable products during the sitting. The cap counts full model price before credits; credit availability never raises the spending limit.
 - **The budget emails** arrive at $15 (half of $30), at $30, and when Amazon forecasts the month will pass $30. The forecast email only starts after a few weeks of billing history. Amazon's numbers lag by several hours, so the budget is a safety net; the $25 stop in the program is the real stop.
 
 **Use this AWS account for Explain only.** The budget watches the whole account.
+
+**Billing-anomaly stop.** Reservation and settlement update the month/day counters atomically with a unique event record. A cost/token-bound breach, unknown usage or uncertain settlement returns paused and attempts a persistent stop that ordinary resume cannot clear. The exact log records known actual cost separately from the reservation and reports whether the pause persisted. If persistence fails, only the current instance is guaranteed paused; the alarm makes that failure observable. The draft adds a named CloudWatch metric/alarm with no automatic actions or notification subscription. It has not been created, and no delivery is claimed. Owner reconciliation is required before clearing an anomaly; a pause cannot undo already billed charges.
 
 ---
 
@@ -67,12 +69,13 @@ The PM sends you a link to `infra/aws/setup.yaml` on GitHub with the repository'
 1. **Sign in** to the AWS console with the account's main (root) sign-in, with two-factor turned on. Use it for these steps only.
 2. **Check the credit.** Billing and Cost Management → **Credits**. Send the PM a screenshot of the credit's name, expiry date and "applicable products".
 3. **Check the selected model.** Choose **US East (N. Virginia)** and confirm the reviewed profile is available on this account. Model access, use-case forms, terms and any paid test are the owner's actions. Do not call a blocked model or substitute another model.
-4. **Check two privacy settings.** Model invocation logging must be **off**, and the account data-retention API must report **`none`**. AWS documents no console retention control; any owner-authorized account change belongs to the sitting. If the selected model refuses `none`, stop and report it to Brad. Never change to default or review retention.
+4. **Check the privacy settings.** Model invocation logging in source `us-east-1` must be **off**, and retention must report **`none`** in every approved processing region (`us-east-1`, `us-east-2`, `us-west-2`). AWS documents regional retention with no propagation; those conservative reads do not themselves prove selected-model compatibility. AWS documents no console retention control; any owner-authorized account change belongs to the sitting. If the selected model refuses `none`, stop and report it to Brad. Never change to default or review retention.
 5. **Create the setup.** Open the PM's link to `setup.yaml` → **Download raw file**. Then CloudFormation → **Create stack** → **With new resources** → **Upload a template file** → choose the file → **Next**. Name it `biasclear-explain-setup`. Check the alert email (`hello@biasclear.com`) → **Next** → **Next** → tick **"I acknowledge that AWS CloudFormation might create IAM resources with custom names"** → **Submit**. Wait until it says `CREATE_COMPLETE`.
    - A true one-click link isn't possible for this first step: Amazon wants such files stored in Amazon first, and your account has nothing there yet.
    - Uploading the file makes CloudFormation create a small bucket of its own, named `cf-templates-…-us-east-1`. It costs next to nothing; the delete steps below remove it.
 6. **Create the GitHub approval step.** In the repository: **Settings → Environments → New environment** → name it `explain-aws` → **Configure environment**:
-   - tick **Required reviewers** and add yourself (leave **Prevent self-review** unticked);
+   - before configuring reviewers, decide the identity boundary described below. With the present shared account, owner approval is a process rule; it is not an agent-proof lock. A separate reviewer identity with **Prevent self-review** requires that identity to approve a run started by the other identity;
+   - set **Required reviewers** and the self-review option only according to that owner-approved design;
    - untick **Allow administrators to bypass configured protection rules**;
    - **Save protection rules**;
    - **Deployment branches and tags** → **Selected branches and tags** → **Add deployment branch or tag rule** → **Branch** → type `main` → **Add rule**;
@@ -98,6 +101,8 @@ Nothing runs by itself. A change merged into the repository waits until you run 
 > **The one rule for approving: approve only a run you started yourself, just now.** If GitHub emails you about a run waiting for approval that you didn't start, don't approve it. Tell the PM.
 
 Every agent works through your GitHub account, so GitHub can't tell your clicks from theirs. Your approval is the check, and it only works if you keep this rule.
+
+**Approval boundary still to decide.** The workflow's restricted `GITHUB_TOKEN` does not restrict agents' existing CLI, connector or browser access. Dispatch uses Actions write access; [approval through GitHub's API requires Deployments write](https://docs.github.com/en/rest/actions/workflow-runs#review-pending-deployments-for-a-workflow-run). An agent acting as the same owner/reviewer account could therefore perform both actions if its access permits them. A separate reviewer identity plus Prevent self-review is a technical separation; enabling that option while the owner starts and approves under the same identity would block the owner too. Brad must choose the separation or explicitly accept the remaining process boundary before any AWS sitting. No identity, permission or environment change is part of this PR.
 
 ### If a deploy fails
 
@@ -169,9 +174,9 @@ The selected Standard US input/output prices per million tokens are Grok 4.7 **$
 
 **The workflow's jobs.** `summary` (read-only; finds the last deploy from the `explain-aws` environment's successful deployments whose run was a `deploy` from `explain.yml` on `main` with a successful `aws` job, on `main`'s history; the deployment and its status made by `github-actions[bot]`, and the deployment's commit equal to its run's commit) → `build` and `rebuild` (read-only, no environment, no `id-token`: `npm ci`, tests, the price check, two reproducible builds on separate runners) → `aws` (the environment and `id-token`; no npm: checks both builds' sha256, then `ops.sh`, each step signing in for its own process) → `report` (evaluate only; read-only).
 
-**Request path** (`packages/explain/src/app.ts`): strict startup validates the selected table entry and retention `none` → authenticated evaluation event or public origin/request boundary → invocation logging off and retention none, refreshed every 15 minutes → exactly seven request fields, <=4,096 bytes, one sentence <=500 code points → bundled engine rechecks the rule and span → rate limits → month/day conditional money reservation before the call → one `Converse` request with the fixed prompt and sentence, no tools, search, grounding or retries → account usage settlement → normalized single-text answer checks → one fixed-field log line. Recognized reasoning blocks are discarded; reasoning output tokens remain part of billed output usage and are counted once. Cache-read/write input counters are conservatively charged at full input rate. Unknown usage keeps the full reservation. A model without a verified total billed output bound cannot start live.
+**Request path** (`packages/explain/src/app.ts`): strict startup validates the selected table entry, input/billed reasoning evidence and retention `none` → authenticated evaluation event or public origin/request boundary → source invocation logging off and all-region retention none, refreshed every 15 minutes with concurrent callers awaiting the same check → exactly seven request fields, <=4,096 bytes, one sentence <=500 code points → bundled engine rechecks the rule and span → rate limits → persistent pause fence and atomic month/day reservation before the call → one `Converse` request with the fixed prompt and sentence, no tools, search, grounding or retries → conditional atomic usage settlement → bound-breach pause or normalized answer checks → one fixed-field log line. Recognized reasoning blocks are discarded; normalized output accounting must be verified to include billed reasoning exactly once before live startup. Cache-read/write input counters are conservatively charged at full input rate. Unknown usage keeps the full reservation and pauses; a model without verified input and total billed bounds cannot start live.
 
-**Service stack parameters** (`explain.yaml`). `Model` is the only model selector: `grok47` (default), `sonnet55`, or `sol61`. The exact profile and reviewed prices are mapped from the one code table; prices cannot be lowered through stack parameters. Other workflow-controlled values are `Explain`, `MonthlyCapUsd`, `CodeKey` and the short-lived `EvaluationKey` (`NoEcho`, cleared after a run). Retention only allows `none`. `AllowedOrigins` defaults to `https://biasclear.com`.
+**Service stack parameters** (`explain.yaml`). `Model` is the only model selector: `grok47` (default), `sonnet55`, or `sol61`. The exact profile and reviewed prices are mapped from the one code table; prices cannot be lowered through stack parameters. Other workflow-controlled values are `Explain`, `MonthlyCapUsd`, `CodeKey` and the temporary `EvaluationKey` (`NoEcho`, best-effort cleanup after a run; no automatic expiry). Retention only allows `none`. `AllowedOrigins` defaults to `https://biasclear.com`.
 
 **IAM.** All permissions live in the setup stack. The function has `bedrock:InvokeModel` and `bedrock:GetInferenceProfile` on each exact reviewed `us-east-1` profile ARN. Each profile has exactly three destination foundation-model ARNs, with `bedrock:InferenceProfileArn` equal to that profile; no region wildcard or direct model call is allowed. It may read the two account settings, use its one counters table and write its one log group. The budget attaches a deny policy for `bedrock:*` and `bedrock-mantle:*`. The deploy role may change only the service stack through its named CloudFormation role, upload builds, read settings and invoke the evaluation function. CloudFormation may manage only the named function/log and HTTP APIs in us-east-1 and pass only the function role. The Budgets role may only attach/detach the one deny policy. The OIDC trust pins account/repository IDs and the protected `explain-aws` environment.
 

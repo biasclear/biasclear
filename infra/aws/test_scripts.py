@@ -98,9 +98,14 @@ elif cmd == "bedrock get-model-invocation-logging-configuration":
     print(json.dumps(state.get("logging", {})))
 elif cmd == "bedrock get-account-data-retention":
     if "--generate-cli-skeleton" in args:
+        if state.get("oldCli"):
+            sys.exit(2)
         print("{}")
     else:
-        print(json.dumps({"mode": state.get("retention", "none")}))
+        region = opt("--region", "us-east-1")
+        if region in state.get("retentionReadFails", []):
+            sys.exit(254)
+        print(json.dumps({"mode": state.get("retentionByRegion", {}).get(region, state.get("retention", "none"))}))
 elif cmd == "lambda invoke":
     payload = json.load(open(opt("--payload").replace("file://", "")))
     out = [a for a in args[2:] if not a.startswith("-") and a not in (opt("--function-name"), opt("--cli-binary-format"), opt("--payload"), opt("--cli-read-timeout"), opt("--cli-connect-timeout"), opt("--output"))][-1]
@@ -132,6 +137,12 @@ def opt(name):
     return args[args.index(name) + 1] if name in args else None
 if "audience=sts.amazonaws.com" in url:
     print(json.dumps({"value": "oidc-token"}))
+    sys.exit(0)
+if url.endswith("/data-retention"):
+    region = url.split(".")[1]
+    if region in state.get("retentionReadFails", []):
+        sys.exit(22)
+    print(json.dumps({"mode": state.get("retentionByRegion", {}).get(region, state.get("retention", "none"))}))
     sys.exit(0)
 if url.endswith("/v1/explain"):
     posts = state.get("posts", [])
@@ -289,6 +300,53 @@ def test_settings(fake, logging, retention, want, ok):
     fake.state(logging=logging, retention=retention)
     r = fake.run("ops.sh", "settings", want)
     assert (r.returncode == 0) is ok, r.stdout + r.stderr
+
+
+@pytest.mark.parametrize("region", ["us-east-1", "us-east-2", "us-west-2"])
+def test_settings_rejects_retention_drift_in_any_processing_region(fake, region):
+    fake.state(logging={}, retention="none", retentionByRegion={region: "aws_review"})
+    result = fake.run("ops.sh", "settings", "none")
+    assert result.returncode == 1
+    assert region in fake.summary()
+
+
+def test_settings_rejects_an_unreadable_destination(fake):
+    fake.state(logging={}, retention="none", retentionReadFails=["us-west-2"])
+    result = fake.run("ops.sh", "settings", "none")
+    assert result.returncode == 1
+    assert "could not read Bedrock retention in us-west-2" in fake.summary()
+
+
+def test_settings_reads_source_logging_and_every_reviewed_retention_region(fake):
+    fake.state(logging={}, retention="none")
+    result = fake.run("ops.sh", "settings", "none")
+    assert result.returncode == 0, result.stdout + result.stderr
+    calls = fake.calls()
+    logging = [call for call in calls if call[:3] == ["aws", "bedrock", "get-model-invocation-logging-configuration"]]
+    assert len(logging) == 1
+    assert logging[0][logging[0].index("--region") + 1] == "us-east-1"
+    reads = [call for call in calls if call[:3] == ["aws", "bedrock", "get-account-data-retention"] and "--output" in call]
+    assert [call[call.index("--region") + 1] for call in reads] == ["us-east-1", "us-east-2", "us-west-2"]
+
+
+def test_settings_unknown_selector_stops_before_credentials(fake):
+    fake.state(logging={}, retention="none")
+    result = fake.run("ops.sh", "settings", "none", extra_env={"MODEL": "unreviewed"})
+    assert result.returncode == 1
+    assert fake.read_state().get("signins", 0) == 0
+    assert fake.calls(["aws"]) == []
+
+
+def test_settings_old_cli_checks_each_retention_region_with_signed_read_only_get(fake):
+    fake.state(logging={}, retention="none", oldCli=True)
+    result = fake.run("ops.sh", "settings", "none")
+    assert result.returncode == 0, result.stdout + result.stderr
+    reads = [call for call in fake.calls(["curl"]) if any(arg.endswith("/data-retention") for arg in call)]
+    assert len(reads) == 3
+    assert [next(arg for arg in call if arg.endswith("/data-retention")) for call in reads] == [
+        f"https://bedrock.{region}.amazonaws.com/data-retention" for region in ("us-east-1", "us-east-2", "us-west-2")
+    ]
+    assert all("-X" not in call for call in reads)
 
 
 # ---- ops.sh: deploy ------------------------------------------------------

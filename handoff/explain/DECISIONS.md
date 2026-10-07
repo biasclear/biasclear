@@ -16,6 +16,8 @@ Today the rules say your visitors' text never leaves their browser, and that a h
 
 **Recommend: yes.** The checker itself doesn't change, and still sends nothing. You merge these because they're protected files.
 
+**Required order:** adopt the owner/privacy exception and protected paths before merging the hosted Explain service PR. `OWNER-RULES.patch` is an unapplied proposal; neither code preparation nor this decision draft adopts it.
+
 ---
 
 **D2. Swappable, default Grok 4.7.**
@@ -23,6 +25,8 @@ Today the rules say your visitors' text never leaves their browser, and that a h
 **Owner decision, Brad, 2026-10-07:** "make it swappable, yet lets start with grok 4.7".
 
 Use Bedrock Converse and one reviewed table for Grok 4.7, Claude Sonnet 5.5 and GPT-6.1 Sol. One allowlisted stack parameter selects the model. No automatic fallback. Each entry names its maker, exact IDs, source and destinations, verified prices, lowest supported reasoning effort and total output-token bound. Grok's reasoning cannot be assumed off; all reasoning must be included in the $25 cap. Its total billed-token bound is currently unverified, so paid startup remains blocked. Grok remains the default; this is not a switch to another model. Sol's lowest-effort mapping is also unresolved.
+
+The exact Converse reasoning-accounting and input-bound records now carry explicit source/date and yes/no/unknown states. All three real entries currently remain unknown for these mappings and refuse live startup. Sonnet's documented native output bound does not establish that its normalized Converse billing counters and framing bound have been verified. Synthetic test bounds never confer live readiness.
 
 Grok ships only if the same-set real evaluation passes even-handedness, injection and claim-preservation review. Report failures to Brad and Claude; neither builder switches models on its own. The present evaluation is a stub, with zero spend and no model-quality claim. The real evaluation requires Brad's yes in the AWS sitting.
 
@@ -41,14 +45,14 @@ Exact profile availability and destinations still need account-console confirmat
 **D4. The monthly spending cap.**
 Explain stops calling the AI model for the rest of the month once the model has cost this much, counted at full price, whatever credits you have. It also stops for the rest of the day once it has spent one tenth of the cap, so one busy or abusive day can't use the whole month.
 
-The cap covers the AI model, which is almost all of the cost. The small Amazon services around it (the web address, the function, the counters, the logs) have no hard stop. At normal use they cost under $1 a month. If someone flooded the service at its full speed for a whole month, they could add about $15 to $20. **So the worst month you should plan for is about $45.** The budget emails in D5 would reach you along the way.
+The cap covers the AI model. The surrounding AWS services (the web address, function, counters, logs and anomaly metric/alarm) have no hard cost stop. The old $15–$20 flood estimate predates atomic ledger/event writes and consistent pause reads and must be recalculated before deployment. **No guaranteed worst total AWS bill is established by this code-only draft.** The budget in D5 is a delayed backstop, and credit coverage does not enlarge the model allowance.
 
 **Working ceiling: $25 a month, with a daily limit of $2.50.** The owner prioritizes preventing a drain of the account's credits. The absolute permitted overrun remains a clarification, not authorization to relax the ceiling. No number of explanations is promised before reasoning usage is measured. Lowering the cap is one run in GitHub. Raising it above $25 is a small reviewed change plus one number in your setup, done together.
 
 ---
 
 **D5. A second, automatic stop from Amazon.**
-Amazon's budget tool watches the whole AWS account, ignoring credits and including tax. It emails you when the month reaches half of $30 (the cap plus $5 for small running costs), when it reaches $30, and when Amazon forecasts it will pass $30. The forecast email only starts working after a few weeks, once Amazon has some billing history. At $30 it also switches off Explain's access to the AI model by itself, and Explain stays off until someone checks why and switches it back. Amazon's numbers lag by several hours, so this is a safety net, not the main stop.
+**Separate setup proposal, not a changed model cap:** the secondary whole-account budget below is $30; the model ledger remains $25. This budget amount and the approval identity still require the owner's setup decision. Nothing has been created. Amazon's budget tool watches the whole AWS account, ignoring credits and including tax. It emails you when the month reaches half of $30 (the cap plus $5 for small running costs), when it reaches $30, and when Amazon forecasts it will pass $30. The forecast email only starts working after a few weeks, once Amazon has some billing history. At $30 it also switches off Explain's access to the AI model by itself, and Explain stays off until someone checks why and switches it back. Amazon's numbers lag by several hours, so this is a safety net, not the main stop.
 
 It can fire for two reasons: our own counter was wrong, or someone flooded the service and ran up the small charges in D4. Either way, a person should look before Explain comes back.
 
@@ -108,6 +112,8 @@ No key or password is ever shown, copied or stored. GitHub proves who it is to A
 
 > **Approve only a run you started yourself, just now.** If GitHub emails you about a run waiting for approval that you didn't start, don't approve it. Tell the PM.
 
+This is a process rule under the current shared identity. Workflow-token restrictions do not limit an agent's CLI/connector/browser credentials. Dispatch needs Actions write; [API deployment approval needs Deployments write](https://docs.github.com/en/rest/actions/workflow-runs#review-pending-deployments-for-a-workflow-run). A separate reviewer identity with Prevent self-review can enforce separation, but it would also prevent the same owner identity from both starting and approving. Brad must choose that separation or explicitly accept the process boundary before the AWS sitting. No access or account settings are changed here.
+
 Each run's page shows, in plain words, what it will do and what changed since the last deploy, above the approve button.
 
 **Recommend: yes.** The PM prepares the setup file with the project's public GitHub numbers already filled in, so the only things you type are the setup's name (`biasclear-explain-setup`) and your 12-digit AWS account number.
@@ -132,13 +138,13 @@ AWS advises against using the root sign-in for daily work. Making a separate adm
 ---
 
 **D11. The AWS credit.**
-Claude on Amazon is billed as "AWS Marketplace" usage. Most AWS credits don't cover Marketplace. AWS's Activate terms make one exception, for AI models on Amazon Bedrock. I could read that exception only through search results, not the page itself.
+Credit coverage is an account-specific check. Bedrock billing category, applicable products, credit type and expiry must be read in Billing for the chosen model; no credit balance or generic program statement establishes coverage. The full-price ledger ignores credits.
 
 **Recommend:**
 1. In the setup sitting, open **Billing → Credits** and send the PM a screenshot of the credit's name, expiry date and "applicable products", so we know it really covers Bedrock.
-2. The PM adds a reminder one month before the credit expires.
+2. Any reminder is a separate owner-authorized automation; no reminder has been configured by this code PR.
 
-When the credit runs out, Explain keeps working and charges real money, never more than the cap for the model (D4).
+When a credit runs out, charges may become payable. Live startup remains blocked until the selected model's pre-call input/total-output bounds and billed reasoning accounting are verified; the cap does not bound the other AWS services (D4).
 
 ---
 

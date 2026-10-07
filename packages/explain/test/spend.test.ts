@@ -49,7 +49,7 @@ describe("reservations", () => {
     const aws = new FakeAws();
     const ddb = new Ddb(aws.transport, "us-east-1", "t");
     const r = await reserve(ddb, cfg, now, 10_000);
-    expect(r).toEqual({ ok: true, reservation: { month: "spend#2026-10", day: "spendday#2026-10-31", micros: 10_000 } });
+    expect(r).toMatchObject({ ok: true, reservation: { month: "spend#2026-10", day: "spendday#2026-10-31", micros: 10_000 } });
     if (!r.ok) throw new Error("unreachable");
     // The model answered after midnight: the settle still goes to October 31.
     expect(await settle(ddb, r.reservation, 3_000)).toBe(true);
@@ -99,7 +99,7 @@ describe("reservations", () => {
     expect(await hasHeadroom(ddb, cfg, now, 1000)).toBe(true);
   });
 
-  it("a settle that fails leaves the reservation counted (the meter can only over-count)", async () => {
+  it("a failed atomic settlement leaves both reservation amounts unchanged", async () => {
     const aws = new FakeAws();
     const ddb = new Ddb(aws.transport, "us-east-1", "t");
     const r = await reserve(ddb, cfg, now, 10_000);

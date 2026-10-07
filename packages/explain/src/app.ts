@@ -16,19 +16,21 @@ import type { Config } from "./config.js";
 import type { EngineRegistry } from "./engines.js";
 import { STATUS, ROUTE_PATH, errorResponse, header, jsonResponse, preflight, type HttpEvent, type HttpResult } from "./http.js";
 import { makeLogger, type LogLine, type LogSink } from "./log.js";
-import { MODELS } from "./models.js";
+import { MODELS, modelReady, type ModelInfo } from "./models.js";
 import type { MovesTable } from "./moves.js";
 import { checkReply } from "./output.js";
 import { buildPrompt, type PromptMode } from "./prompt.js";
 import { checkRate, connectionHash, connectionKey, todaysSalt } from "./ratelimit.js";
 import { bodyText, parseJson, validateRequest, type ExplainRequest } from "./request.js";
-import { actualMicros, hasHeadroom, release, reserve, settle, worstCaseMicros, type Reservation } from "./spend.js";
+import { actualMicros, billingPaused, persistBillingPause, hasHeadroom, release, reserve, settle, worstCaseMicros, type Reservation } from "./spend.js";
 import { SETTINGS_INTERVAL_MS, type InstanceState } from "./state.js";
 import { nextDayStart } from "./time.js";
 
 export interface Deps {
   /** undefined when the environment is incomplete: every request is then "paused". */
   config: Config | undefined;
+  /** Trusted dependency injection only. Production always uses the reviewed MODELS. */
+  models?: Readonly<Record<string, ModelInfo>>;
   transport: Transport;
   now: () => number;
   randomBytes: (n: number) => Uint8Array;
@@ -67,6 +69,17 @@ export interface EvaluationResult {
   status: number;
   body: ExplainAnswer | { v: 1; error: ErrorName };
   evaluation: {
+    modelCalled?: boolean | undefined;
+    providerStopReason?: string | undefined;
+    providerText?: string | undefined;
+    providerTextChars?: number | undefined;
+    providerTextTruncated?: boolean | undefined;
+    inputBoundTokens?: number | undefined;
+    outputBoundTokens?: number | undefined;
+    billedBoundViolated?: boolean | undefined;
+    reservedMicros?: number | undefined;
+    actualMicros?: number | undefined;
+    pausePersisted?: boolean | undefined;
     code?: Code | undefined;
     plainer?: PlainerState | undefined;
     inTok?: number | undefined;
@@ -127,7 +140,7 @@ export function createHandler(deps: Deps): (event: unknown) => Promise<HttpResul
   const log = makeLogger(deps.sink, {
     rules: knownRules,
     rulesVersions: new Set(deps.engines.builds.keys()),
-    models: new Set(Object.values(MODELS).map((m) => m.key)),
+    models: new Set(Object.values(deps.models ?? MODELS).map((m) => m.key)),
   });
 
   return async (event: unknown) => {
@@ -135,7 +148,7 @@ export function createHandler(deps: Deps): (event: unknown) => Promise<HttpResul
     const evaluation = isEvaluationEvent(event);
     const line: LogLine = { outcome: "no_answer", status: 502, ms: 0 };
     if (evaluation) line.evaluation = 1;
-    const detail: EvaluationResult["evaluation"] = {};
+    const detail: EvaluationResult["evaluation"] = { modelCalled: false };
     const cors: { origin?: string | undefined } = {};
     let answer: Answer;
     try {
@@ -211,23 +224,28 @@ async function explain(
   // 1. Kill switch and in-memory pauses. Nothing else is read.
   if (cfg === undefined) stop("paused", "E_CONFIG");
   const config: Config = cfg;
-  if (!config.routeApproved || config.retentionMode !== "none") stop("paused", "E_CONFIG");
+  const model = (deps.models ?? MODELS)[config.modelId];
+  if (!modelReady(model) || config.region !== model.region || !config.routeApproved || config.retentionMode !== "none") stop("paused", "E_CONFIG");
   if (!config.on) stop("paused", "E_SWITCH_OFF");
   if (state.pausedUntil > now) stop("paused", "E_PAUSE_FLAG");
 
-  // 2. The account's privacy settings, read at most every 15 minutes.
-  if (now >= state.nextSettingsCheck) {
-    state.nextSettingsCheck = now + SETTINGS_INTERVAL_MS;
-    let code: Code | undefined;
-    try {
-      const s = await readAccountSettings(deps.transport, config.region);
-      if (s.loggingOn) code = "E_SETTINGS_LOGGING_ON";
-      else if (s.retention !== config.retentionMode) code = "E_SETTINGS_RETENTION";
-    } catch {
-      code = "E_SETTINGS_READ";
+  // 2. A concurrent request must await privacy proof; caching begins after it finishes.
+  if (state.settingsCheck !== undefined || now >= state.nextSettingsCheck) {
+    if (state.settingsCheck === undefined) {
+      state.settingsCheck = (async (): Promise<Code | undefined> => {
+        try {
+          const s = await readAccountSettings(deps.transport, config.region, model.destinationRegions);
+          if (s.loggingOn) return "E_SETTINGS_LOGGING_ON";
+          if (Object.values(s.retentionByRegion).some((mode) => mode !== config.retentionMode)) return "E_SETTINGS_RETENTION";
+          return undefined;
+        } catch { return "E_SETTINGS_READ"; }
+      })();
     }
+    const code = await state.settingsCheck;
+    state.settingsCheck = undefined;
+    state.nextSettingsCheck = deps.now() + SETTINGS_INTERVAL_MS;
     if (code !== undefined) {
-      state.pausedUntil = now + SETTINGS_INTERVAL_MS;
+      state.pausedUntil = deps.now() + SETTINGS_INTERVAL_MS;
       stop("paused", code);
     }
   }
@@ -279,18 +297,22 @@ async function explain(
   if (!marks.some((m) => m.ruleId === req.rule && m.start === req.start && m.end === req.end)) {
     stop("invalid", "E_NOT_A_MARK", 422);
   }
-  const model = MODELS[config.modelId];
-  if (model === undefined) return stop("paused", "E_CONFIG");
   line.model = model.key;
   const prompt = buildPrompt(deps.promptMode, move, req.sentence, req.start, req.end);
   detail.promptBytes = prompt.bytes;
-  const worst = worstCaseMicros(prompt.bytes, model.billedMaxTokens ?? model.maxTokens, config);
+  detail.inputBoundTokens = prompt.bytes + model.inputTokenBound.framingTokens;
+  detail.outputBoundTokens = model.billedMaxTokens;
+  const worst = worstCaseMicros(prompt.bytes, model.billedMaxTokens, config, model.inputTokenBound.framingTokens);
   if (worst > config.dailyMicros || worst > config.capMicros) stop("paused", "E_TOO_COSTLY");
 
   const ddb = new Ddb(deps.transport, config.region, config.table);
 
   // 6. Spend headroom: two cheap reads, so a flood after the money is gone costs no writes.
   try {
+    if (await billingPaused(ddb, now)) {
+      state.pausedUntil = Number.POSITIVE_INFINITY;
+      stop("paused", "E_BILLING_PAUSE");
+    }
     if (!(await hasHeadroom(ddb, config, now, worst))) {
       state.pausedUntil = nextDayStart(now);
       stop("paused", "E_HEADROOM");
@@ -320,8 +342,8 @@ async function explain(
   try {
     const r = await reserve(ddb, config, now, worst);
     if (!r.ok) {
-      state.pausedUntil = nextDayStart(now);
-      return stop("paused", r.which === "month" ? "E_RESERVE_MONTH" : "E_RESERVE_DAY");
+      state.pausedUntil = r.which === "pause" ? Number.POSITIVE_INFINITY : nextDayStart(now);
+      return stop("paused", r.which === "pause" ? "E_BILLING_PAUSE" : r.which === "month" ? "E_RESERVE_MONTH" : "E_RESERVE_DAY");
     }
     reservation = r.reservation;
   } catch (err) {
@@ -329,34 +351,59 @@ async function explain(
     throw err;
   }
   line.micros = reservation.micros;
+  line.reservedMicros = reservation.micros;
+  detail.reservedMicros = reservation.micros;
+
+  const pause = async (code: Code, actual?: number): Promise<never> => {
+    state.pausedUntil = Number.POSITIVE_INFINITY;
+    const persisted = await persistBillingPause(ddb, { reason: code, nowMs: now, reservedMicros: reservation.micros,
+      ...(actual === undefined ? {} : { actualMicros: actual }), event: reservation.event });
+    line.pausePersisted = persisted ? 1 : 0;
+    detail.pausePersisted = persisted;
+    return stop("paused", code);
+  };
 
   // 9. The model call, with the reservation in hand.
-  const outcome = await callModel(deps, config, reservation, prompt.system, prompt.user, model.maxTokens);
+  const outcome = await callModel(deps, config, reservation, prompt.system, prompt.user, model);
+  detail.modelCalled = outcome.modelCalled;
+  detail.providerStopReason = outcome.providerStopReason;
+  detail.providerText = outcome.providerText;
+  detail.providerTextChars = outcome.providerTextChars;
+  detail.providerTextTruncated = outcome.providerTextTruncated;
+  if (evaluation) detail.raw = outcome.providerText;
   if (outcome.kind === "not-billed") {
-    // If the give-back fails, the reservation stays counted: the safe direction.
-    line.micros = (await release(ddb, reservation)) ? 0 : reservation.micros;
+    line.actualMicros = 0;
+    detail.actualMicros = 0;
+    if (!(await release(ddb, reservation))) return pause("E_SETTLE", 0);
+    line.micros = 0;
     if (outcome.pauseInstance) state.pausedUntil = now + SETTINGS_INTERVAL_MS;
     return stop(outcome.answer, outcome.code);
   }
   if (outcome.kind === "maybe-billed") {
-    // It may have been billed: the whole reservation stays counted.
-    return stop("no_answer", outcome.code);
+    // Unknown usage cannot demonstrate the reservation covered billed reasoning.
+    // Preserve its event as unresolved and stop further spend, including fresh instances.
+    return pause(outcome.code);
   }
 
   // 11. Settle the real cost (before the checks, so a failed check still counts what it cost).
   const actual = actualMicros(outcome.inTok, outcome.outTok, config);
   line.inTok = outcome.inTok;
   line.outTok = outcome.outTok;
-  line.micros = actual;
+  line.actualMicros = actual;
+  detail.actualMicros = actual;
+  const violated = outcome.inTok > detail.inputBoundTokens || outcome.outTok > model.billedMaxTokens || actual > reservation.micros;
+  detail.billedBoundViolated = violated;
   if (actual > reservation.micros) line.overrun = 1;
-  if (!(await settle(ddb, reservation, actual))) {
-    line.code = "E_SETTLE";
-    line.micros = reservation.micros;
-  }
-  if (evaluation) {
-    const content = outcome.reply.content;
-    const first = Array.isArray(content) ? (content[0] as { text?: unknown } | undefined) : undefined;
-    detail.raw = typeof first?.text === "string" ? first.text.slice(0, 4000) : undefined;
+  if (violated) line.billedBoundViolated = 1;
+  const pauseDetail = violated ? { reason: "E_PROVIDER_BOUND" as const, nowMs: now, reservedMicros: reservation.micros,
+    actualMicros: actual, event: reservation.event } : undefined;
+  if (!(await settle(ddb, reservation, actual, pauseDetail))) return pause("E_SETTLE", actual);
+  line.micros = actual;
+  if (violated) {
+    state.pausedUntil = Number.POSITIVE_INFINITY;
+    line.pausePersisted = 1;
+    detail.pausePersisted = true;
+    return stop("paused", "E_PROVIDER_BOUND");
   }
 
   // 10. Check the answer.
@@ -395,10 +442,9 @@ async function callModel(
   reservation: Reservation,
   system: string,
   user: string,
-  maxTokens: number,
+  model: ModelInfo,
 ): Promise<ModelOutcome> {
   if (!(reservation.micros > 0)) throw new CodedError("E_INTERNAL");
-  const model = MODELS[config.modelId];
-  if (model === undefined || maxTokens !== model.maxTokens) throw new CodedError("E_CONFIG");
-  return converseModel(deps.transport, config.region, config.modelId, modelRequest(system, user, model));
+  if (!modelReady(model) || model !== (deps.models ?? MODELS)[config.modelId]) throw new CodedError("E_CONFIG");
+  return converseModel(deps.transport, config.region, config.modelId, modelRequest(system, user, model), model);
 }

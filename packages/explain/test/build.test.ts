@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 // The built function (dist/index.mjs, zipped in dist/explain.zip) runs on its
-// own: real SigV4 signing and the real fetch path, with fetch stubbed to the
-// fake AWS. `npm test` builds first.
+// own. All current models fail startup on missing evidence, before fetch.
+// SigV4 and the synthetic transport are verified separately. `npm test` builds first.
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
@@ -11,22 +11,17 @@ import { ENV, FakeAws, httpEvent } from "./helpers.js";
 const dist = fileURLToPath(new URL("../dist/", import.meta.url));
 const aws = new FakeAws();
 const hosts: string[] = [];
-const authorized: boolean[] = [];
 let handler: (event: unknown) => Promise<{ statusCode: number; body: string }>;
 
 beforeAll(async () => {
   if (!existsSync(`${dist}index.mjs`)) throw new Error("dist/ is missing: run `npm run build` (npm test builds first)");
-  // Default Grok intentionally refuses live startup until its billed reasoning
-  // bound is documented. Exercise the built transport with documented Sonnet.
+  // Sonnet's native output bound is not Converse accounting/input-bound proof.
+  // No production model is silently substituted to make this artifact callable.
   for (const [k, v] of Object.entries({ ...ENV, EXPLAIN_MODEL_ID: "us.anthropic.claude-sonnet-5-5", EXPLAIN_PRICE_OUT: "11.00" })) vi.stubEnv(k, v);
-  vi.stubEnv("AWS_ACCESS_KEY_ID", "TESTONLYACCESSKEYID");
-  vi.stubEnv("AWS_SECRET_ACCESS_KEY", "test-only-not-a-secret");
-  vi.stubEnv("AWS_SESSION_TOKEN", "test-only-session");
   vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
     const u = new URL(url);
     hosts.push(u.host);
     const headers = init.headers as Record<string, string>;
-    authorized.push(/^AWS4-HMAC-SHA256 Credential=TESTONLYACCESSKEYID\//.test(headers.authorization ?? "") && headers["x-amz-security-token"] === "test-only-session");
     const service = u.host.startsWith("dynamodb.") ? "dynamodb" : "bedrock";
     const reply = await aws.transport({
       service,
@@ -49,20 +44,16 @@ afterAll(() => {
 });
 
 describe("the built function", () => {
-  it("answers a real request end to end, signing every AWS call", async () => {
+  it("refuses a real production request before any AWS call while evidence is unknown", async () => {
     const r = await handler(httpEvent());
-    expect(r.statusCode).toBe(200);
-    expect(JSON.parse(r.body).model).toBe("Claude Sonnet 5.5");
-    expect(authorized.length).toBeGreaterThan(5);
-    expect(authorized.every(Boolean)).toBe(true);
+    expect(r.statusCode).toBe(503);
+    expect(JSON.parse(r.body)).toEqual({v:1,error:"paused"});
+    expect(hosts).toEqual([]);
   });
 
-  it("talks to exactly three AWS endpoints in us-east-1, and nothing else", () => {
-    expect([...new Set(hosts)].sort()).toEqual([
-      "bedrock-runtime.us-east-1.amazonaws.com",
-      "bedrock.us-east-1.amazonaws.com",
-      "dynamodb.us-east-1.amazonaws.com",
-    ]);
+  it("contains the synthetic test override in neither its config nor registry", () => {
+    expect(readFileSync(`${dist}index.mjs`,"utf8")).not.toContain("synthetic fixture, not Bedrock evidence");
+    expect(hosts).toEqual([]);
   });
 
   it("imports nothing but Node's own modules", () => {

@@ -2,7 +2,7 @@
 // variables that infra/aws/explain.yaml sets. A missing or out-of-range value
 // makes every request answer "paused" (fail closed), never a guess.
 
-import { MODELS } from "./models.js";
+import { MODELS, modelReady, type ModelInfo } from "./models.js";
 
 export const ALLOWED_ORIGINS = ["https://biasclear.github.io", "https://biasclear.com"] as const;
 
@@ -50,7 +50,7 @@ function intIn(text: string | undefined, min: number, max: number): number | und
 }
 
 /** Parses the environment. Returns undefined when anything is missing or out of range. */
-export function readConfig(env: Record<string, string | undefined>): Config | undefined {
+export function readConfig(env: Record<string, string | undefined>, models: Readonly<Record<string, ModelInfo>> = MODELS): Config | undefined {
   const switchValue = env.EXPLAIN_SWITCH;
   if (switchValue !== "on" && switchValue !== "off") return undefined;
   const region = env.AWS_REGION ?? "";
@@ -58,9 +58,9 @@ export function readConfig(env: Record<string, string | undefined>): Config | un
   const table = env.EXPLAIN_TABLE ?? "";
   if (!/^[A-Za-z0-9_.-]{3,255}$/.test(table)) return undefined;
   const modelId = env.EXPLAIN_MODEL_ID ?? "";
-  if (!Object.hasOwn(MODELS, modelId)) return undefined;
-  const model = MODELS[modelId]!;
-  if (region !== model.region || model.route !== "us-profile" || !model.settingsVerified || model.billedMaxTokens === null || model.liveBlockReason !== "") return undefined;
+  if (!Object.hasOwn(models, modelId)) return undefined;
+  const model = models[modelId];
+  if (!modelReady(model) || region !== model.region || model.route !== "us-profile") return undefined;
   const inNanos = priceToNanos(env.EXPLAIN_PRICE_IN);
   const outNanos = priceToNanos(env.EXPLAIN_PRICE_OUT);
   const capUsd = intIn(env.EXPLAIN_MONTHLY_CAP_USD, 1, 25);

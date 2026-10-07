@@ -279,6 +279,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    env:
+      MODEL: ${{ inputs.model }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -302,7 +304,7 @@ jobs:
       - name: "Evaluate: the red team's report"
         run: |
           set -euo pipefail
-          MODEL_ID=$(node infra/aws/model-table.mjs --id "${{ inputs.model }}")
+          MODEL_ID=$(node infra/aws/model-table.mjs --id "$MODEL")
           node explain-build/ops.mjs report --model "$MODEL_ID" --fixtures packages/explain/eval/fixtures.json \
             --requests explain-build/eval-requests.jsonl --raw explain-raw/eval-raw.jsonl --out eval-results.json
 

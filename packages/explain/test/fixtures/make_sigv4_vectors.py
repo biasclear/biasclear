@@ -41,5 +41,6 @@ with mock.patch("botocore.auth.get_current_datetime", return_value=when):
         out.append({**c, "scope": m.group(2), "signedHeaders": m.group(3), "signature": m.group(4), "amzDate": req.headers["X-Amz-Date"]})
 print(json.dumps({
   "about": "SigV4 signatures made by botocore " + __import__("botocore").__version__ + " (AWS's Python signer) with made-up credentials, for test/sigv4.test.ts. Made by test/fixtures/make_sigv4_vectors.py (needs botocore; not run in CI).",
-  "credentials": {"accessKeyId": creds.access_key, "secretAccessKey": creds.secret_key, "sessionToken": creds.token},
+  # Emit only independent signatures and requests. The test defines the
+  # made-up signing inputs itself; credential objects never reach stdout.
   "date": "2026-10-05T14:03:07Z", "region": "us-east-1", "cases": out}, indent=2, ensure_ascii=False))

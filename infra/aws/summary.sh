@@ -51,14 +51,22 @@ last_deploy() {
     statuses="$(gh api "repos/${GH_REPO}/deployments/${id}/statuses?per_page=1" \
       --jq '.[0] | [.state, (.log_url // .target_url // ""), (.creator.login // "")] | @tsv' 2>/dev/null)" || continue
     IFS=$'\t' read -r state url status_creator <<<"$statuses"
-    [ "$state" = success ] && [ "$status_creator" = "$ACTIONS_BOT" ] || continue
+    if [ "$state" != success ] || [ "$status_creator" != "$ACTIONS_BOT" ]; then
+      continue
+    fi
     run_id="$(grep -oE '/actions/runs/[0-9]+' <<<"$url" | head -1 | grep -oE '[0-9]+$')" || continue
     run="$(gh api "repos/${GH_REPO}/actions/runs/${run_id}" \
       --jq '[.display_title, .event, .path, .head_branch, .head_sha] | @tsv' 2>/dev/null)" || continue
     IFS=$'\t' read -r title event path branch head_sha <<<"$run"
-    [ "$title" = "Explain (AWS): deploy" ] && [ "$event" = workflow_dispatch ] || continue
-    [[ "$sha" =~ ^[0-9a-f]{40}$ ]] && [ "$head_sha" = "$sha" ] || continue
-    [ "${path%%@*}" = "$WORKFLOW_PATH" ] && [ "$branch" = main ] || continue
+    if [ "$title" != "Explain (AWS): deploy" ] || [ "$event" != workflow_dispatch ]; then
+      continue
+    fi
+    if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || [ "$head_sha" != "$sha" ]; then
+      continue
+    fi
+    if [ "${path%%@*}" != "$WORKFLOW_PATH" ] || [ "$branch" != main ]; then
+      continue
+    fi
     aws_ok="$(gh api "repos/${GH_REPO}/actions/runs/${run_id}/jobs?per_page=100" \
       --jq '[.jobs[] | select(.name == "aws") | .conclusion] | if length == 1 then .[0] else "" end' 2>/dev/null)" || continue
     [ "$aws_ok" = success ] || continue

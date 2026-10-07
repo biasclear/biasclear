@@ -177,36 +177,46 @@ cmd_prepare() {
 }
 
 cmd_settings() {
-  local want="${1:-}" logging retention on mode ok=0
+  local want="${1:-}" logging retention on mode ok=0 regions model_key region cli_retention=0
   [ "$want" = none ] || fail "Stop: zero data retention is required. No retention fallback is permitted."
+  model_key="${MODEL:-$(node "$HERE/deploy-params.mjs" --get Model)}"
+  regions="$(node "$HERE/model-table.mjs" --regions "$model_key")" ||
+    fail "Stop: the selected model's processing regions are not reviewed. No credentials were requested."
   signin
-  logging="$(aws bedrock get-model-invocation-logging-configuration --output json </dev/null)" ||
+  # AWS cross-region logging is in the source region. Retention settings are
+  # regional and do not propagate, so conservatively check every destination.
+  logging="$(aws bedrock get-model-invocation-logging-configuration --region "$AWS_REGION" --output json </dev/null)" ||
     fail "Stop: could not read the account's Bedrock logging setting. Nothing was changed."
   if aws bedrock get-account-data-retention --generate-cli-skeleton input >/dev/null 2>&1; then
-    retention="$(aws bedrock get-account-data-retention --output json </dev/null)" ||
-      fail "Stop: could not read the account's Bedrock data-retention setting. Nothing was changed."
-  else
-    # An AWS CLI older than the setting: the same signed GET with curl.
-    retention="$(curl -sS --fail --max-time 10 --aws-sigv4 "aws:amz:${AWS_REGION}:bedrock" \
-      -K <(printf 'user = "%s:%s"\n' "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY") \
-      -H "x-amz-security-token: ${AWS_SESSION_TOKEN}" \
-      "https://bedrock.${AWS_REGION}.amazonaws.com/data-retention")" ||
-      fail "Stop: could not read the account's Bedrock data-retention setting. Nothing was changed."
+    cli_retention=1
   fi
   on="$(jq -r 'if .loggingConfig == null then "off" elif (.loggingConfig | type) != "object" then "on" elif (.loggingConfig | length) > 0 then "on" else "off" end' <<<"$logging")"
-  mode="$(jq -r '.mode // ""' <<<"$retention")"
   if [ "$on" = on ]; then
     say "Stop: Bedrock model invocation logging is ON in this account. It must be off (Bedrock > Settings)."
     ok=1
   else
     say "Bedrock model invocation logging is off."
   fi
-  if [ "$mode" != "$want" ]; then
-    say "Stop: the account's Bedrock data-retention mode is \"$mode\", but Explain is set up for \"$want\" (RetentionMode in infra/aws/explain.yaml)."
-    ok=1
-  else
-    say "The account's Bedrock data-retention mode is \"$want\", as expected."
-  fi
+  while IFS= read -r region; do
+    if [ "$cli_retention" = 1 ]; then
+      retention="$(aws bedrock get-account-data-retention --region "$region" --output json </dev/null)" ||
+        fail "Stop: could not read Bedrock retention in $region. Nothing was changed."
+    else
+      # An older CLI: the same signed read-only GET in the reviewed region.
+      retention="$(curl -sS --fail --max-time 10 --aws-sigv4 "aws:amz:${region}:bedrock" \
+        -K <(printf 'user = "%s:%s"\n' "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY") \
+        -H "x-amz-security-token: ${AWS_SESSION_TOKEN}" \
+        "https://bedrock.${region}.amazonaws.com/data-retention")" ||
+        fail "Stop: could not read Bedrock retention in $region. Nothing was changed."
+    fi
+    mode="$(jq -r '.mode // ""' <<<"$retention")"
+    if [ "$mode" != "$want" ]; then
+      say "Stop: Bedrock data retention in $region does not report the required mode \"$want\". Nothing was changed."
+      ok=1
+    else
+      say "Bedrock data retention in $region is \"$want\", as expected."
+    fi
+  done <<<"$regions"
   return "$ok"
 }
 
@@ -258,7 +268,9 @@ smoke() {
 
 cmd_deploy() {
   local zip="$1" smoke_file="$2" cap="${3:-}" sha key status
-  [ -f "$zip" ] && [ -f "$smoke_file" ] || fail "Usage: ops.sh deploy ZIP SMOKE_JSON [CAP]"
+  if [ ! -f "$zip" ] || [ ! -f "$smoke_file" ]; then
+    fail "Usage: ops.sh deploy ZIP SMOKE_JSON [CAP]"
+  fi
   if [ -n "$cap" ] && ! [[ "$cap" =~ ^([1-9]|1[0-9]|2[0-5])$ ]]; then fail "Stop: the monthly cap must be a whole number from 1 to 25, or blank."; fi
   local model="${MODEL:-grok47}"
   node "$HERE/model-table.mjs" --check-key "$model" >/dev/null || fail "Stop: unknown model key; no AWS sign-in."

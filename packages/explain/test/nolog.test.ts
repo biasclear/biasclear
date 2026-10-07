@@ -58,7 +58,7 @@ function expectClean(h: Harness): void {
   for (const line of h.logs) {
     const obj = JSON.parse(line) as Record<string, unknown>;
     for (const key of Object.keys(obj)) {
-      expect(["outcome", "status", "ms", "code", "rule", "rules", "model", "inTok", "outTok", "micros", "overrun", "plainer", "evaluation"]).toContain(key);
+      expect(["outcome", "status", "ms", "code", "rule", "rules", "model", "inTok", "outTok", "micros", "overrun", "plainer", "evaluation", "reservedMicros", "actualMicros", "pausePersisted", "billedBoundViolated"]).toContain(key);
     }
   }
 }

@@ -79,6 +79,8 @@ describe("a valid explain", () => {
       inTok: 820,
       outTok: 120,
       micros: actual,
+      actualMicros: actual,
+      reservedMicros: expect.any(Number),
       plainer: "kept",
     });
     expect(h.logs).toHaveLength(1);
@@ -327,12 +329,11 @@ describe("the spend cap fails closed", () => {
     expect((await h.call(httpEvent())).statusCode).toBe(200);
   });
 
-  it("gives the month's share back when the day refuses the reservation", async () => {
+  it("commits neither counter when the day refuses the atomic reservation", async () => {
     const h = harness();
     // The headroom read saw room, but by the day's conditional update another request has used it.
     h.aws.table.fault = (op, payload) => {
-      const pk = (payload.Key as { pk: { S: string } } | undefined)?.pk.S;
-      if (op === "UpdateItem" && pk === DAY && payload.ConditionExpression !== undefined) {
+      if (op === "TransactWriteItems" && JSON.stringify(payload).includes("ConditionCheck")) {
         h.aws.table.items.set(DAY, { pk: { S: DAY }, m: { N: "2499999" } });
       }
       return undefined;
@@ -340,7 +341,7 @@ describe("the spend cap fails closed", () => {
     const r = await h.call(httpEvent());
     expect(r.statusCode).toBe(503);
     expect(lastLog(h).code).toBe("E_RESERVE_DAY");
-    expect(h.aws.table.num(MONTH, "m")).toBe(0);
+    expect(h.aws.table.num(MONTH, "m") ?? 0).toBe(0);
     expect(h.aws.modelCalls).toEqual([]);
   });
 
@@ -370,7 +371,8 @@ describe("the spend cap fails closed", () => {
       const h = harness();
       h.aws.model = () => outcome;
       const r = await h.call(httpEvent());
-      expect(r.statusCode).toBe(502);
+      expect(r.statusCode).toBe(503);
+      expect(lastLog(h).pausePersisted).toBe(1);
       const worst = lastLog(h).micros as number;
       expect(worst).toBe(worstCaseMicros(buildPrompt("how-and-plainer", bundledMoves().get(RULE)!, SENTENCE, START, END).bytes, MODELS[config().modelId]!.maxTokens, config()));
       expect(h.aws.table.num(MONTH, "m")).toBe(worst);
@@ -382,7 +384,8 @@ describe("the spend cap fails closed", () => {
     const h = harness();
     h.aws.model = () => ({ status: 200, json: modelReply({ usage: null }) });
     const r = await h.call(httpEvent());
-    expect(r.statusCode).toBe(502);
+    expect(r.statusCode).toBe(503);
+    expect(lastLog(h).pausePersisted).toBe(1);
     expect(lastLog(h).code).toBe("E_MODEL_NO_USAGE");
     expect(h.aws.table.num(MONTH, "m")).toBe(lastLog(h).micros);
     expect(lastLog(h).micros).toBeGreaterThan(0);
@@ -459,9 +462,11 @@ describe("the spend cap fails closed", () => {
   it("marks an overrun when the real cost passes the reservation, and counts all of it", async () => {
     const h = harness();
     h.aws.model = () => ({ status: 200, json: modelReply({ inTok: 50_000, outTok: 400 }) });
-    await h.call(httpEvent());
+    expect((await h.call(httpEvent())).statusCode).toBe(503);
     const log = lastLog(h);
     expect(log.overrun).toBe(1);
+    expect(log.code).toBe("E_PROVIDER_BOUND");
+    expect(log.pausePersisted).toBe(1);
     const actual = Math.ceil((50_000 * 2200 + 400 * 6600) / 1000);
     expect(log.micros).toBe(actual);
     expect(h.aws.table.num(MONTH, "m")).toBe(actual);
@@ -632,10 +637,10 @@ describe("the account's privacy settings", () => {
     const h = harness();
     await h.call(httpEvent());
     await h.call(httpEvent({ ip: "192.0.2.1" }));
-    expect(h.aws.settingsReads).toBe(2); // one read of each setting
+    expect(h.aws.settingsReads).toBe(4); // source logging plus three regional retention reads
     h.clock.advance(15 * 60 * 1000);
     await h.call(httpEvent({ ip: "192.0.2.2" }));
-    expect(h.aws.settingsReads).toBe(4);
+    expect(h.aws.settingsReads).toBe(8);
   });
 });
 
@@ -678,7 +683,8 @@ describe("malformed model output", () => {
     const h = harness();
     h.aws.model = () => ({ status: 200 });
     const r = await h.call(httpEvent());
-    expect(r.statusCode).toBe(502);
+    expect(r.statusCode).toBe(503);
+    expect(lastLog(h).pausePersisted).toBe(1);
     expect(lastLog(h).code).toBe("E_MODEL_NO_USAGE");
   });
 });

@@ -13,7 +13,7 @@ describe("offline Explain evaluation", () => {
     vi.stubGlobal("fetch", network);
     try {
       const small: Fixtures = { ...all, samples: { pairs: 1, injections: 1, rewrites: 3 },
-        pairs: all.pairs.filter((p) => p.id === "p41"), injections: all.injections.filter((p) => ["i03", "i13", "i14"].includes(p.id)) };
+        controls: [], pairs: all.pairs.filter((p) => p.id === "p41"), injections: all.injections.filter((p) => ["i03", "i13", "i14"].includes(p.id)) };
       const run = await runDryEvaluation(small);
       expect(network).not.toHaveBeenCalled();
       expect(run).toMatchObject({ actualSpendUsd: 0, qualityMeasured: false, releaseApproved: false,
@@ -21,6 +21,9 @@ describe("offline Explain evaluation", () => {
       expect(run.models).toHaveLength(Object.keys(MODELS).length);
       expect(new Set(run.models.map((m) => m.fixtureHash)).size).toBe(1);
       for (const model of run.models) {
+        expect(model.syntheticBound).toMatchObject({ billedMaxTokens: 400, framingTokens: 50 });
+        expect(model.liveConfigurationBlocked).toBe(true);
+        expect(model.knownLiveWorstCaseUsd).toBeNull();
         expect(model).toMatchObject({ planned: 23, simulationChecksPass: true, injectedVerdictProbes: 3,
           injectedVerdictRejected: 3, unsafeRewriteProbes: 6, unsafeRewriteDropped: 6, safeRewriteProbes: 12, safeRewriteKept: 12 });
         expect(model.results).toMatchObject({ releaseApproved: false, qualityMeasured: false, actualSpendUsd: 0, complete: true });

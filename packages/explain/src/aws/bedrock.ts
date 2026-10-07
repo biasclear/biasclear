@@ -2,7 +2,7 @@
 // route/settings; the wire body never carries tools, search or grounding.
 
 import type { Code } from "../codes.js";
-import type { ModelInfo } from "../models.js";
+import { MODELS, modelReady, type ModelInfo } from "../models.js";
 import { parseJsonOrUndefined } from "../json.js";
 import { TransportError, type Transport } from "./transport.js";
 
@@ -26,18 +26,28 @@ export function modelRequest(system: string, user: string, model: ModelInfo): Mo
   };
 }
 
-export type ModelOutcome =
+interface ProviderDetail {
+  modelCalled: boolean;
+  providerStopReason?: string | undefined;
+  /** Private evaluation only; text blocks only, never reasoning. */
+  providerText?: string | undefined;
+  providerTextChars?: number | undefined;
+  providerTextTruncated?: boolean | undefined;
+}
+
+export type ModelOutcome = ProviderDetail & (
   | { kind: "reply"; reply: Record<string, unknown>; inTok: number; outTok: number }
   /** No usage came back: it may have been billed, so the whole reservation stays counted. */
   | { kind: "maybe-billed"; code: Code }
   /** AWS doesn't bill these: the reservation is given back. */
-  | { kind: "not-billed"; code: Code; answer: "busy" | "paused" | "no_answer"; pauseInstance: boolean };
+  | { kind: "not-billed"; code: Code; answer: "busy" | "paused" | "no_answer"; pauseInstance: boolean });
 
-/** Settle the reported Converse outputTokens once; never estimate tokens from reasoning text.
- * Sonnet documents a total thinking + text output bound. Grok/Sol billing mappings
- * and bounds are not proven: strict live configuration blocks them pending evidence.
- * Cached input (we never request a cache) is conservatively charged at full input price. */
-function usageOf(reply: Record<string, unknown>): { inTok: number; outTok: number } | undefined {
+/** Read reported usage exactly once, never estimate from private reasoning text.
+ * Model-specific evidence must separately prove outputTokens includes billed reasoning.
+ * All current live rows lack that proof and are blocked, including Sonnet's native
+ * total-output bound (which does not prove Converse's usage mapping).
+ * Cached input is conservatively charged at the full uncached input price. */
+function usageOf(reply: Record<string, unknown>, model: ModelInfo): { inTok: number; outTok: number } | undefined {
   const usage = reply.usage;
   if (usage === null || typeof usage !== "object" || Array.isArray(usage)) return undefined;
   const u = usage as Record<string, unknown>;
@@ -48,6 +58,9 @@ function usageOf(reply: Record<string, unknown>): { inTok: number; outTok: numbe
   if (!integer(read) || !integer(write)) return undefined;
   const inTok = u.inputTokens + read + write;
   if (!Number.isSafeInteger(inTok)) return undefined;
+  const nanos = inTok * Math.round(model.inputPricePerMillion * 1000) +
+    u.outputTokens * Math.round(model.outputPricePerMillion * 1000);
+  if (!Number.isSafeInteger(nanos)) return undefined; // no rounded/overflowed cost is accepted as known usage
   // An unexplained total is not proof of the billed usage: retain the full reservation.
   if (u.totalTokens !== undefined && (!integer(u.totalTokens) ||
       u.totalTokens < u.inputTokens + u.outputTokens || u.totalTokens > inTok + u.outputTokens)) return undefined;
@@ -116,29 +129,29 @@ export function errorMessage(body: string): string {
 export function classifyError(status: number, errorType: string, message = ""): ModelOutcome {
   const type = errorType.split(":")[0] ?? "";
   if (status === 429 || type === "ThrottlingException" || type === "ModelNotReadyException") {
-    return { kind: "not-billed", code: "E_MODEL_THROTTLED", answer: "busy", pauseInstance: false };
+    return { modelCalled: true, kind: "not-billed", code: "E_MODEL_THROTTLED", answer: "busy", pauseInstance: false };
   }
   if (status === 403 || type === "AccessDeniedException") {
     // The budget action or a policy has taken the model away: a person should look.
-    return { kind: "not-billed", code: "E_MODEL_DENIED", answer: "paused", pauseInstance: true };
+    return { modelCalled: true, kind: "not-billed", code: "E_MODEL_DENIED", answer: "paused", pauseInstance: true };
   }
   if (status === 404 || type === "ResourceNotFoundException") {
-    return { kind: "not-billed", code: "E_MODEL_NOT_FOUND", answer: "paused", pauseInstance: true };
+    return { modelCalled: true, kind: "not-billed", code: "E_MODEL_NOT_FOUND", answer: "paused", pauseInstance: true };
   }
   if (type === "ServiceQuotaExceededException") {
-    return { kind: "not-billed", code: "E_MODEL_QUOTA", answer: "busy", pauseInstance: false };
+    return { modelCalled: true, kind: "not-billed", code: "E_MODEL_QUOTA", answer: "busy", pauseInstance: false };
   }
   if (status === 400 || type === "ValidationException") {
     if (RETENTION_MESSAGE.test(message)) {
-      return { kind: "not-billed", code: "E_MODEL_RETENTION", answer: "paused", pauseInstance: true };
+      return { modelCalled: true, kind: "not-billed", code: "E_MODEL_RETENTION", answer: "paused", pauseInstance: true };
     }
     if (ROUTE_MESSAGE.test(message)) {
-      return { kind: "not-billed", code: "E_MODEL_ROUTE", answer: "paused", pauseInstance: true };
+      return { modelCalled: true, kind: "not-billed", code: "E_MODEL_ROUTE", answer: "paused", pauseInstance: true };
     }
-    return { kind: "not-billed", code: "E_MODEL_VALIDATION", answer: "no_answer", pauseInstance: false };
+    return { modelCalled: true, kind: "not-billed", code: "E_MODEL_VALIDATION", answer: "no_answer", pauseInstance: false };
   }
-  if (status === 408 || type === "ModelTimeoutException") return { kind: "maybe-billed", code: "E_MODEL_TIMEOUT" };
-  return { kind: "maybe-billed", code: "E_MODEL_ERROR" };
+  if (status === 408 || type === "ModelTimeoutException") return { modelCalled: true, kind: "maybe-billed", code: "E_MODEL_TIMEOUT" };
+  return { modelCalled: true, kind: "maybe-billed", code: "E_MODEL_ERROR" };
 }
 
 export async function converseModel(
@@ -146,7 +159,11 @@ export async function converseModel(
   region: string,
   modelId: string,
   body: ModelRequest,
+  model: ModelInfo | undefined = MODELS[modelId],
 ): Promise<ModelOutcome> {
+  if (!modelReady(model) || modelId !== `us.${model.foundationModelId}` || region !== model.region || body.inferenceConfig.maxTokens !== model.maxTokens) {
+    return { modelCalled: false, kind: "not-billed", code: "E_CONFIG", answer: "paused", pauseInstance: true };
+  }
   let reply;
   try {
     reply = await transport({
@@ -161,21 +178,30 @@ export async function converseModel(
   } catch (err) {
     const kind = err instanceof TransportError ? err.kind : "network";
     if (kind === "credentials") {
-      return { kind: "not-billed", code: "E_MODEL_DENIED", answer: "paused", pauseInstance: true };
+      return { modelCalled: false, kind: "not-billed", code: "E_MODEL_DENIED", answer: "paused", pauseInstance: true };
     }
-    return { kind: "maybe-billed", code: kind === "timeout" ? "E_MODEL_TIMEOUT" : "E_MODEL_NETWORK" };
+    return { modelCalled: true, kind: "maybe-billed", code: kind === "timeout" ? "E_MODEL_TIMEOUT" : "E_MODEL_NETWORK" };
   }
   if (reply.status !== 200) {
     return classifyError(reply.status, reply.headers["x-amzn-errortype"] ?? "", errorMessage(reply.body));
   }
   const json = parseJsonOrUndefined(reply.body);
   if (json === null || typeof json !== "object" || Array.isArray(json)) {
-    return { kind: "maybe-billed", code: "E_MODEL_NO_USAGE" };
+    return { modelCalled: true, kind: "maybe-billed", code: "E_MODEL_NO_USAGE" };
   }
   const obj = json as Record<string, unknown>;
-  const usage = usageOf(obj);
-  if (usage === undefined) return { kind: "maybe-billed", code: "E_MODEL_NO_USAGE" };
-  return { kind: "reply", reply: normalizedReply(obj), ...usage };
+  const providerStopReason = typeof obj.stopReason === "string" ? obj.stopReason : undefined;
+  const blocks = (obj.output as { message?: { content?: unknown } } | undefined)?.message?.content;
+  const fullProviderText = Array.isArray(blocks) ? blocks.flatMap((block: unknown) =>
+    block !== null && typeof block === "object" && typeof (block as { text?: unknown }).text === "string"
+      ? [(block as { text: string }).text] : []).join("\n") : undefined;
+  const providerText = fullProviderText?.slice(0, 4000);
+  const detail: ProviderDetail = { modelCalled: true, providerStopReason, providerText,
+    providerTextChars: fullProviderText?.length,
+    providerTextTruncated: fullProviderText === undefined ? undefined : fullProviderText.length > 4000 };
+  const usage = usageOf(obj, model);
+  if (usage === undefined) return { kind: "maybe-billed", code: "E_MODEL_NO_USAGE", ...detail };
+  return { kind: "reply", reply: normalizedReply(obj), ...usage, ...detail };
 }
 
 export interface AccountSettings {
@@ -183,12 +209,14 @@ export interface AccountSettings {
   loggingOn: boolean;
   /** The account's Bedrock data-retention mode ("none", "default", ...). */
   retention: string;
+  retentionByRegion: Readonly<Record<string, string>>;
 }
 
 async function getJson(transport: Transport, region: string, path: string): Promise<Record<string, unknown>> {
   const reply = await transport({
     service: "bedrock",
     host: `bedrock.${region}.amazonaws.com`,
+    region,
     method: "GET",
     path,
     headers: { accept: "application/json" },
@@ -201,15 +229,21 @@ async function getJson(transport: Transport, region: string, path: string): Prom
   return json as Record<string, unknown>;
 }
 
-/** Reads the two account settings (GetModelInvocationLoggingConfiguration, GetAccountDataRetention). Throws on any failure. */
-export async function readAccountSettings(transport: Transport, region: string): Promise<AccountSettings> {
-  const [logging, retention] = await Promise.all([
+/** CRIS invocation logs remain in the source region. Retention is regional:
+ * read every approved processing destination, with no unknown/default fallback. */
+export async function readAccountSettings(transport: Transport, region: string, destinationRegions: readonly string[] = [region]): Promise<AccountSettings> {
+  const regions = [...new Set([region, ...destinationRegions])];
+  const [logging, ...retentions] = await Promise.all([
     getJson(transport, region, "/logging/modelinvocations"),
-    getJson(transport, region, "/data-retention"),
+    ...regions.map((r) => getJson(transport, r, "/data-retention")),
   ]);
-  const config = logging.loggingConfig;
+  const config = logging!.loggingConfig;
   const loggingOn = config !== undefined && config !== null && (typeof config !== "object" || Object.keys(config).length > 0);
-  const mode = retention.mode;
-  if (typeof mode !== "string") throw new Error("settings read failed");
-  return { loggingOn, retention: mode };
+  const modes: Record<string, string> = {};
+  for (let i = 0; i < regions.length; i++) {
+    const mode = retentions[i]!.mode;
+    if (typeof mode !== "string") throw new Error("settings read failed");
+    modes[regions[i]!] = mode;
+  }
+  return { loggingOn, retention: modes[region]!, retentionByRegion: modes };
 }

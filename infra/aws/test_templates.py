@@ -79,6 +79,8 @@ class TestService:
         assert "AWS::Lambda::Url" not in types
         assert types == {
             "AWS::Logs::LogGroup",
+            "AWS::Logs::MetricFilter",
+            "AWS::CloudWatch::Alarm",
             "AWS::Lambda::Function",
             "AWS::ApiGatewayV2::Api",
             "AWS::ApiGatewayV2::Integration",
@@ -212,6 +214,21 @@ class TestService:
         assert lg["RetentionInDays"] == 7
         assert lg["LogGroupName"] == "/biasclear/explain"
 
+    def test_billing_anomaly_is_visible_without_actions_or_notifications(self):
+        metric = one(SERVICE, "AWS::Logs::MetricFilter")
+        assert metric["LogGroupName"] == {"Ref": "LogGroup"}
+        assert metric["FilterName"] == "biasclear-explain-billing-anomaly"
+        for condition in ["$.overrun = 1", "$.billedBoundViolated = 1", "$.pausePersisted = 0", "$.pausePersisted = 1", '$.code = "E_SETTLE"']:
+            assert condition in metric["FilterPattern"]
+        assert metric["MetricTransformations"] == [{"MetricNamespace": "BiasClear/Explain", "MetricName": "BillingAnomaly", "MetricValue": "1", "DefaultValue": 0, "Unit": "Count"}]
+        alarm = one(SERVICE, "AWS::CloudWatch::Alarm")
+        assert alarm["AlarmName"] == "biasclear-explain-billing-anomaly"
+        assert alarm["Namespace"] == "BiasClear/Explain" and alarm["MetricName"] == "BillingAnomaly"
+        assert alarm["Threshold"] == 1 and alarm["Period"] == 60 and alarm["EvaluationPeriods"] == 1
+        assert alarm["TreatMissingData"] == "notBreaching" and alarm["ActionsEnabled"] is False
+        for field in ["AlarmActions", "OKActions", "InsufficientDataActions"]:
+            assert alarm[field] == []
+
     def test_only_this_accounts_api_may_invoke_for_its_one_route(self):
         # RT: IAM can't pin SourceArn or SourceAccount on CloudFormation's
         # AddPermission, so this test is the fence: exactly this account, this
@@ -229,7 +246,7 @@ class TestService:
 
     def test_everything_taggable_is_tagged(self):
         for name, r in resources(SERVICE).items():
-            if r["Type"] in {"AWS::ApiGatewayV2::Integration", "AWS::ApiGatewayV2::Route", "AWS::Lambda::Permission"}:
+            if r["Type"] in {"AWS::ApiGatewayV2::Integration", "AWS::ApiGatewayV2::Route", "AWS::Lambda::Permission", "AWS::Logs::MetricFilter"}:
                 continue  # these types carry no tags
             assert tag_map(r["Properties"]) == TAGS, name
 
@@ -286,6 +303,7 @@ class TestSetupIam:
             assert model["Condition"] == {"StringEquals": {"bedrock:InferenceProfileArn": profile_arn}}
             assert all("bedrock:*" not in resource["Fn::Sub"] for resource in model["Resource"])
         assert sorted(by_sid["TheCounters"]["Action"]) == [
+            "dynamodb:ConditionCheckItem",
             "dynamodb:DeleteItem",
             "dynamodb:GetItem",
             "dynamodb:PutItem",
@@ -297,7 +315,29 @@ class TestSetupIam:
         actions = {a for s in stmts for a in as_list(s["Action"])}
         assert not {a for a in actions if "Stream" in a and a.startswith("bedrock:")}
         assert not {a for a in actions if a.startswith(("aws-marketplace:", "bedrock:Put", "bedrock-mantle:", "iam:"))}
-        assert len(stmts) == 9
+        assert len(stmts) == 10
+
+    def test_privacy_reads_are_exact_and_region_scoped(self):
+        for name in ["FunctionRole", "DeployRole"]:
+            reads = [s for s in statements(role(name)) if any(a in {
+                "bedrock:GetModelInvocationLoggingConfiguration", "bedrock:GetAccountDataRetention"
+            } for a in as_list(s["Action"]))]
+            assert sorted(a for s in reads for a in as_list(s["Action"])) == [
+                "bedrock:GetAccountDataRetention", "bedrock:GetModelInvocationLoggingConfiguration"]
+            assert len(reads) == 2
+            for s in reads:
+                assert s["Effect"] == "Allow" and s["Resource"] == "*"
+                expected_regions = "us-east-1" if s["Action"] == "bedrock:GetModelInvocationLoggingConfiguration" else ["us-east-1", "us-east-2", "us-west-2"]
+                assert s["Condition"] == {"StringEquals": {"aws:RequestedRegion": expected_regions}}
+
+    def test_alarm_permissions_are_only_on_the_named_alarm_and_log_group(self):
+        by_sid = {s["Sid"]: s for s in statements(role("CloudFormationRole"))}
+        alarm = by_sid["TheBillingAnomalyAlarm"]
+        assert sorted(as_list(alarm["Action"])) == ["cloudwatch:DeleteAlarms", "cloudwatch:DescribeAlarms", "cloudwatch:ListTagsForResource", "cloudwatch:PutMetricAlarm", "cloudwatch:TagResource", "cloudwatch:UntagResource"]
+        assert alarm["Resource"] == {"Fn::Sub": "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:biasclear-explain-billing-anomaly"}
+        log = by_sid["TheLogGroup"]
+        assert {"logs:PutMetricFilter", "logs:DeleteMetricFilter", "logs:DescribeMetricFilters"} <= set(log["Action"])
+        assert all("log-group:/biasclear/explain" in r["Fn::Sub"] for r in log["Resource"])
 
     def test_github_login_is_pinned_to_the_repository_and_environment(self):
         trust = role("DeployRole")["Properties"]["AssumeRolePolicyDocument"]["Statement"]

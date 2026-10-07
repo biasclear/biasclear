@@ -1,27 +1,25 @@
-// The spend cap: the real stop (SPEC §8). Money is counted in whole
-// micro-dollars at list price, from the model's own token counts, whatever
-// credits the account has. A request reserves its worst case on the month and
-// the day before the model is called, and settles the real cost after.
+// Every reservation and settlement updates month/day together. A durable event
+// record proves committed writes after a lost acknowledgment. No signed ADD is
+// blindly retried, and a persistent billing pause fences new reservations.
 
+import { randomUUID } from "node:crypto";
 import type { Config } from "./config.js";
-import type { Ddb } from "./aws/dynamodb.js";
-import { numberAttr } from "./aws/dynamodb.js";
+import type { Code } from "./codes.js";
+import { DdbError, numberAttr, stringAttr, type Ddb, type Item } from "./aws/dynamodb.js";
 import { DAY_MS, dayKey, monthKey, seconds } from "./time.js";
 
-/** Message framing the byte count doesn't cover (SPEC §8 step 1; the evaluation checks it). */
+/** Synthetic/legacy arithmetic allowance only; live callers need model-specific evidence. */
 export const FRAMING_TOKENS = 50;
 export const MONTH_TTL_MS = 100 * DAY_MS;
 export const DAY_TTL_MS = 3 * DAY_MS;
-
+export const BILLING_PAUSE_KEY = "billing#pause";
 type Prices = Pick<Config, "inNanosPerToken" | "outNanosPerToken">;
 
-/** Worst case: a token is never shorter than a byte, so bytes (+ framing) bound the input tokens from above. */
-export function worstCaseMicros(promptBytes: number, maxTokens: number, prices: Prices): number {
-  const nanos = (promptBytes + FRAMING_TOKENS) * prices.inNanosPerToken + maxTokens * prices.outNanosPerToken;
-  return Math.ceil(nanos / 1000);
+/** A candidate bound, usable live only when the selected model's evidence says yes. */
+export function worstCaseMicros(promptBytes: number, maxTokens: number, prices: Prices, framingTokens = FRAMING_TOKENS): number {
+  return Math.ceil(((promptBytes + framingTokens) * prices.inNanosPerToken + maxTokens * prices.outNanosPerToken) / 1000);
 }
 
-/** The real cost, from the model's token counts, rounded up. */
 export function actualMicros(inTok: number, outTok: number, prices: Prices): number {
   return Math.ceil((inTok * prices.inNanosPerToken + outTok * prices.outNanosPerToken) / 1000);
 }
@@ -30,68 +28,130 @@ export function spendKeys(nowMs: number): { month: string; day: string } {
   return { month: `spend#${monthKey(nowMs)}`, day: `spendday#${dayKey(nowMs)}` };
 }
 
-/** A reservation in hand. The model call takes one, so it can't be made without one. */
 export interface Reservation {
   readonly month: string;
   readonly day: string;
   readonly micros: number;
+  readonly event: string;
+  readonly token: string;
 }
 
-/**
- * Cheap, eventually consistent reads of both counters (SPEC §4 step 6).
- * True when both have room for `micros`. Throws a DdbError on any fault.
- */
+/** No TTL: only an owner can clear a billing anomaly, including after month rollover. */
+export async function billingPaused(ddb: Ddb, nowMs: number): Promise<boolean> {
+  return (await ddb.get(BILLING_PAUSE_KEY, seconds(nowMs), true)) !== undefined;
+}
+
 export async function hasHeadroom(ddb: Ddb, cfg: Config, nowMs: number, micros: number): Promise<boolean> {
   const keys = spendKeys(nowMs);
-  const now = seconds(nowMs);
-  const [month, day] = await Promise.all([ddb.get(keys.month, now), ddb.get(keys.day, now)]);
-  const spentMonth = numberAttr(month, "m") ?? 0;
-  const spentDay = numberAttr(day, "m") ?? 0;
-  return spentMonth + micros <= cfg.capMicros && spentDay + micros <= cfg.dailyMicros;
+  const [month, day] = await Promise.all([ddb.get(keys.month, seconds(nowMs)), ddb.get(keys.day, seconds(nowMs))]);
+  return (numberAttr(month, "m") ?? 0) + micros <= cfg.capMicros && (numberAttr(day, "m") ?? 0) + micros <= cfg.dailyMicros;
 }
 
-export type ReserveResult = { ok: true; reservation: Reservation } | { ok: false; which: "month" | "day" };
+export type ReserveResult = { ok: true; reservation: Reservation } | { ok: false; which: "month" | "day" | "pause" };
 
-/**
- * Reserves `micros` on the month, then on the day, each with one
- * conditional update (SPEC §8 steps 3 and 4). If the day refuses, the month's
- * share is given back. Throws a DdbError on any other fault.
- */
+function reserveUpdate(pk: string, micros: number, limit: number, ttl: number): Record<string, unknown> {
+  return {
+    Key: { pk: { S: pk } },
+    UpdateExpression: "SET #m = if_not_exists(#m, :zero) + :r, #t = :t",
+    ConditionExpression: "attribute_not_exists(#m) OR #m <= :max",
+    ExpressionAttributeNames: { "#m": "m", "#t": "ttl" },
+    ExpressionAttributeValues: { ":zero": { N: "0" }, ":r": { N: String(micros) }, ":t": { N: String(ttl) }, ":max": { N: String(limit - micros) } },
+  };
+}
+
+function matches(item: Item | undefined, r: Reservation): boolean {
+  return stringAttr(item, "month") === r.month && stringAttr(item, "day") === r.day && numberAttr(item, "reserved") === r.micros;
+}
+
+/** The pause condition and both cap checks are in the same atomic transaction. */
 export async function reserve(ddb: Ddb, cfg: Config, nowMs: number, micros: number): Promise<ReserveResult> {
+  if (!Number.isSafeInteger(micros) || micros <= 0) throw new DdbError("other");
   if (micros > cfg.capMicros || micros > cfg.dailyMicros) return { ok: false, which: "day" };
+  const token = randomUUID();
   const keys = spendKeys(nowMs);
-  if (!(await ddb.reserve(keys.month, micros, cfg.capMicros, seconds(nowMs + MONTH_TTL_MS)))) {
-    return { ok: false, which: "month" };
-  }
-  let dayOk: boolean;
+  const r: Reservation = { ...keys, micros, token, event: `billing#${token}` };
   try {
-    dayOk = await ddb.reserve(keys.day, micros, cfg.dailyMicros, seconds(nowMs + DAY_TTL_MS));
+    await ddb.transact([
+      { ConditionCheck: { Key: { pk: { S: BILLING_PAUSE_KEY } }, ConditionExpression: "attribute_not_exists(pk)" } },
+      { Update: reserveUpdate(r.month, micros, cfg.capMicros, seconds(nowMs + MONTH_TTL_MS)) },
+      { Update: reserveUpdate(r.day, micros, cfg.dailyMicros, seconds(nowMs + DAY_TTL_MS)) },
+      { Put: { Item: { pk: { S: r.event }, state: { S: "reserved" }, month: { S: r.month }, day: { S: r.day }, reserved: { N: String(micros) }, ttl: { N: String(seconds(nowMs + MONTH_TTL_MS)) } }, ConditionExpression: "attribute_not_exists(pk)" } },
+    ], token);
+    return { ok: true, reservation: r };
   } catch (err) {
-    await ddb.add(keys.month, -micros).catch(() => undefined);
-    throw err;
+    // A read proving the unique event committed proves both counters committed.
+    // A missing/unreadable event never authorizes a model call or a refund.
+    const item = await ddb.get(r.event, seconds(nowMs), true);
+    if (matches(item, r) && stringAttr(item, "state") === "reserved") return { ok: true, reservation: r };
+    if (err instanceof DdbError) {
+      const reasons = err.cancellationReasons;
+      if (reasons[0] === "ConditionalCheckFailed") return { ok: false, which: "pause" };
+      if (reasons[1] === "ConditionalCheckFailed") return { ok: false, which: "month" };
+      if (reasons[2] === "ConditionalCheckFailed") return { ok: false, which: "day" };
+    }
+    throw new DdbError("other");
   }
-  if (!dayOk) {
-    // If the give-back fails, the month over-counts: the safe direction.
-    await ddb.add(keys.month, -micros).catch(() => undefined);
-    return { ok: false, which: "day" };
-  }
-  return { ok: true, reservation: { month: keys.month, day: keys.day, micros } };
 }
 
-/**
- * Settles on the keys the reservation used, so a request that crosses UTC
- * midnight settles where it reserved (SPEC §8 step 6). The delta is signed
- * and never clamped. Returns false if either write failed (the reservation
- * then stays counted: the meter can only over-count).
- */
-export async function settle(ddb: Ddb, r: Reservation, actual: number): Promise<boolean> {
+export interface PauseDetail {
+  reason: Code;
+  nowMs: number;
+  reservedMicros: number;
+  actualMicros?: number;
+  event: string;
+}
+
+function pauseItem(p: PauseDetail): Item {
+  return {
+    pk: { S: BILLING_PAUSE_KEY }, reason: { S: p.reason }, at: { N: String(seconds(p.nowMs)) }, reserved: { N: String(p.reservedMicros) },
+    ...(p.actualMicros === undefined ? {} : { actual: { N: String(p.actualMicros) } }),
+    event: { S: p.event },
+  };
+}
+
+/** Persist every unresolved event, not just the first pause, without text or keys.
+ * Atomic overwrite of fixed items is idempotent; no money ADD is retried. A debt
+ * survives log expiry/month rollover until an owner reconciles and removes it. */
+export async function persistBillingPause(ddb: Ddb, p: PauseDetail): Promise<boolean> {
+  const item = pauseItem(p);
+  const debtKey = `billingdebt#${p.event.slice("billing#".length)}`;
+  const debt: Item = { ...item, pk: { S: debtKey } };
+  try {
+    await ddb.transact([{ Put: { Item: item } }, { Put: { Item: debt } }], randomUUID());
+    return true;
+  } catch {
+    try {
+      const known = await ddb.get(debtKey, 0, true);
+      return await billingPaused(ddb, p.nowMs) && stringAttr(known, "event") === p.event &&
+        numberAttr(known, "reserved") === p.reservedMicros && numberAttr(known, "actual") === p.actualMicros;
+    } catch { return false; }
+  }
+}
+
+/** Atomic CAS event + month + day; an optional anomaly pause commits with them. */
+export async function settle(ddb: Ddb, r: Reservation, actual: number, pause?: PauseDetail): Promise<boolean> {
+  if (!Number.isSafeInteger(actual) || actual < 0) return false;
   const delta = actual - r.micros;
-  if (delta === 0) return true;
-  const results = await Promise.allSettled([ddb.add(r.month, delta), ddb.add(r.day, delta)]);
-  return results.every((x) => x.status === "fulfilled");
+  const add = (pk: string) => ({ Key: { pk: { S: pk } }, UpdateExpression: "ADD #m :d", ExpressionAttributeNames: { "#m": "m" }, ExpressionAttributeValues: { ":d": { N: String(delta) } } });
+  const writes: Record<string, Record<string, unknown>>[] = [
+    { Update: { Key: { pk: { S: r.event } }, UpdateExpression: "SET #s = :settled, #a = :actual", ConditionExpression: "#s = :reserved", ExpressionAttributeNames: { "#s": "state", "#a": "actual" }, ExpressionAttributeValues: { ":reserved": { S: "reserved" }, ":settled": { S: "settled" }, ":actual": { N: String(actual) } } } },
+    { Update: add(r.month) }, { Update: add(r.day) },
+  ];
+  if (pause !== undefined) writes.push({ Put: { Item: pauseItem(pause) } });
+  try {
+    // Distinct token from reservation; the CAS is the durable idempotence fence.
+    await ddb.transact(writes, r.token.replace(/.$/, r.token.endsWith("0") ? "1" : "0"));
+    return true;
+  } catch {
+    try {
+      const item = await ddb.get(r.event, 0, true);
+      const committed = matches(item, r) && stringAttr(item, "state") === "settled" && numberAttr(item, "actual") === actual;
+      if (!committed) return false;
+      return pause === undefined || await billingPaused(ddb, pause.nowMs);
+    } catch { return false; }
+  }
 }
 
-/** Gives a reservation back, for a call AWS doesn't bill. */
 export async function release(ddb: Ddb, r: Reservation): Promise<boolean> {
   return settle(ddb, r, 0);
 }

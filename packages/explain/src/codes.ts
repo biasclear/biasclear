@@ -56,6 +56,8 @@ export const CODES = [
   "E_RESERVE_DAY",
   "E_DDB",
   "E_SETTLE",
+  "E_BILLING_PAUSE",
+  "E_PROVIDER_BOUND",
   // per-connection limits (SPEC §9)
   "E_ADDRESS",
   "E_SALT",

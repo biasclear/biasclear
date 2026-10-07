@@ -6,7 +6,7 @@
 import { createHandler, type Deps } from "../src/app.js";
 import type { AwsCall, AwsReply, Transport } from "../src/aws/transport.js";
 import { TransportError } from "../src/aws/transport.js";
-import { MODELS } from "../src/models.js";
+import { MODELS, type ModelInfo } from "../src/models.js";
 import { readConfig, type Config } from "../src/config.js";
 import { bundledEngines } from "../src/engines.js";
 import type { HttpResult } from "../src/http.js";
@@ -49,18 +49,17 @@ export function evalEvent(request: unknown = requestBody(), key: string = EVAL_K
   return { explainEvaluation: 1, key, request };
 }
 
-/** Synthetic-only config. The real entrypoint calls strict readConfig, never this helper. */
+/** Explicit finite synthetic model contract. It is never used by the production entrypoint. */
+export const STUB_MODELS: Readonly<Record<string, ModelInfo>> = Object.freeze(Object.fromEntries(
+  Object.entries(MODELS).map(([id, model]) => [id, Object.freeze({ ...model, billedMaxTokens: 400,
+    liveBlockReason: "", settingsVerified: true,
+    reasoningAccounting: { state: "yes" as const, source: "synthetic fixture, not Bedrock evidence", checkedOn: "2026-10-07" },
+    inputTokenBound: { state: "yes" as const, framingTokens: 50, source: "synthetic fixture, not Bedrock evidence", checkedOn: "2026-10-07" },
+  })]),
+));
+
 export function stubConfig(env: Record<string, string>): Config | undefined {
-  const model = MODELS[env.EXPLAIN_MODEL_ID ?? ""];
-  if (model === undefined || Number(env.EXPLAIN_PRICE_IN) !== model.inputPricePerMillion ||
-      Number(env.EXPLAIN_PRICE_OUT) !== model.outputPricePerMillion) return undefined;
-  // Use the documented-bound model to validate every common setting, then
-  // substitute the requested stub model. No real transport is wired in this file.
-  const checked = readConfig({ ...env, EXPLAIN_MODEL_ID: "us.anthropic.claude-sonnet-5-5",
-    EXPLAIN_PRICE_IN: "2.20", EXPLAIN_PRICE_OUT: "11.00" });
-  return checked === undefined ? undefined : { ...checked, modelId: env.EXPLAIN_MODEL_ID!,
-    inNanosPerToken: Math.round(model.inputPricePerMillion * 1000),
-    outNanosPerToken: Math.round(model.outputPricePerMillion * 1000) };
+  return readConfig(env, STUB_MODELS);
 }
 
 export function config(overrides: Record<string, string> = {}): Config {
@@ -155,7 +154,7 @@ type Item = Record<string, Attr>;
 export class FakeTable {
   readonly items = new Map<string, Item>();
   /** Return a fault for an operation instead of running it. */
-  fault: ((op: string, payload: Record<string, unknown>) => "throttle" | "network" | undefined) | undefined;
+  fault: ((op: string, payload: Record<string, unknown>) => "throttle" | "network" | "response-lost" | undefined) | undefined;
   /** Delay (ms) before each operation runs, to interleave concurrent requests. */
   delayMs = 0;
   readonly ops: string[] = [];
@@ -182,11 +181,41 @@ export class FakeTable {
     if (f === "throttle") {
       return { status: 400, headers: {}, body: JSON.stringify({ __type: "com.amazonaws.dynamodb.v20120810#ThrottlingException" }) };
     }
+    const reply = this.apply(op, payload);
+    if (f === "response-lost" && reply.status === 200) throw new TransportError("network");
+    return reply;
+  }
+
+  private apply(op: string, payload: Record<string, unknown>): AwsReply {
+    if (op === "TransactWriteItems") {
+      const shadow = new FakeTable();
+      for (const [key, item] of this.items) shadow.items.set(key, { ...item });
+      const writes = payload.TransactItems as Record<string, Record<string, unknown>>[];
+      const reasons = writes.map(() => ({ Code: "None" }));
+      for (let i = 0; i < writes.length; i++) {
+        const [component, body] = Object.entries(writes[i]!)[0]!;
+        const mapped = { Put: "PutItem", Update: "UpdateItem", Delete: "DeleteItem", ConditionCheck: "ConditionCheck" }[component];
+        if (mapped === undefined) throw new Error("unexpected transaction component");
+        const fault = this.fault?.(mapped, body);
+        const result = fault === "network" || fault === "throttle"
+          ? { status: 400, headers: {}, body: "{}" } : shadow.apply(mapped, body);
+        if (result.status !== 200) {
+          reasons[i] = { Code: fault === undefined ? "ConditionalCheckFailed" : "ProvisionedThroughputExceeded" };
+          return { status: 400, headers: {}, body: JSON.stringify({ __type: "com.amazonaws.dynamodb.v20120810#TransactionCanceledException", CancellationReasons: reasons }) };
+        }
+      }
+      this.items.clear();
+      for (const [key, item] of shadow.items) this.items.set(key, item);
+      return { status: 200, headers: {}, body: "{}" };
+    }
     const key = (payload.Key as { pk: { S: string } } | undefined)?.pk.S;
     const values = (payload.ExpressionAttributeValues ?? {}) as Record<string, Attr>;
     const names = (payload.ExpressionAttributeNames ?? {}) as Record<string, string>;
     const val = (k: string): number => Number((values[k] as { N: string }).N);
     switch (op) {
+      case "ConditionCheck":
+        if (payload.ConditionExpression !== "attribute_not_exists(pk)") throw new Error("unexpected transaction condition");
+        return key !== undefined && this.items.has(key) ? FakeTable.ccf() : { status: 200, headers: {}, body: "{}" };
       case "GetItem": {
         const item = key === undefined ? undefined : this.items.get(key);
         return { status: 200, headers: {}, body: JSON.stringify(item ? { Item: item } : {}) };
@@ -197,8 +226,8 @@ export class FakeTable {
       case "PutItem": {
         const item = payload.Item as Item;
         const pk = (item.pk as { S: string }).S;
-        if (payload.ConditionExpression !== "attribute_not_exists(pk)") throw new Error("unexpected PutItem condition");
-        if (this.items.has(pk)) return FakeTable.ccf();
+        if (payload.ConditionExpression !== undefined && payload.ConditionExpression !== "attribute_not_exists(pk)") throw new Error("unexpected PutItem condition");
+        if (payload.ConditionExpression !== undefined && this.items.has(pk)) return FakeTable.ccf();
         this.items.set(pk, { ...item });
         return { status: 200, headers: {}, body: "{}" };
       }
@@ -211,12 +240,17 @@ export class FakeTable {
         };
         const cond = payload.ConditionExpression as string | undefined;
         if (cond !== undefined) {
+          if (cond === "#s = :reserved") {
+            const have = current[names["#s"]!] as { S?: string } | undefined;
+            if (have?.S !== (values[":reserved"] as { S: string }).S) return FakeTable.ccf();
+          } else {
           const m = /^attribute_not_exists\((#\w+)\) OR (#\w+) (<=|<) (:\w+)$/.exec(cond);
           if (!m || m[1] !== m[2]) throw new Error(`unexpected condition ${cond}`);
           const have = numOf(names[m[1]!]!);
           const limit = val(m[4]!);
           const pass = have === undefined || (m[3] === "<=" ? have <= limit : have < limit);
           if (!pass) return FakeTable.ccf();
+          }
         }
         const expr = payload.UpdateExpression as string;
         const clauses = expr.split(/\b(?=SET |ADD )/).map((c) => c.trim()).filter(Boolean);
@@ -261,6 +295,8 @@ export class FakeAws {
   model: ModelScript = () => ({ status: 200, json: modelReply() });
   settings: { logging: unknown; retention: string } | "fail" = { logging: {}, retention: "none" };
   settingsReads = 0;
+  /** Regional retention fixtures; absent entries use the common settings above. */
+  regionalRetention: Record<string, string | "fail"> = {};
 
   readonly transport: Transport = async (call) => {
     this.calls.push(call);
@@ -288,7 +324,10 @@ export class FakeAws {
         return { status: 200, headers: {}, body: off ? "{}" : JSON.stringify({ loggingConfig: logging }) };
       }
       if (call.path === "/data-retention") {
-        return { status: 200, headers: {}, body: JSON.stringify({ mode: this.settings.retention }) };
+        const region = call.host.split(".")[1]!;
+        const mode = this.regionalRetention[region] ?? this.settings.retention;
+        if (mode === "fail") return { status: 500, headers: {}, body: "{}" };
+        return { status: 200, headers: {}, body: JSON.stringify({ mode }) };
       }
       throw new Error(`unexpected Bedrock path ${call.path}`);
     }
@@ -320,6 +359,7 @@ export function harness(over: Partial<Deps> & { env?: Record<string, string> } =
   const clock = new Clock();
   const logs: string[] = [];
   const deps: Deps = {
+    models: STUB_MODELS,
     config: over.env ? stubConfig({ ...ENV, ...over.env }) : config(),
     transport: aws.transport,
     now: clock.now,

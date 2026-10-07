@@ -9,6 +9,8 @@ export interface AwsCall {
   /** Signing name. */
   service: "dynamodb" | "bedrock" | "lambda";
   host: string;
+  /** Explicit endpoint region for reviewed regional privacy reads; otherwise the source region. */
+  region?: string;
   method: "GET" | "POST";
   /** Path as sent, segments already URI-encoded. */
   path: string;
@@ -55,7 +57,7 @@ export function fetchTransport(options: FetchTransportOptions): Transport {
       headers: call.headers,
       body: call.body,
       service: call.service,
-      region: options.region,
+      region: call.region ?? options.region,
       credentials,
       date: new Date(options.now()),
     });

@@ -39,7 +39,9 @@ export function listPrices(sources, modelId) {
   const html = sources.cards?.[modelId]?.html;
   if (typeof html !== "string" || !/Standard tier/i.test(html) || !/1 million tokens/i.test(html)) throw new Error("Standard model price source missing");
   const label = model.foundationModelId === "xai.grok-4.7" ? "Geo CRIS" : "US CRIS (bedrock-runtime)";
-  const row = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)].map(m => m[1]).find(r => r.replace(/<[^>]*>/g, "").includes(label));
+  // The reviewed AWS label is literal text in its table cell. Read that
+  // literal row; this is source inspection, with no HTML sanitizing/rendering.
+  const row = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)].map(m => m[1]).find(r => r.includes(label));
   if (!row) throw new Error("geographic Standard price row missing");
   const amounts = [...row.matchAll(/\$([0-9]+(?:\.[0-9]+)?)/g)].map(m => Number(m[1]));
   // Grok: input/output/cache-read. Sol: input/cache-write/cache-read/output.

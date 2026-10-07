@@ -5,11 +5,15 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHandler, type EvaluationResult } from "../src/app.js";
-import { MODELS } from "../src/models.js";
+import { MODELS, modelReady } from "../src/models.js";
 import { buildPrompt } from "../src/prompt.js";
 import { spendKeys, worstCaseMicros } from "../src/spend.js";
-import { evaluationRequests, report, refusalLike, preflightRejected, outputRejected, sampleOf, type Fixtures } from "../ops/ops.js";
-import { Clock, ENV, EVAL_KEY, FakeAws, FakeTable, harness, modelReply, stubConfig } from "../test/helpers.js";
+import { evaluationRequests, report, refusalLike, preflightRejected, outputRejected, sampleOf, classifySample, type Fixtures } from "../ops/ops.js";
+import { Clock, ENV, EVAL_KEY, FakeAws, FakeTable, harness, modelReply, stubConfig, STUB_MODELS } from "../test/helpers.js";
+
+// Fixed artificial usage keeps the larger wiring corpus inside the unchanged
+// $2.50 synthetic day fence. These are not tokenizer or model measurements.
+const STUB_USAGE = Object.freeze({ inTok: 100, outTok: 40 });
 
 export async function runDryEvaluation(fixtures: Fixtures) {
   const planned = evaluationRequests(fixtures);
@@ -20,6 +24,9 @@ export async function runDryEvaluation(fixtures: Fixtures) {
   let stubInvocations = 0;
   let reservedBeforeEveryCall = true;
   for (const [id, model] of Object.entries(MODELS)) {
+    const stubModel = STUB_MODELS[id];
+    if (stubModel === undefined || !Number.isInteger(stubModel.billedMaxTokens) || !(stubModel.billedMaxTokens! > 0)) throw new Error("synthetic billed bound missing");
+    const stubBilledMaxTokens = stubModel.billedMaxTokens!;
     const aws = new FakeAws();
     const cfg = stubConfig({ ...ENV, EXPLAIN_MODEL_ID: id,
       EXPLAIN_PRICE_IN: String(model.inputPricePerMillion), EXPLAIN_PRICE_OUT: String(model.outputPricePerMillion) });
@@ -62,9 +69,9 @@ export async function runDryEvaluation(fixtures: Fixtures) {
       }
       const move = defaults.moves.get(call.request.rule as string)!;
       const prompt = buildPrompt(defaults.promptMode, move, sentence, call.request.start as number, call.request.end as number);
-      // This fallback is ONLY the synthetic stub's known output bound. The
-      // real entrypoint refuses unverified billed-reasoning bounds.
-      const reservation = worstCaseMicros(prompt.bytes, model.billedMaxTokens ?? model.maxTokens, cfg);
+      // The stub has a separate explicit finite contract. No live model
+      // field or visible-token fallback supplies this bound.
+      const reservation = worstCaseMicros(prompt.bytes, stubBilledMaxTokens, cfg, stubModel.inputTokenBound.framingTokens!);
       stubReservationTotalMicros += reservation;
       const beforeKeys = spendKeys(clock.now());
       const beforeMonth = sharedLedger.num(beforeKeys.month, "m") ?? 0;
@@ -75,7 +82,7 @@ export async function runDryEvaluation(fixtures: Fixtures) {
           (sharedLedger.num(keys.day, "m") ?? 0) >= beforeDay + reservation;
         stubInvocations++;
         clock.advance(1); // A labelled synthetic time, not measured latency.
-        return { status: 200, json: modelReply({ how, plainer, inTok: 100, outTok: 80 }) };
+        return { status: 200, json: modelReply({ how, plainer, ...STUB_USAGE }) };
       };
       const result = await handler({ explainEvaluation: 1, key: EVAL_KEY, request: call.request }) as EvaluationResult;
       raw.push({ id: call.id, part: call.part, sample: call.sample, ...result });
@@ -85,8 +92,8 @@ export async function runDryEvaluation(fixtures: Fixtures) {
         if (!unsafeRewrite && result.body.plainer === rewrite.safeRewrite) safeRewriteKept++;
       }
     }
-    const result = report(fixtures, planned.length, raw, { model: model.displayName, dryRun: true });
-    const categories = (["a", "b", "i", "r"] as const).map((part) => {
+    const result = report(fixtures, planned.length, raw, { model: model.displayName, modelId: id, dryRun: true, plannedRequests: planned });
+    const categories = (["a", "b", "i", "r", "c"] as const).map((part) => {
       const rows = raw.filter((r) => r.part === part);
       const samples = rows.map(sampleOf);
       return { part, planned: planned.filter((p) => p.part === part).length, ran: rows.length,
@@ -94,28 +101,31 @@ export async function runDryEvaluation(fixtures: Fixtures) {
         refusalLike: samples.filter(refusalLike).length,
         preflightRejected: samples.filter(preflightRejected).length,
         outputRejected: samples.filter(outputRejected).length,
+        outcomes: Object.fromEntries(["accepted", "provider_refusal", "truncated", "validator_rejected", "call_failure", "cap", "preflight", "service_blocked", "unknown"].map((outcome) => [outcome, samples.filter((s) => classifySample(s) === outcome).length])),
         simulatedUsd: samples.reduce((sum, s) => sum + (s.micros ?? 0), 0) / 1_000_000,
         simulatedMs: samples.reduce((sum, s) => sum + (s.ms ?? 0), 0),
       };
     });
     models.push({ id, displayName: model.displayName, fixtureHash, planned: planned.length,
-      liveConfigurationBlocked: model.billedMaxTokens == null || !model.settingsVerified,
+      liveConfigurationBlocked: !modelReady(model),
       liveBlockReason: model.liveBlockReason,
       stubReservationTotalUsd: stubReservationTotalMicros / 1_000_000,
-      knownLiveWorstCaseUsd: model.billedMaxTokens == null ? null : stubReservationTotalMicros / 1_000_000,
+      syntheticBound: { billedMaxTokens: stubBilledMaxTokens, framingTokens: stubModel.inputTokenBound.framingTokens },
+      knownLiveWorstCaseUsd: modelReady(model) ? stubReservationTotalMicros / 1_000_000 : null,
       injectedVerdictProbes, injectedVerdictRejected, unsafeRewriteProbes, unsafeRewriteDropped, safeRewriteProbes, safeRewriteKept,
       simulationChecksPass: result.ok && injectedVerdictProbes === injectedVerdictRejected && unsafeRewriteProbes === unsafeRewriteDropped && safeRewriteProbes === safeRewriteKept,
       categories, results: result.results, raw,
     });
   }
   return { dryRun: true, actualSpendUsd: 0, qualityMeasured: false, releaseApproved: false,
-    humanReviewRequired: true, fixtureHash, sameFixedSetForEveryModel: true,
+    humanReviewRequired: true, fixtureHash, syntheticUsage: STUB_USAGE, sameFixedSetForEveryModel: true,
     stubInvocations, reservedBeforeEveryCall, models };
 }
 
 export function dryMarkdown(run: Awaited<ReturnType<typeof runDryEvaluation>>): string {
   const lines = ["# Explain offline evaluation rehearsal", "",
     "Actual spend: $0. All operations used in-memory AWS/model stubs. Times, tokens, costs and answers are synthetic.",
+    `Fixed synthetic usage per attempted call: ${run.syntheticUsage.inTok} input / ${run.syntheticUsage.outTok} output tokens. It is not a model measurement.`,
     "Model quality is unmeasured. Nothing is approved to ship. The real matched-pair, injection and rewrite review remains a separate owner-approved sitting under the cap.",
     "", `Fixture SHA-256: ${run.fixtureHash}`, ""];
   for (const model of run.models) {

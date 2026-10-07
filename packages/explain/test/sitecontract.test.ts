@@ -12,12 +12,29 @@ const contract = readFileSync(fileURLToPath(new URL("../SITE_CONTRACT.md", impor
 const section9 = contract.split("## 9. ")[1]!.split("\n## 10. ")[0]!;
 const pattern = new RegExp(/```\n([^\n]+)\n```/.exec(section9)![1]!, "i");
 
-/** A file's text as a visitor reads it: tags removed, whitespace collapsed, entities for quotes read. */
-function text(path: string): string {
-  return readFileSync(`${root}${path}`, "utf8")
-    .replace(/<[^>]+>/g, "")
+/** Read static repository HTML for this assertion; never a renderer or sanitizer. */
+function staticText(source: string): string {
+  let visible = "";
+  let inTag = false;
+  let quote = "";
+  for (const char of source) {
+    if (!inTag) {
+      if (char === "<") inTag = true;
+      else visible += char;
+    } else if (quote) {
+      if (char === quote) quote = "";
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === ">") inTag = false;
+  }
+  if (inTag) throw new Error("unterminated tag in static site source");
+  return visible
     .replace(/&rsquo;/g, "’")
     .replace(/\s+/g, " ");
+}
+
+function text(path: string): string {
+  const source = readFileSync(`${root}${path}`, "utf8");
+  return path.endsWith(".html") ? staticText(source) : source.replace(/\s+/g, " ");
 }
 
 const rows = section9
@@ -26,6 +43,10 @@ const rows = section9
   .map((l) => l.split(" | ").map((c) => c.replace(/^\| /, "").replace(/ \|$/, "")));
 
 describe("the switch-on PR's list of public promises", () => {
+  it("reads promises across inline tags and quoted tag attributes", () => {
+    expect(staticText('Text <em title="a > b">never</em> leaves your device.')).toBe("Text never leaves your device.");
+    expect(() => staticText("Text <em")).toThrow("unterminated");
+  });
   it("has a row for every file where the pattern finds a promise today", () => {
     const files = ["site/pages/index.html", "site/pages/privacy.html", "site/js/checker.js", "README.md", "site/README.md", "SECURITY.md"];
     for (const f of files) {

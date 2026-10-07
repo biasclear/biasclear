@@ -1,6 +1,8 @@
 // What one Lambda instance remembers between requests, in memory only. It is
 // lost when the instance ends, and never written anywhere.
 
+import type { Code } from "./codes.js";
+
 export const SETTINGS_INTERVAL_MS = 15 * 60 * 1000;
 export const OVER_LIMIT_MAX = 10_000;
 
@@ -9,6 +11,8 @@ export interface InstanceState {
   pausedUntil: number;
   /** When the account settings are next read (SPEC §4 step 2). */
   nextSettingsCheck: number;
+  /** Concurrent invocations await the same unfinished privacy check. */
+  settingsCheck?: Promise<Code | undefined> | undefined;
   /** Today's salt, once made or read (SPEC §9). */
   salt: { day: string; bytes: Uint8Array } | undefined;
   /** Connection hashes over a limit, and when that limit resets (ms). */

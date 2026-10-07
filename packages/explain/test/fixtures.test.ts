@@ -22,7 +22,7 @@ import {
 } from "../ops/ops.js";
 import { validateRequest } from "../src/request.js";
 import { isCapitalised, startsSentence, wordsOf } from "../src/text.js";
-import { SIDE_PAIRS } from "../src/output.js";
+import { bundledEngines } from "../src/engines.js";
 
 const f = JSON.parse(readFileSync(fileURLToPath(new URL("../eval/fixtures.json", import.meta.url)), "utf8")) as Fixtures;
 
@@ -35,6 +35,7 @@ const f = JSON.parse(readFileSync(fileURLToPath(new URL("../eval/fixtures.json",
 const MADE_UP = [
   "Harlan", "Marchmont", "Okafor", "Lindqvist", "Valley League", "Ridge Alliance",
   "Center for Ostrevan Progress", "Legislative Budget Office", "Varnholt Foundation",
+  "Kestrines", "Vallorans", "Kestrine Party", "Valloran Party", "MTGA", "Encamp", "Verdant Party", "Freehold Party", "Solidarist", "Preservation",
 ];
 
 function swap(text: string, [a, b]: [string, string]): string {
@@ -50,17 +51,55 @@ function swap(text: string, [a, b]: [string, string]): string {
 }
 
 describe("the evaluation fixtures", () => {
-  it("preserves the original pairs and injections and adds bounded controversial and rewrite cases", () => {
-    expect(f.pairs).toHaveLength(73);
+  it("keeps structural controls and replaces repetitive provider questions with a varied draft", () => {
+    expect(f.about).toContain("DRAFT");
+    expect(f.pairs).toHaveLength(98);
     expect(f.injections).toHaveLength(21);
     expect(f.rewrites).toHaveLength(6);
-    expect(evaluationRequests(f)).toHaveLength(811);
-    for (const [[a, pa], [b, pb]] of SIDE_PAIRS) {
-      const both = f.pairs.flatMap((p) => p.sides).join("\n");
-      expect(pa.test(both), a).toBe(true);
-      expect(pb.test(both), b).toBe(true);
+    expect(f.controls).toHaveLength(24);
+    expect(evaluationRequests(f)).toHaveLength(1085);
+    expect(f.pairs.filter((p) => p.controversial)).toHaveLength(56);
+    expect(f.pairs.filter((p) => /^p/.test(p.id)).map((p) => p.id)).toEqual(Array.from({ length: 50 }, (_, i) => `p${String(i + 1).padStart(2, "0")}`));
+    expect(f.pairs.some((p) => p.id === "p51")).toBe(false);
+    // Morphological side-word coverage belongs to validator unit tests,
+    // not a requirement to send real political groups to a provider.
+    const text = f.pairs.flatMap((p) => [p.a, p.b]).join(" ");
+    expect(/\b(?:democrat(?:s|ic)?|republican(?:s)?|maga|antifa|nazis?|marxists?)\b/iu.test(text)).toBe(false);
+    const proposed = f.pairs.filter((p) => /^q/.test(p.id));
+    expect(new Set(proposed.map((p) => p.topic)).size).toBe(11);
+    expect(new Set(proposed.map((p) => p.rule)).size).toBe(16);
+    const axes = new Set(proposed.map((p) => p.axis));
+    expect(axes.size).toBe(13);
+    for (const axis of axes) {
+      const pairs = proposed.filter((p) => p.axis === axis);
+      expect(new Set(pairs.map((p) => p.rule)).size, axis).toBeGreaterThanOrEqual(3);
+      expect(new Set(pairs.map((p) => p.sides.join("/"))).size, axis).toBe(2);
+      for (const pair of pairs) expect(pair.topic).toBeTruthy();
     }
-    expect(f.pairs.filter((p) => p.controversial)).toHaveLength(31);
+    const firstSide: Record<string, string> = { "Kestrine/Valloran": "Kestrines", "Kestrine Party/Valloran Party": "the Kestrine Party",
+      "progressive/conservative": "progressives", "left/right": "the left", "Encamp/MTGA": "the Encamp movement",
+      "Verdant Party/Freehold Party": "the Verdant Party", "union/company": "the union", "tenant/landlord": "tenants",
+      "left-wing/right-wing activists": "left-wing activists", "Kestrine senator/Valloran senator": "the Kestrine senator",
+      "Solidarist/Preservation government": "the Solidarist government", "secular/religious": "secularists",
+      "progressive mayor/conservative mayor": "the progressive mayor" };
+    expect(proposed.filter((p) => p.sides[0] === firstSide[p.axis!])).toHaveLength(24);
+  });
+
+  it("keeps canonical side labels attached to content when first-side order reverses", () => {
+    expect(f.pairs.find((p) => p.id === "q02")?.canonicalSides).toEqual(["Vallorans", "Kestrines"]);
+    expect(f.pairs.find((p) => p.id === "p01")?.canonicalSides).toEqual(["the Harlan plan", "the Marchmont plan"]);
+    expect(f.pairs.find((p) => p.id === "p42")?.canonicalSides).toEqual(["progressives", "conservatives"]);
+    for (const pair of f.pairs.filter((p) => /^q/.test(p.id))) expect(pair.canonicalSides, pair.id).toEqual(pair.sides);
+  });
+
+  it("has marked side-free heldout controls distinct from vocabulary calibration", () => {
+    expect(new Set(f.controls?.map((c) => c.rule)).size).toBe(16);
+    expect(f.controls?.every((c) => c.set === "heldout")).toBe(true);
+    for (const control of f.controls ?? []) {
+      expect(markOf(control.sentence, control.rule), control.id).toBeDefined();
+      expect(() => validateRequest(requestFor(control.sentence, control.rule))).not.toThrow();
+    }
+    expect(new Set(evaluationRequests(f).map((p) => `${p.id}/${p.part}/${p.sample}`)).size).toBe(evaluationRequests(f).length);
   });
 
   it("swaps loaded labels, not only made-up names (RT: made-up names can't show a slant)", () => {
@@ -95,6 +134,14 @@ describe("the evaluation fixtures", () => {
       expect(swap(p.a.slice(ma!.start, ma!.end), p.sides)).toBe(p.b.slice(mb!.start, mb!.end));
       expect(() => validateRequest(requestFor(p.a, p.rule))).not.toThrow();
       expect(() => validateRequest(requestFor(p.b, p.rule))).not.toThrow();
+      // Label lengths may differ (for example "religious believers" /
+      // "secularists"); the surrounding context must remain identical.
+      const mask = (sentence: string, side: string) => sentence.split(side).join("SIDE").split(side[0]!.toUpperCase() + side.slice(1)).join("SIDE");
+      expect(wordsOf(mask(p.a, p.sides[0])).length).toBe(wordsOf(mask(p.b, p.sides[1])).length);
+      const engines = bundledEngines();
+      const engine = engines.builds.get(engines.current)!;
+      const marks = (sentence: string) => engine.scan(sentence, "general").map((m) => ({ rule: m.ruleId, text: sentence.slice(m.start, m.end) })).sort((a, b) => a.rule.localeCompare(b.rule) || a.text.localeCompare(b.text));
+      expect(marks(p.a).map((m) => ({ ...m, text: swap(m.text, p.sides) }))).toEqual(marks(p.b));
     });
   }
 
@@ -112,7 +159,7 @@ describe("the evaluation fixtures", () => {
       ...MADE_UP.flatMap((n) => n.split(" ")).filter((w) => w !== "for"),
       "Mayor", "BiasClear", "JSON", "HTML", "French", "Spanish", "YES", "I", "New", "The", "True", "Everyone",
     ]);
-    const sentences = [...f.pairs.flatMap((p) => [p.a, p.b]), ...f.injections.map((i) => i.sentence), ...(f.rewrites ?? []).map((r) => r.sentence)];
+    const sentences = [...f.pairs.flatMap((p) => [p.a, p.b]), ...f.injections.map((i) => i.sentence), ...(f.rewrites ?? []).map((r) => r.sentence), ...(f.controls ?? []).map((c) => c.sentence)];
     const unknown = new Set<string>();
     for (const s of sentences) {
       for (const w of wordsOf(s)) {
@@ -132,10 +179,11 @@ describe("the workflow helpers", () => {
     expect(s.marked.rule).toBe(s.rule);
   });
 
-  it("plan every call in order: each pair's sides alternate, then injections and rewrites", () => {
+  it("plan every call in order: paired samples, injections, rewrites, then side-free controls", () => {
     const calls = evaluationRequests(f);
     expect(calls.slice(0, 3).map((c) => [c.id, c.part, c.sample])).toEqual([["p01", "a", 0], ["p01", "b", 0], ["p01", "a", 1]]);
-    expect(calls.at(-1)).toMatchObject({ id: "r06", part: "r", sample: 2 });
+    expect(calls.findLast((c) => c.part === "r")).toMatchObject({ id: "r06", part: "r", sample: 2 });
+    expect(calls.at(-1)).toMatchObject({ id: "c24", part: "c", sample: 0 });
   });
 
   it("count the words used about each side, without the side's own words", () => {
@@ -150,7 +198,7 @@ describe("the workflow helpers", () => {
     const small: Fixtures = { samples: { pairs: 1, injections: 1 }, pairs: [f.pairs[0]!], injections: [f.injections[0]!] };
     const planned = evaluationRequests(small).length;
     const ok = (id: string, part: string) => ({ id, part, sample: 0, status: 200, body: { how: "It asks for trust.", plainer: null }, evaluation: { inTok: 10, promptBytes: 100 } });
-    const full = report(small, planned, [ok("p01", "a"), ok("p01", "b"), ok("i01", "i")]);
+    const full = report(small, planned, [ok("p01", "a"), ok("p01", "b"), ok("i01", "i")], { dryRun: true });
     expect(full.ok).toBe(true);
     expect(full.markdown).toContain(`All ${planned} planned calls ran.`);
     const cut = report(small, planned, [ok("p01", "a"), { id: "p01", part: "b", sample: 0, invokeFailed: 403 }]);
@@ -189,11 +237,11 @@ describe("the workflow helpers", () => {
     expect(refusalLike({ status: 502, raw: "I cannot assist with that request." })).toBe(true);
     expect(refusalLike({ status: 502, raw: "The sentence does not give a reason." })).toBe(false);
     const small: Fixtures = { samples: { pairs: 1, injections: 1 }, pairs: [f.pairs[0]!], injections: [] };
-    const a = { id: "p01", part: "a", sample: 0, status: 502, body: { error: "no_answer" }, evaluation: { raw: "I cannot assist with that request.", micros: 30, ms: 25 } };
-    const b = { id: "p01", part: "b", sample: 0, status: 200, body: { how: "It asks for trust.", plainer: null, model: "test model" }, evaluation: { micros: 40, ms: 30 } };
+    const a = { id: "p01", part: "a", sample: 0, status: 502, body: { error: "no_answer" }, evaluation: { raw: "I cannot assist with that request.", micros: 30, actualMicros: 30, ms: 25 } };
+    const b = { id: "p01", part: "b", sample: 0, status: 200, body: { how: "It asks for trust.", plainer: null, model: "test model" }, evaluation: { micros: 40, actualMicros: 40, ms: 30 } };
     const r = report(small, 2, [a, b], { model: "test model" });
     expect(r.ok).toBe(false);
     expect(r.results).toMatchObject({ refusalLike: 1, unequalPairRefusalCounts: 1, releaseApproved: false, humanReviewRequired: true });
-    expect(r.markdown).toContain("0.00003 | 25");
+    expect(r.markdown).toContain("0.00003 | unavailable | 25");
   });
 });

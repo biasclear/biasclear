@@ -21,6 +21,10 @@ export interface LogLine {
   outTok?: number | undefined;
   micros?: number | undefined;
   overrun?: 0 | 1 | undefined;
+  reservedMicros?: number | undefined;
+  actualMicros?: number | undefined;
+  pausePersisted?: 0 | 1 | undefined;
+  billedBoundViolated?: 0 | 1 | undefined;
   plainer?: PlainerState | undefined;
   evaluation?: 1 | undefined;
 }
@@ -61,11 +65,13 @@ export function formatLine(line: LogLine, knownValues: KnownValues): string {
   if (rules !== undefined) out.rules = rules;
   const model = known(line.model, knownValues.models);
   if (model !== undefined) out.model = model;
-  for (const key of ["inTok", "outTok", "micros"] as const) {
+  for (const key of ["inTok", "outTok", "micros", "actualMicros", "reservedMicros"] as const) {
     const v = count(line[key]);
     if (v !== undefined) out[key] = v;
   }
   if (line.overrun === 1) out.overrun = 1;
+  if (line.billedBoundViolated === 1) out.billedBoundViolated = 1;
+  if (line.pausePersisted === 0 || line.pausePersisted === 1) out.pausePersisted = line.pausePersisted;
   if (line.plainer !== undefined && PLAINER_SET.has(line.plainer)) out.plainer = line.plainer;
   if (line.evaluation === 1) out.evaluation = 1;
   return JSON.stringify(out);

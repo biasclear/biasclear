@@ -123,7 +123,9 @@ jobs:
       # deploy workflow's shell scripts against fake aws, curl and gh commands
       # (shellcheck is on the runner image).
       - name: Reviewed model table matches exact IAM, selector and prices
-        run: node infra/aws/model-table.mjs --check
+        run: |
+          node infra/aws/model-table.mjs --check
+          node packages/explain/scripts/privacy-drafts.mjs --check
 
       - name: cfn-lint, the template checks and the workflow scripts
         run: |
@@ -131,7 +133,7 @@ jobs:
           python -m pip install --quiet "cfn-lint==${CFN_LINT_VERSION}" "pytest>=8"
           cfn-lint infra/aws/explain.yaml infra/aws/setup.yaml
           shellcheck infra/aws/ops.sh infra/aws/summary.sh
-          python -m pytest infra/aws/test_templates.py infra/aws/test_scripts.py -q -p no:cacheprovider
+          python -m pytest infra/aws/test_templates.py infra/aws/test_scripts.py infra/aws/test_model_table.py -q -p no:cacheprovider
 
   security:
     name: security

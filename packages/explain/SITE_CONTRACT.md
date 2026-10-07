@@ -51,7 +51,7 @@ Because of check 4, the service's own mark check never surprises a visitor.
 
 The first press in a page visit opens an inline box. It quotes the exact text that will be sent, then shows the consent line derived from the selected reviewed model table entry and verified zero-retention configuration (see section 1):
 
-> Explain sends this sentence, and nothing else you pasted, to BiasClear's service on Amazon Web Services. It asks {model display name}, an AI model made by {maker}, how the wording works. Amazon may process it in N. Virginia, Ohio or Oregon in the United States. We keep no copy. Our Amazon account uses Bedrock's zero data retention setting; Explain pauses if that setting changes.
+> Explain sends this sentence, and nothing else you pasted, to BiasClear's service on Amazon Web Services. It asks {model display name}, an AI model made by {maker}, through Amazon Bedrock, how the wording works. Amazon may process it in {locations from the selected reviewed model entry}. We keep no copy. Our Amazon account uses Bedrock's zero data retention setting; Explain pauses if that setting changes.
 >
 > **[Send this sentence]** **[Not now]** · [How Explain handles text](privacy.html#explain)
 
@@ -134,7 +134,7 @@ A new section 05 with the id `explain` (Contact becomes 06). The numbers (500, 7
 
 > **Explain sends one sentence, only when you ask.**
 >
-> Explain is the one part of BiasClear that sends anything. It does nothing until you press Explain on a marked move and agree. Then the page sends that sentence (at most 500 characters), which move was marked and where, which set of rules the checker ran, and the rules version, to BiasClear's Explain service on Amazon Web Services. Nothing else you pasted is sent. The service runs the same rules on the sentence to check that the move is really there, then asks {model display name}, an AI model made by {maker}, through Amazon Bedrock, to describe how the wording works. The service calls Amazon from N. Virginia, and its approved US profile may process the sentence in N. Virginia, Ohio or Oregon in the United States. It does not search the web or X, use tools, or receive the rest of your text.
+> Explain is the one part of BiasClear that sends anything. It does nothing until you press Explain on a marked move and agree. Then the page sends that sentence (at most 500 characters), which move was marked and where, the domain and rules version, to BiasClear's Explain service on Amazon Web Services. Nothing else you pasted is sent. The service runs the same rules on the sentence to check that the move is really there, then asks {model display name}, an AI model made by {maker}, through Amazon Bedrock, to describe how the wording works. The service calls Amazon from {source location}; its approved US profile may process the sentence in {locations from the selected reviewed model entry}. BiasClear does not request web or X search, grounding or tools. It sends only the one sentence and our fixed wording prompt, with no conversation history or the rest of your text.
 >
 > We keep no copy of your sentence or of the answer. Our logs keep counts and settings only, such as which move was explained and how many tokens (pieces of words) the model read and wrote, for 7 days. To share Explain fairly, the service counts requests from each connection: it scrambles your network address with a secret that is replaced every day and expires after two days, and it never stores the address itself. The service erases old secrets each day, and Amazon erases any left over within a few days; once a secret is gone, the scrambled code can't be turned back into your address. Each count expires within two days and is erased within a few days after that. Like any web host, Amazon sees your network address when you connect.
 >
@@ -185,12 +185,6 @@ In both modes (`api: null` and set): the policy on each page (only the checker p
 
 ## 11. Model-specific drafts and switch discipline
 
-These placeholders are draft copy, not text published on the site. For the current reviewed US routes, each uses the same AWS-documented destination line (account-console confirmation remains required): "Amazon may process the sentence in N. Virginia, Ohio or Oregon in the United States."
-
-| Stack `Model` key | Display name | Maker | Invocation ID |
-|---|---|---|---|
-| `grok47` (default) | Grok 4.7 | xAI | `us.xai.grok-4.7` |
-| `sonnet55` | Claude Sonnet 5.5 | Anthropic | `us.anthropic.claude-sonnet-5-5` |
-| `sol61` | GPT-6.1 Sol | OpenAI | `us.openai.gpt-6.1-sol` |
+These placeholders are draft copy, not text published on the site. The complete per-model consent and privacy drafts are generated from the code table in [`PRIVACY-DRAFTS.md`](../../handoff/explain/PRIVACY-DRAFTS.md). Regenerate with `node packages/explain/scripts/privacy-drafts.mjs --write`; `--check` and the package test refuse stale wording. Unknown regions or routes fail instead of acquiring guessed privacy wording. Account-console confirmation of the exact profile and all processing destinations remains required.
 
 The switch-on site build must bind its privacy and consent to the selected stack entry, never infer the maker from free-form model output. To switch models later: pause visitor Explain; verify and evaluate the chosen entry under the shared cap; generate consent/privacy from that entry; publish the approved matching site configuration; only then resume. Selecting one stack parameter does not authorize running a model the visitor was not told about. Live model switching is not implemented by this code-only PR, and no new field is added to the one-sentence request here.

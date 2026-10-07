@@ -24,6 +24,8 @@ export function modelReadiness(key, table = modelTable()) {
   const reasons = [];
   if (!model.settingsVerified) reasons.push("lowest provider reasoning setting is unverified");
   if (model.billedMaxTokens === null) reasons.push("billed total-output bound is unverified; $25 reservation cannot be guaranteed");
+  if (model.reasoningAccounting?.state !== "yes") reasons.push("Converse billed reasoning accounting is unverified");
+  if (model.inputTokenBound?.state !== "yes" || !Number.isSafeInteger(model.inputTokenBound.framingTokens)) reasons.push("model-specific input token framing bound is unverified");
   if (model.liveBlockReason) reasons.push(model.liveBlockReason);
   return reasons;
 }

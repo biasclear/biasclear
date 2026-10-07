@@ -16,6 +16,7 @@ declare module "node:crypto" {
   export function createHmac(algorithm: "sha256", key: string | Uint8Array): Hmac;
   export function createHash(algorithm: "sha256"): Hash;
   export function randomBytes(size: number): Uint8Array;
+  export function randomUUID(): string;
   export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean;
 }
 

@@ -22,10 +22,17 @@ interface Vector {
 }
 
 const file = JSON.parse(readFileSync(fileURLToPath(new URL("./fixtures/sigv4-vectors.json", import.meta.url)), "utf8")) as {
-  credentials: { accessKeyId: string; secretAccessKey: string; sessionToken: string };
   date: string;
   region: string;
   cases: Vector[];
+};
+
+// Deliberately synthetic inputs used by the offline botocore generator.
+// These sign nothing real and are never read from an environment.
+const syntheticCredentials = {
+  accessKeyId: "TESTONLYACCESSKEYID",
+  secretAccessKey: "test-secret-not-a-real-key",
+  sessionToken: "test-session-token-not-real",
 };
 
 describe("SigV4", () => {
@@ -39,14 +46,14 @@ describe("SigV4", () => {
         body: v.body,
         service: v.service,
         region: file.region,
-        credentials: file.credentials,
+        credentials: syntheticCredentials,
         date: new Date(file.date),
       });
       expect(headers["x-amz-date"]).toBe(v.amzDate);
       expect(headers.authorization).toBe(
-        `AWS4-HMAC-SHA256 Credential=${file.credentials.accessKeyId}/${v.scope}, SignedHeaders=${v.signedHeaders}, Signature=${v.signature}`,
+        `AWS4-HMAC-SHA256 Credential=${syntheticCredentials.accessKeyId}/${v.scope}, SignedHeaders=${v.signedHeaders}, Signature=${v.signature}`,
       );
-      expect(headers["x-amz-security-token"]).toBe(file.credentials.sessionToken);
+      expect(headers["x-amz-security-token"]).toBe(syntheticCredentials.sessionToken);
     });
   }
 

@@ -26,6 +26,16 @@ export function modelTable(source = readFileSync(MODEL_SOURCE, "utf8")) {
         typeof m.liveBlockReason !== "string" ||
         (m.billedMaxTokens !== null && (!Number.isSafeInteger(m.billedMaxTokens) || m.billedMaxTokens < m.maxTokens)) ||
         ((m.billedMaxTokens === null || !m.settingsVerified) && m.liveBlockReason === "")) throw new Error("invalid reviewed model entry");
+    for (const field of ["reasoningAccounting", "inputTokenBound"]) {
+      const evidence = m[field];
+      if (!evidence || !["yes", "no", "unknown"].includes(evidence.state) ||
+          typeof evidence.source !== "string" || !evidence.source || !/^\d{4}-\d{2}-\d{2}$/.test(evidence.checkedOn)) throw new Error("invalid model evidence");
+    }
+    if (m.inputTokenBound.framingTokens !== null && (!Number.isSafeInteger(m.inputTokenBound.framingTokens) || m.inputTokenBound.framingTokens < 0)) throw new Error("invalid input token bound");
+    if (m.inputTokenBound.state === "yes" && m.inputTokenBound.framingTokens === null) throw new Error("verified input bound missing framing maximum");
+    for (const field of ["profile", "price", "settings"]) {
+      if (typeof m.source?.[field] !== "string" || !m.source[field] || !/^\d{4}-\d{2}-\d{2}$/.test(m.source[`${field}CheckedOn`])) throw new Error("source provenance date missing");
+    }
     keys.add(m.key);
     // Settings may never enable external tools/search, even after a table edit.
     const settings = JSON.stringify(m.requestFields);
@@ -79,13 +89,14 @@ export function generatedTemplates(service, setup, table = modelTable()) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   try {
     const args = process.argv.slice(2);
-    if (args.length === 2 && ["--id", "--check-key"].includes(args[0])) {
+    if (args.length === 2 && ["--id", "--check-key", "--regions"].includes(args[0])) {
       const entry = Object.entries(modelTable().models).find(([, model]) => model.key === args[1]);
       if (!entry) throw new Error("unknown model key");
       if (args[0] === "--id") process.stdout.write(`${entry[0]}\n`);
+      if (args[0] === "--regions") process.stdout.write(`${entry[1].destinationRegions.join("\n")}\n`);
       process.exit(0);
     }
-    if (args.length !== 1 || !["--check", "--write"].includes(args[0])) throw new Error("Usage: node infra/aws/model-table.mjs --check|--write|--id KEY|--check-key KEY");
+    if (args.length !== 1 || !["--check", "--write"].includes(args[0])) throw new Error("Usage: node infra/aws/model-table.mjs --check|--write|--id KEY|--check-key KEY|--regions KEY");
     const service = readFileSync(SERVICE, "utf8");
     const setup = readFileSync(SETUP, "utf8");
     const generated = generatedTemplates(service, setup);

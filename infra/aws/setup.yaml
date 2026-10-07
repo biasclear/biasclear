@@ -148,12 +148,20 @@ Resources:
                 Action: s3:PutObject
                 Resource: !Sub "${BuildBucket.Arn}/explain/*"
               # Read-only, account-wide settings with no resource of their own.
-              - Sid: ReadBedrockPrivacySettings
+              - Sid: ReadBedrockSourceLogging
                 Effect: Allow
-                Action:
-                  - bedrock:GetModelInvocationLoggingConfiguration
-                  - bedrock:GetAccountDataRetention
+                Action: bedrock:GetModelInvocationLoggingConfiguration
                 Resource: "*"
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: us-east-1
+              - Sid: ReadBedrockDestinationRetention
+                Effect: Allow
+                Action: bedrock:GetAccountDataRetention
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: [us-east-1, us-east-2, us-west-2]
               # The live evaluation invokes the function directly.
               - Sid: InvokeTheFunctionForTheEvaluation
                 Effect: Allow
@@ -255,9 +263,22 @@ Resources:
                   - logs:ListTagsForResource
                   - logs:GetDataProtectionPolicy
                   - logs:DescribeIndexPolicies
+                  - logs:PutMetricFilter
+                  - logs:DeleteMetricFilter
+                  - logs:DescribeMetricFilters
                 Resource:
                   - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/biasclear/explain"
                   - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/biasclear/explain:*"
+              - Sid: TheBillingAnomalyAlarm
+                Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricAlarm
+                  - cloudwatch:DeleteAlarms
+                  - cloudwatch:DescribeAlarms
+                  - cloudwatch:TagResource
+                  - cloudwatch:UntagResource
+                  - cloudwatch:ListTagsForResource
+                Resource: !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:biasclear-explain-billing-anomaly"
               - Sid: ListLogGroups
                 Effect: Allow
                 Action: logs:DescribeLogGroups
@@ -350,12 +371,20 @@ Resources:
                   StringEquals:
                     "bedrock:InferenceProfileArn": !Sub "arn:${AWS::Partition}:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.openai.gpt-6.1-sol"
               # END_GENERATED_MODEL_IAM
-              - Sid: ReadBedrockPrivacySettings
+              - Sid: ReadBedrockSourceLogging
                 Effect: Allow
-                Action:
-                  - bedrock:GetModelInvocationLoggingConfiguration
-                  - bedrock:GetAccountDataRetention
+                Action: bedrock:GetModelInvocationLoggingConfiguration
                 Resource: "*"
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: us-east-1
+              - Sid: ReadBedrockDestinationRetention
+                Effect: Allow
+                Action: bedrock:GetAccountDataRetention
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: [us-east-1, us-east-2, us-west-2]
               - Sid: TheCounters
                 Effect: Allow
                 Action:
@@ -363,6 +392,7 @@ Resources:
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
+                  - dynamodb:ConditionCheckItem
                 Resource: !GetAtt Table.Arn
               - Sid: TheLogGroup
                 Effect: Allow

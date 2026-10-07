@@ -1,10 +1,5 @@
 {
   "about": "SigV4 signatures made by botocore 1.43.103 (AWS's Python signer) with made-up credentials, for test/sigv4.test.ts. Made by test/fixtures/make_sigv4_vectors.py (needs botocore; not run in CI).",
-  "credentials": {
-    "accessKeyId": "TESTONLYACCESSKEYID",
-    "secretAccessKey": "test-secret-not-a-real-key",
-    "sessionToken": "test-session-token-not-real"
-  },
   "date": "2026-10-05T14:03:07Z",
   "region": "us-east-1",
   "cases": [

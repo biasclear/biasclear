@@ -21,6 +21,8 @@ export interface ModelInfo {
   readonly billedMaxTokens: number | null;
   readonly liveBlockReason: string;
   readonly settingsVerified: boolean;
+  readonly reasoningAccounting: { readonly state: "yes" | "no" | "unknown"; readonly source: string; readonly checkedOn: string };
+  readonly inputTokenBound: { readonly state: "yes" | "no" | "unknown"; readonly source: string; readonly checkedOn: string; readonly framingTokens: number | null };
   readonly requestFields: Readonly<Record<string, unknown>>;
   readonly source: Readonly<Record<string, string>>;
 }
@@ -53,8 +55,22 @@ const MODEL_TABLE = {
     "source": {
       "baseId": "AWS Bedrock Model catalog, us-east-1, copied 2026-10-07",
       "profile": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-7.html",
+      "profileCheckedOn": "2026-10-07",
       "price": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-7.html",
-      "settings": "https://aws.amazon.com/blogs/machine-learning/grok-4-7-is-now-available-on-amazon-bedrock/"
+      "priceCheckedOn": "2026-10-07",
+      "settings": "https://aws.amazon.com/blogs/machine-learning/grok-4-7-is-now-available-on-amazon-bedrock/",
+      "settingsCheckedOn": "2026-10-07"
+    },
+    "reasoningAccounting": {
+      "state": "unknown",
+      "source": "Converse total billed reasoning mapping not established by current model-specific primary evidence.",
+      "checkedOn": "2026-10-07"
+    },
+    "inputTokenBound": {
+      "state": "unknown",
+      "source": "Model-specific Converse input framing maximum not established; prompt bytes plus 50 is not a documented universal bound.",
+      "checkedOn": "2026-10-07",
+      "framingTokens": null
     }
   },
   "us.anthropic.claude-sonnet-5-5": {
@@ -73,7 +89,7 @@ const MODEL_TABLE = {
     "outputPricePerMillion": 11,
     "maxTokens": 400,
     "billedMaxTokens": 400,
-    "liveBlockReason": "",
+    "liveBlockReason": "Converse reasoning accounting and input token framing bounds remain unverified.",
     "settingsVerified": true,
     "requestFields": {
       "thinking": {
@@ -86,8 +102,22 @@ const MODEL_TABLE = {
     "source": {
       "baseId": "AWS Bedrock Model catalog, us-east-1, copied 2026-10-07",
       "profile": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-sonnet-5-5.html",
+      "profileCheckedOn": "2026-10-07",
       "price": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrockFoundationModels/20260930001912/us-east-1/index.json",
-      "settings": "https://docs.aws.amazon.com/bedrock/latest/userguide/claude-messages-adaptive-thinking.html"
+      "priceCheckedOn": "2026-10-07",
+      "settings": "https://docs.aws.amazon.com/bedrock/latest/userguide/claude-messages-adaptive-thinking.html",
+      "settingsCheckedOn": "2026-10-07"
+    },
+    "reasoningAccounting": {
+      "state": "unknown",
+      "source": "Converse total billed reasoning mapping not established by current model-specific primary evidence.",
+      "checkedOn": "2026-10-07"
+    },
+    "inputTokenBound": {
+      "state": "unknown",
+      "source": "Model-specific Converse input framing maximum not established; prompt bytes plus 50 is not a documented universal bound.",
+      "checkedOn": "2026-10-07",
+      "framingTokens": null
     }
   },
   "us.openai.gpt-6.1-sol": {
@@ -112,8 +142,22 @@ const MODEL_TABLE = {
     "source": {
       "baseId": "AWS Bedrock Model catalog, us-east-1, copied 2026-10-07",
       "profile": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-6-1-sol.html",
+      "profileCheckedOn": "2026-10-07",
       "price": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-6-1-sol.html",
-      "settings": "Lowest reasoning setting and total billed-token bound are unverified; live startup is blocked."
+      "priceCheckedOn": "2026-10-07",
+      "settings": "Lowest reasoning setting and total billed-token bound are unverified; live startup is blocked.",
+      "settingsCheckedOn": "2026-10-07"
+    },
+    "reasoningAccounting": {
+      "state": "unknown",
+      "source": "Converse total billed reasoning mapping not established by current model-specific primary evidence.",
+      "checkedOn": "2026-10-07"
+    },
+    "inputTokenBound": {
+      "state": "unknown",
+      "source": "Model-specific Converse input framing maximum not established; prompt bytes plus 50 is not a documented universal bound.",
+      "checkedOn": "2026-10-07",
+      "framingTokens": null
     }
   }
 };
@@ -123,6 +167,16 @@ for (const model of Object.values(MODEL_TABLE)) {
   Object.freeze(model.destinationRegions);
   Object.freeze(model.requestFields);
   Object.freeze(model.source);
+  Object.freeze(model.reasoningAccounting);
+  Object.freeze(model.inputTokenBound);
   Object.freeze(model);
 }
 export const MODELS: Readonly<Record<string, ModelInfo>> = Object.freeze(MODEL_TABLE) as Readonly<Record<string, ModelInfo>>;
+
+/** Only reviewed, provider-specific accounting evidence can open the live boundary. */
+export function modelReady(model: ModelInfo | undefined): model is ModelInfo & { billedMaxTokens: number; inputTokenBound: ModelInfo["inputTokenBound"] & { framingTokens: number } } {
+  return model !== undefined && model.settingsVerified && model.liveBlockReason === "" &&
+    model.reasoningAccounting.state === "yes" && model.inputTokenBound.state === "yes" &&
+    Number.isSafeInteger(model.billedMaxTokens) && model.billedMaxTokens !== null && model.billedMaxTokens >= model.maxTokens &&
+    Number.isSafeInteger(model.inputTokenBound.framingTokens) && model.inputTokenBound.framingTokens !== null && model.inputTokenBound.framingTokens >= 0;
+}

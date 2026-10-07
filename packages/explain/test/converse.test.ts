@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { converseModel, modelRequest, normalizedReply } from "../src/aws/bedrock.js";
 import { readConfig } from "../src/config.js";
 import { DEFAULT_MODEL_ID, MODELS } from "../src/models.js";
-import { ENV, harness, httpEvent, lastLog } from "./helpers.js";
+import { STUB_MODELS, ENV, harness, httpEvent, lastLog } from "./helpers.js";
 
 const text = JSON.stringify({how:'The words "Everyone agrees" offer agreement as the reason.',plainer:'Some people say it.'});
 const reply = (content: unknown[], usage: Record<string, unknown> = {inputTokens:100,outputTokens:150,totalTokens:250}) =>
@@ -22,7 +22,7 @@ describe("one provider-independent Converse contract", () => {
     });
   }
 
-  it("uses one Converse POST, counts reasoning output once and drops private reasoning", async () => {
+  it("uses one Converse POST, uses synthetic billed output once and drops private reasoning", async () => {
     let calls = 0;
     const outcome = await converseModel(async call => {
       calls++;
@@ -31,22 +31,36 @@ describe("one provider-independent Converse contract", () => {
       return {status:200,headers:{},body:JSON.stringify(reply([
         {reasoningContent:{reasoningText:{text:"private reasoning",signature:"test-signature"}}},{text},
       ]))};
-    }, "us-east-1", DEFAULT_MODEL_ID, modelRequest("prompt","sentence",MODELS[DEFAULT_MODEL_ID]!));
+    }, "us-east-1", DEFAULT_MODEL_ID, modelRequest("prompt","sentence",STUB_MODELS[DEFAULT_MODEL_ID]!), STUB_MODELS[DEFAULT_MODEL_ID]);
     expect(calls).toBe(1);
     expect(outcome.kind).toBe("reply");
     if (outcome.kind !== "reply") throw new Error("missing reply");
     expect(outcome.inTok).toBe(100);
-    expect(outcome.outTok).toBe(150); // total output including reasoning, never added a second time
+    expect(outcome.outTok).toBe(150); // synthetic reported total; no provider guarantee inferred
     expect(outcome.reply).toEqual({stop_reason:"end_turn",content:[{type:"text",text}]});
     expect(JSON.stringify(outcome.reply)).not.toContain("private reasoning");
   });
 
   it("charges all cached-input usage at the full rate and refuses unexplained totals", async () => {
     const call = async (usage: Record<string, unknown>) => converseModel(async () => ({status:200,headers:{},body:JSON.stringify(reply([{text}],usage))}),
-      "us-east-1", DEFAULT_MODEL_ID, modelRequest("p","s",MODELS[DEFAULT_MODEL_ID]!));
+      "us-east-1", DEFAULT_MODEL_ID, modelRequest("p","s",STUB_MODELS[DEFAULT_MODEL_ID]!), STUB_MODELS[DEFAULT_MODEL_ID]);
     const cached = await call({inputTokens:100,outputTokens:20,cacheReadInputTokens:30,cacheWriteInputTokens:10,totalTokens:160});
     expect(cached).toMatchObject({kind:"reply",inTok:140,outTok:20});
     expect(await call({inputTokens:100,outputTokens:20,totalTokens:500})).toMatchObject({kind:"maybe-billed",code:"E_MODEL_NO_USAGE"});
+    expect(await call({inputTokens:Number.MAX_SAFE_INTEGER,outputTokens:20})).toMatchObject({kind:"maybe-billed",code:"E_MODEL_NO_USAGE"});
+  });
+
+  it("reports complete versus clipped private evaluation text exactly, without reasoning", async () => {
+    for (const size of [4000,4001]) {
+      const body = reply([{reasoningContent:{reasoningText:{text:"private reasoning"}}},{text:"x".repeat(size)}]);
+      const outcome = await converseModel(async()=>({status:200,headers:{},body:JSON.stringify(body)}),
+        "us-east-1",DEFAULT_MODEL_ID,modelRequest("p","s",STUB_MODELS[DEFAULT_MODEL_ID]!),STUB_MODELS[DEFAULT_MODEL_ID]);
+      expect(outcome.providerTextChars).toBe(size);
+      expect(outcome.providerTextTruncated).toBe(size > 4000);
+      expect(outcome.providerText).toBe("x".repeat(4000));
+      expect(outcome.providerText).not.toContain("private reasoning");
+      expect(outcome.providerStopReason).toBe("end_turn");
+    }
   });
 
   it("refuses tool/search/unknown blocks and more than one text block", () => {
@@ -66,9 +80,9 @@ describe("live startup refuses unresolved default/alternative settings", () => {
     expect(lastLog(h).code).toBe("E_CONFIG");
     expect(h.aws.calls).toEqual([]);
   });
-  it("accepts only documented total-bound Sonnet, exact region/rates and zero retention", () => {
+  it("rejects Sonnet too until Converse accounting and input bounds have evidence", () => {
     const env = {...ENV,EXPLAIN_MODEL_ID:"us.anthropic.claude-sonnet-5-5",EXPLAIN_PRICE_OUT:"11.00"};
-    expect(readConfig(env)?.modelId).toBe(env.EXPLAIN_MODEL_ID);
+    expect(readConfig(env)).toBeUndefined();
     for (const changes of [{EXPLAIN_MODEL_ID:"unknown"},{AWS_REGION:"us-west-2"},{EXPLAIN_PRICE_OUT:"1"},{EXPLAIN_RETENTION_MODE:"default"},
       {EXPLAIN_MODEL_ID:"us.openai.gpt-6.1-sol"}]) expect(readConfig({...env,...changes})).toBeUndefined();
   });

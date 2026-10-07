@@ -159,6 +159,43 @@ Resources:
         - Key: feature
           Value: explain
 
+  BillingAnomalyMetric:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: biasclear-explain-billing-anomaly
+      LogGroupName: !Ref LogGroup
+      FilterPattern: '{ ($.overrun = 1) || ($.billedBoundViolated = 1) || ($.pausePersisted = 0) || ($.pausePersisted = 1) || ($.code = "E_SETTLE") }'
+      MetricTransformations:
+        - MetricNamespace: BiasClear/Explain
+          MetricName: BillingAnomaly
+          MetricValue: "1"
+          DefaultValue: 0
+          Unit: Count
+
+  BillingAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: biasclear-explain-billing-anomaly
+      AlarmDescription: Billing bound breach, unresolved settlement, or failed durable pause. Visible only; no notification or automatic action configured.
+      Namespace: BiasClear/Explain
+      MetricName: BillingAnomaly
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: false
+      AlarmActions: []
+      OKActions: []
+      InsufficientDataActions: []
+      Tags:
+        - Key: project
+          Value: biasclear
+        - Key: feature
+          Value: explain
+
   Function:
     Type: AWS::Lambda::Function
     Properties:
