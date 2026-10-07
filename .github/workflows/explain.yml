@@ -71,6 +71,7 @@ jobs:
         env:
           ACTION: ${{ inputs.action }}
           CAP: ${{ inputs.monthly_cap }}
+          MODEL: ${{ inputs.model }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           REF: ${{ github.ref }}

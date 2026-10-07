@@ -89,14 +89,16 @@ export function generatedTemplates(service, setup, table = modelTable()) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   try {
     const args = process.argv.slice(2);
-    if (args.length === 2 && ["--id", "--check-key", "--regions"].includes(args[0])) {
+    if (args.length === 2 && ["--id", "--check-key", "--regions", "--name"].includes(args[0])) {
       const entry = Object.entries(modelTable().models).find(([, model]) => model.key === args[1]);
       if (!entry) throw new Error("unknown model key");
       if (args[0] === "--id") process.stdout.write(`${entry[0]}\n`);
       if (args[0] === "--regions") process.stdout.write(`${entry[1].destinationRegions.join("\n")}\n`);
+      // The maker visitors are told about, for the approval summary and refusals (306 e).
+      if (args[0] === "--name") process.stdout.write(`${entry[1].displayName}, made by ${entry[1].provider}\n`);
       process.exit(0);
     }
-    if (args.length !== 1 || !["--check", "--write"].includes(args[0])) throw new Error("Usage: node infra/aws/model-table.mjs --check|--write|--id KEY|--check-key KEY|--regions KEY");
+    if (args.length !== 1 || !["--check", "--write"].includes(args[0])) throw new Error("Usage: node infra/aws/model-table.mjs --check|--write|--id KEY|--check-key KEY|--regions KEY|--name KEY");
     const service = readFileSync(SERVICE, "utf8");
     const setup = readFileSync(SETUP, "utf8");
     const generated = generatedTemplates(service, setup);

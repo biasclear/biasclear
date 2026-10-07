@@ -29,6 +29,9 @@ export AWS_REGION AWS_DEFAULT_REGION="$AWS_REGION" AWS_PAGER=""
 STACK="${STACK:-biasclear-explain}"
 FUNCTION="biasclear-explain"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The site's published Explain settings (packages/explain/SITE_CONTRACT.md section 1). Its "model"
+# is the entry the visitor's consent and privacy text name. The variable exists for the tests.
+SITE_CONFIG="${EXPLAIN_SITE_CONFIG:-$HERE/../../site/data/explain.json}"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 SIGNED_IN_UNTIL=0
@@ -84,6 +87,24 @@ stack_status() {
 
 # Writes the switch's current value to GITHUB_ENV as PREV_SWITCH, so the
 # workflow's last step can put it back whatever happens in between.
+model_name() {
+  node "$HERE/model-table.mjs" --name "$1" 2>/dev/null || echo "an unreviewed model ($1)"
+}
+
+# Deploy, resume and evaluate each switch Explain on. While the site offers Explain (its "api" is
+# set), they may only run the model its published consent names: a different maker would get
+# visitors' sentences under consent that names someone else (306 e). With no published settings,
+# or "api" null, the site shows no Explain control and there is no consent to contradict.
+require_published_model() {
+  local model="$1" api published
+  [ -f "$SITE_CONFIG" ] || return 0
+  api="$(jq -r '.api // ""' "$SITE_CONFIG" 2>/dev/null)" || fail "Stop: could not read the site's Explain settings. Nothing was changed."
+  [ -n "$api" ] || return 0
+  published="$(jq -r '.model // ""' "$SITE_CONFIG")"
+  [ "$published" = "$model" ] && return 0
+  fail "Stop: the site's consent and privacy text name $(model_name "$published"), but this run selects $(model_name "$model"). Visitors would send their sentences to a maker they weren't told about. Take Explain off the site, evaluate, publish consent for the new model, then run this. Nothing was changed."
+}
+
 record_prev_switch() {
   local prev="$1"
   [ "$prev" = on ] || prev=off
@@ -272,9 +293,22 @@ cmd_deploy() {
     fail "Usage: ops.sh deploy ZIP SMOKE_JSON [CAP]"
   fi
   if [ -n "$cap" ] && ! [[ "$cap" =~ ^([1-9]|1[0-9]|2[0-5])$ ]]; then fail "Stop: the monthly cap must be a whole number from 1 to 25, or blank."; fi
-  local model="${MODEL:-grok47}"
+  local model="${MODEL:-grok47}" current
   node "$HERE/model-table.mjs" --check-key "$model" >/dev/null || fail "Stop: unknown model key; no AWS sign-in."
+  require_published_model "$model"
   signin
+  # A deploy switches Explain on and the workflow restores the switch it found. If visitors can use
+  # Explain now, another model must not take over under consent naming the running one (306 e).
+  case "$(stack_status || echo UNREADABLE)" in
+    NONE | ROLLBACK_COMPLETE | REVIEW_IN_PROGRESS) ;;
+    UNREADABLE) fail "Stop: could not read Explain's stack in AWS. Nothing was changed." ;;
+    *)
+      current="$(param_value Model)"
+      if [ "$current" != "$model" ] && [ "$(param_value Explain)" = on ]; then
+        fail "Stop: Explain is on with $(model_name "$current"), and this deploy selects $(model_name "$model"). Visitors' consent names the running model's maker. Run pause first, publish consent and privacy for the new model, then deploy. Nothing was changed."
+      fi
+      ;;
+  esac
   sha="$(sha256sum "$zip" | cut -d' ' -f1)"
   aws s3 cp "$zip" "s3://biasclear-explain-build-${ACCOUNT}/explain/${sha}.zip" --only-show-errors
   key="$(new_key)"
@@ -306,6 +340,7 @@ cmd_evaluate() {
   local requests="$1" out="$2" key planned n=0 line
   [ -f "$requests" ] || fail "Usage: ops.sh evaluate REQUESTS_JSONL OUT"
   node "$HERE/model-table.mjs" --check-key "${MODEL:-grok47}" >/dev/null || fail "Stop: unknown model key; no AWS sign-in."
+  require_published_model "${MODEL:-grok47}"
   signin
   case "$(stack_status || echo UNREADABLE)" in
     NONE | ROLLBACK_COMPLETE | REVIEW_IN_PROGRESS) fail "Stop: there is no Explain service to evaluate. Run deploy first." ;;
@@ -344,6 +379,7 @@ cmd_switch() {
   [ "$value" = on ] || [ "$value" = off ] || fail "Usage: ops.sh switch on|off"
   if [ "$value" = on ]; then
     node "$HERE/model-table.mjs" --check-key "${MODEL:-grok47}" >/dev/null || fail "Stop: unknown model key; no AWS sign-in."
+    require_published_model "${MODEL:-grok47}"
   fi
   signin
   local status

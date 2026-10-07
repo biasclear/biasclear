@@ -120,6 +120,20 @@ changes_since_last_deploy() {
   out '```'
 }
 
+# The model this run selects, as visitors' consent must name it (306 e).
+model_line() {
+  local name
+  if [ -z "${MODEL:-}" ]; then
+    out "**The model isn't named here:** the workflow didn't pass it to this summary. Don't approve until you know which model this run selects."
+    return
+  fi
+  if ! name="$(node "$(dirname "${BASH_SOURCE[0]}")/model-table.mjs" --name "$MODEL" 2>/dev/null)"; then
+    out "**Unknown model key.** The run stops before any AWS step."
+    return
+  fi
+  out "Model: **${name}**."
+}
+
 main() {
   if [ -n "${CAP:-}" ] && ! [[ "$CAP" =~ ^([1-9]|1[0-9]|2[0-5])$ ]]; then
     echo "::error::The monthly cap must be a whole number from 1 to 25, or blank."
@@ -136,10 +150,21 @@ main() {
       out "This run will build Explain from main and run its tests, check the model's price against AWS's price list, check that Bedrock logging is off and the data-retention setting is as expected, then update the service with every setting from the reviewed files. Readiness and zero-retention checks must pass before any paid call. It switches Explain on for two distinct test calls, each once, and back to its previous state: off on a first deploy."
       out
       if [ -n "${CAP:-}" ]; then out "It will set the monthly cap to **\$${CAP}**."; else out "The monthly cap stays as it is."; fi
+      out
+      model_line
+      out "If Explain is on with a different model, or the site's published consent names a different model, this run stops before changing anything: changing makers needs a pause and consent that names the new one first."
       ;;
     pause) out "This run will switch Explain **off**. Visitors who press Explain will see \"Explain is paused\". Nothing else changes, and nothing new is shipped." ;;
-    resume) out "This run will switch Explain back **on**. Nothing else changes, and nothing new is shipped." ;;
-    evaluate) out "This run will evaluate the reviewed synthetic set on the one explicitly selected model, through the authenticated cap-backed function, save every answer for the red team, then restore the previous switch. Real costs and time come from each reply; no model is switched automatically." ;;
+    resume)
+      out "This run will switch Explain back **on**. Nothing else changes, and nothing new is shipped. It stops if the running model isn't the one named below, or isn't the one the site's consent names."
+      out
+      model_line
+      ;;
+    evaluate)
+      out "This run will evaluate the reviewed synthetic set on the one explicitly selected model, through the authenticated cap-backed function, save every answer for the red team, then restore the previous switch. Real costs and time come from each reply; no model is switched automatically."
+      out
+      model_line
+      ;;
     remove) out "This run will **delete** the Explain service: the function, the web address and every log line. The month's spending count stays in the setup, so the \$25 stop still holds if you deploy again this month (see infra/aws/README.md to remove the setup too)." ;;
     *) out "Unknown action." ;;
   esac

@@ -469,6 +469,67 @@ def test_evaluate_refuses_mismatched_model_without_switching_or_calling(fake):
     assert not fake.read_state().get("invokes")
 
 
+# ---- 306 e: a model change can't reuse consent naming another maker ------
+
+
+def stack_with(model, switch):
+    s = stack(switch=switch)
+    s["params"]["Model"] = model
+    return s
+
+
+def site_config(tmp_path, api, model="grok47"):
+    p = tmp_path / "explain.json"
+    p.write_text(json.dumps({"api": api, "rules": [], "retention": "none", "model": model}))
+    return {"EXPLAIN_SITE_CONFIG": str(p)}
+
+
+def test_deploy_refuses_another_model_while_explain_is_on(fake):
+    # The 306 case: on with Grok, then prepare, deploy MODEL=sonnet55 and restore on left visitors on Sonnet.
+    z, s = smoke_file(fake.path)
+    fake.state(stack=stack_with("grok47", "on"), posts=[[422, {}, None], [200, GOOD, "https://biasclear.com"]], replies=[{"status": 200, "body": GOOD}])
+    assert fake.run("ops.sh", "prepare").returncode == 0
+    r = fake.run("ops.sh", "deploy", str(z), str(s), extra_env={"MODEL": "sonnet55"})
+    assert r.returncode == 1
+    assert "Explain is on with Grok 4.7, made by xAI, and this deploy selects Claude Sonnet 5.5, made by Anthropic" in fake.summary()
+    assert "Run pause first" in fake.summary()
+    assert not fake.read_state().get("deploys")
+    assert not fake.calls(["aws", "s3"])
+    assert fake.run("ops.sh", "restore", "on").returncode == 0
+    assert fake.read_state()["stack"]["params"]["Model"] == "grok47"
+
+
+def test_deploy_may_change_the_model_while_explain_is_off(fake):
+    z, s = smoke_file(fake.path)
+    fake.state(stack=stack_with("grok47", "off"), posts=[[422, {}, None], [200, GOOD, "https://biasclear.com"]], replies=[{"status": 200, "body": GOOD}])
+    r = fake.run("ops.sh", "deploy", str(z), str(s), extra_env={"MODEL": "sonnet55"})
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "Model=sonnet55" in fake.read_state()["deploys"][0]
+
+
+def test_deploy_resume_and_evaluate_refuse_a_model_the_published_consent_does_not_name(fake):
+    z, s = smoke_file(fake.path)
+    site = site_config(fake.path, "https://abc123.execute-api.us-east-1.amazonaws.com", model="grok47")
+    req = requests_file(fake.path, 1)
+    fake.state(stack=stack_with("sonnet55", "off"))
+    for args in (("deploy", str(z), str(s)), ("switch", "on"), ("evaluate", str(req), str(fake.path / "raw.jsonl"))):
+        r = fake.run("ops.sh", *args, extra_env={"MODEL": "sonnet55", **site})
+        assert r.returncode == 1, args
+        assert "the site's consent and privacy text name Grok 4.7, made by xAI, but this run selects Claude Sonnet 5.5, made by Anthropic" in fake.summary()
+    assert not fake.calls(["aws"])  # refused before signing in
+    assert not fake.read_state().get("updates") and not fake.read_state().get("deploys")
+
+
+def test_published_consent_binds_only_while_the_site_offers_explain(fake):
+    z, s = smoke_file(fake.path)
+    fake.state(stack=stack_with("grok47", "off"), posts=[[422, {}, None], [200, GOOD, "https://biasclear.com"]], replies=[{"status": 200, "body": GOOD}])
+    r = fake.run("ops.sh", "deploy", str(z), str(s), extra_env={"MODEL": "sonnet55", **site_config(fake.path, None, model="grok47")})
+    assert r.returncode == 0, r.stdout + r.stderr
+    fake.state(stack=stack_with("grok47", "off"))
+    r = fake.run("ops.sh", "switch", "on", extra_env={"MODEL": "grok47", **site_config(fake.path, "https://abc123.execute-api.us-east-1.amazonaws.com")})
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
 def test_resume_and_evaluate_reject_unknown_model_before_sign_in(fake):
     req = requests_file(fake.path, 1)
     fake.state(stack=stack(switch="off"))
@@ -759,6 +820,24 @@ def test_summary_says_so_when_it_cannot_find_the_last_deploy(fake, repo):
     assert "This is the first deploy." not in s
 
 
+def test_summary_names_the_selected_model_and_the_consent_stop(fake, repo):
+    d, *_ = repo
+    fake.state(gh=gh_state([]))
+    for action in ("deploy", "resume", "evaluate"):
+        r = fake.run("summary.sh", cwd=d, extra_env={"ACTION": action, "CAP": "", "MODEL": "sonnet55", "REF": "refs/heads/main", "GH_REPO": "o/r", "GH_TOKEN": "x"})
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert "Model: **Claude Sonnet 5.5, made by Anthropic**." in fake.summary()
+    assert "changing makers needs a pause and consent that names the new one first" in fake.summary()
+
+
+def test_summary_warns_when_the_model_is_not_passed(fake, repo):
+    d, *_ = repo
+    fake.state(gh=gh_state([]))
+    r = run_summary(fake, d)
+    assert r.returncode == 0
+    assert "The model isn't named here" in fake.summary()
+
+
 def test_summary_refuses_a_cap_out_of_range(fake, repo):
     d, *_ = repo
     fake.state(gh=gh_state([]))
@@ -774,6 +853,9 @@ def test_shellcheck():
 def test_scripts_are_what_the_workflow_runs():
     wf = (ROOT / ".github/workflows/explain.yml").read_text()
     assert "bash infra/aws/ops.sh" in wf and "bash infra/aws/summary.sh" in wf
+    # The approval summary names the model the run selects (306 e).
+    summary_step = wf.split("- name: Say what this run will do", 1)[1].split("run: bash infra/aws/summary.sh", 1)[0]
+    assert "MODEL: ${{ inputs.model }}" in summary_step
     # The credentialed job installs nothing from npm.
     aws_job = wf.split("\n  aws:\n", 1)[1].split("\n  report:\n", 1)[0]
     code = "\n".join(line for line in aws_job.splitlines() if not line.lstrip().startswith("#"))
