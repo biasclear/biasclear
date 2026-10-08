@@ -257,7 +257,7 @@ export function classifySample(sample: Sample): SampleOutcome {
   // is never reported as a provider refusal, so it keeps the run incomplete.
   if (["E_HEADROOM", "E_TOO_COSTLY", "E_RESERVE_MONTH", "E_RESERVE_DAY"].includes(sample.code ?? "")) return "cap";
   if (calledModel(sample) && (sample.code?.startsWith("E_MODEL_") || sample.code === "E_INTERNAL")) return "call_failure";
-  if (sample.error === "paused" || ["E_SETTLE", "E_PROVIDER_BOUND", "E_BILLING_PAUSE", "E_DDB"].includes(sample.code ?? "")) return "service_blocked";
+  if (sample.error === "paused" || ["E_SETTLE", "E_PROVIDER_BOUND", "E_BILLING_PAUSE", "E_DDB", "E_DEADLINE"].includes(sample.code ?? "")) return "service_blocked";
   if (refusalLike(sample)) return "provider_refusal";
   if (calledModel(sample) && TRUNCATED_STOPS.has(sample.providerStopReason ?? "")) return "truncated";
   if (acceptedAnswer(sample)) return "accepted";

@@ -127,11 +127,18 @@ describe("atomic and durable billing fences", () => {
   });
 
   it("lost pause acknowledgment is recovered only when both pause and this event debt exist",async()=>{
+    // 314 L2: the pause and debt are PutItem writes now, so the lost acknowledgment is injected there.
     const aws=new FakeAws();const ddb=new Ddb(aws.transport,cfg.region,cfg.table);
     const r=await reserve(ddb,cfg,now,10000);if(!r.ok) throw new Error("reservation missing");
-    aws.table.fault=(op)=>op === "TransactWriteItems" ? "response-lost" : undefined;
+    aws.table.ops.length=0;
+    aws.table.fault=(op)=>op === "PutItem" ? "response-lost" : undefined;
     expect(await persistBillingPause(ddb,{reason:"E_SETTLE",nowMs:now,reservedMicros:10000,actualMicros:15000,event:r.reservation.event})).toBe(true);
+    expect(aws.table.ops.filter(o=>o === "PutItem")).toHaveLength(2); // each written once; its reply was lost
+    expect(aws.table.ops.filter(o=>o === "GetItem")).toHaveLength(2); // and proved by a consistent read
+    expect(aws.table.items.has(BILLING_PAUSE_KEY)).toBe(true);
     expect([...aws.table.items.keys()].filter(k=>k.startsWith("billingdebt#"))).toHaveLength(1);
+    expect(aws.table.num(r.reservation.month,"m")).toBe(10000); // no counter is touched
+    expect(aws.table.num(r.reservation.day,"m")).toBe(10000);
   });
 
   it("reports failed durable pause honestly and still stops this instance",async()=>{

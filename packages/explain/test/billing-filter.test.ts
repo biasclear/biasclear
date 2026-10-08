@@ -4,7 +4,7 @@
 // see inside it. Offline only: real alarm operation is unproven until the AWS sitting.
 
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { BILLING_PAUSE_KEY } from "../src/spend.js";
 import { ConflictAws } from "./conflicts.js";
 import { harness, httpEvent, modelReply, type Harness } from "./helpers.js";
@@ -51,7 +51,11 @@ describe("the billing-anomaly filter sees anomaly lines as Lambda stores them (3
     ca.forceConflict = (body) => JSON.stringify(body).includes(":settled");
     const unsettled = harness({ transport: ca.transport });
     ca.aws.table.fault = (op, p) => op === "PutItem" && (p.Item as { pk: { S: string } }).pk.S === BILLING_PAUSE_KEY ? "network" : undefined;
-    await unsettled.call(httpEvent());
+    vi.useFakeTimers(); // its fence write fails on every try, for the 4 s retry window
+    const settling = unsettled.call(httpEvent());
+    await vi.runAllTimersAsync();
+    await settling;
+    vi.useRealTimers();
     lines.push(lastLine(unsettled));
 
     const unknown = harness();

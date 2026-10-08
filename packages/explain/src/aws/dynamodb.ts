@@ -32,7 +32,7 @@ export class Ddb {
     private readonly table: string,
   ) {}
 
-  private async call(operation: string, payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private async call(operation: string, payload: Record<string, unknown>, timeoutMs = DDB_TIMEOUT_MS): Promise<Record<string, unknown>> {
     let reply;
     try {
       reply = await this.transport({
@@ -45,7 +45,7 @@ export class Ddb {
           "x-amz-target": `DynamoDB_20120810.${operation}`,
         },
         body: JSON.stringify(operation === "TransactWriteItems" ? payload : { TableName: this.table, ...payload }),
-        timeoutMs: DDB_TIMEOUT_MS,
+        timeoutMs: Math.max(1, Math.min(DDB_TIMEOUT_MS, timeoutMs)),
       });
     } catch {
       throw new DdbError("other");
@@ -64,17 +64,17 @@ export class Ddb {
 
   /** Atomic component writes on this exact table, with no transport retry.
    * The durable event condition supplies idempotence beyond DynamoDB's token window. */
-  async transact(items: readonly Record<string, Record<string, unknown>>[], token: string): Promise<void> {
+  async transact(items: readonly Record<string, Record<string, unknown>>[], token: string, timeoutMs = DDB_TIMEOUT_MS): Promise<void> {
     await this.call("TransactWriteItems", {
       TransactItems: items.map((item) => Object.fromEntries(Object.entries(item).map(([operation, body]) =>
         [operation, { TableName: this.table, ...body }]))),
       ClientRequestToken: token,
-    });
+    }, timeoutMs);
   }
 
   /** The item, or undefined if there is none or its TTL has passed. */
-  async get(pk: string, nowSec: number, consistent = false): Promise<Item | undefined> {
-    const out = await this.call("GetItem", { Key: { pk: { S: pk } }, ConsistentRead: consistent });
+  async get(pk: string, nowSec: number, consistent = false, timeoutMs = DDB_TIMEOUT_MS): Promise<Item | undefined> {
+    const out = await this.call("GetItem", { Key: { pk: { S: pk } }, ConsistentRead: consistent }, timeoutMs);
     const item = out.Item as Item | undefined;
     if (item === undefined || item === null || typeof item !== "object") return undefined;
     const ttl = numberAttr(item, "ttl");
@@ -110,8 +110,8 @@ export class Ddb {
   }
 
   /** Writes (or overwrites) an item. Only for records whose rewrite is harmless: no counter. */
-  async put(item: Item): Promise<void> {
-    await this.call("PutItem", { Item: item });
+  async put(item: Item, timeoutMs = DDB_TIMEOUT_MS): Promise<void> {
+    await this.call("PutItem", { Item: item }, timeoutMs);
   }
 
   /** Writes an item only if none has this key. Returns false if one already exists. */

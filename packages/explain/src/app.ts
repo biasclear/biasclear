@@ -9,7 +9,7 @@
 
 import { timingSafeEqual } from "node:crypto";
 import { Ddb, DdbError } from "./aws/dynamodb.js";
-import { converseModel, modelRequest, readAccountSettings, type ModelOutcome } from "./aws/bedrock.js";
+import { MODEL_TIMEOUT_MS, converseModel, modelRequest, readAccountSettings, type ModelOutcome } from "./aws/bedrock.js";
 import type { Transport } from "./aws/transport.js";
 import { CodedError, type Code, type ErrorName, type PlainerState } from "./codes.js";
 import { bankHash, pickLimits, quotable } from "./compose.js";
@@ -23,7 +23,7 @@ import { checkReply } from "./output.js";
 import { buildPrompt, type PromptMode } from "./prompt.js";
 import { checkRate, connectionHash, connectionKey, todaysSalt } from "./ratelimit.js";
 import { bodyText, parseJson, validateRequest, type ExplainRequest } from "./request.js";
-import { actualMicros, billingPaused, persistBillingPause, persistPause, hasHeadroom, release, reserve, settle, worstCaseMicros, type Reservation } from "./spend.js";
+import { FENCE_RESERVE_MS, LOG_RESERVE_MS, actualMicros, billingPaused, persistBillingPause, persistPause, hasHeadroom, release, reserve, settle, worstCaseMicros, type Deadline, type Reservation } from "./spend.js";
 import { SETTINGS_INTERVAL_MS, type InstanceState } from "./state.js";
 import { nextDayStart } from "./time.js";
 
@@ -41,6 +41,17 @@ export interface Deps {
   sink: LogSink;
   state: InstanceState;
 }
+
+/** What the handler reads from the Lambda context: the time this invocation has left. */
+export interface InvocationContext {
+  getRemainingTimeInMillis?: () => number;
+}
+
+/** After the model call: up to two settlement round trips, then the fence and debt writes and the log
+ * line (314 M1). The model call is cut so this always fits inside the function's timeout. */
+export const POST_CALL_RESERVE_MS = 2 * 3_000 + FENCE_RESERVE_MS + LOG_RESERVE_MS;
+/** Below this, the model call isn't worth making: the reservation is released and the answer is "busy". */
+export const MIN_MODEL_TIMEOUT_MS = 8_000;
 
 /** The success body (SPEC §3). */
 export interface ExplainAnswer {
@@ -137,7 +148,7 @@ function shapeStop(err: unknown): never {
   throw err;
 }
 
-export function createHandler(deps: Deps): (event: unknown) => Promise<HttpResult | EvaluationResult> {
+export function createHandler(deps: Deps): (event: unknown, context?: InvocationContext) => Promise<HttpResult | EvaluationResult> {
   const knownRules = new Set<string>();
   for (const b of deps.engines.builds.values()) for (const id of b.ruleIds) knownRules.add(id);
   const log = makeLogger(deps.sink, {
@@ -146,8 +157,12 @@ export function createHandler(deps: Deps): (event: unknown) => Promise<HttpResul
     models: new Set(Object.values(deps.models ?? MODELS).map((m) => m.key)),
   });
 
-  return async (event: unknown) => {
+  return async (event: unknown, context?: InvocationContext) => {
     const started = deps.now();
+    // One deadline for the whole invocation, measured on the real clock like Lambda's own timeout.
+    const remaining = typeof context?.getRemainingTimeInMillis === "function" ? context.getRemainingTimeInMillis() : Number.POSITIVE_INFINITY;
+    const t0 = Date.now();
+    const deadline: Deadline = { left: () => remaining - (Date.now() - t0) };
     const evaluation = isEvaluationEvent(event);
     const line: LogLine = { outcome: "no_answer", status: 502, ms: 0 };
     if (evaluation) line.evaluation = 1;
@@ -155,7 +170,7 @@ export function createHandler(deps: Deps): (event: unknown) => Promise<HttpResul
     const cors: { origin?: string | undefined } = {};
     let answer: Answer;
     try {
-      answer = await explain(deps, event, evaluation, line, detail, cors);
+      answer = await explain(deps, event, evaluation, line, detail, cors, deadline);
     } catch (err) {
       if (err instanceof Stop) {
         line.code = err.code;
@@ -205,6 +220,7 @@ async function explain(
   line: LogLine,
   detail: EvaluationResult["evaluation"],
   cors: { origin?: string | undefined },
+  deadline: Deadline,
 ): Promise<Answer> {
   const now = deps.now();
   const cfg = deps.config;
@@ -365,14 +381,21 @@ async function explain(
   const pause = async (code: Code, actual?: number): Promise<never> => {
     state.pausedUntil = Number.POSITIVE_INFINITY;
     const persisted = await persistBillingPause(ddb, { reason: code, nowMs: now, reservedMicros: reservation.micros,
-      ...(actual === undefined ? {} : { actualMicros: actual }), event: reservation.event });
+      ...(actual === undefined ? {} : { actualMicros: actual }), event: reservation.event }, deadline);
     line.pausePersisted = persisted ? 1 : 0;
     detail.pausePersisted = persisted;
     return stop("paused", code);
   };
 
-  // 9. The model call, with the reservation in hand.
-  const outcome = await callModel(deps, config, reservation, prompt.system, prompt.user, model);
+  // 9. The model call, with the reservation in hand, cut to leave time for the ledger and the stop
+  //    records afterwards (314 M1). Too little time left: release the reservation and answer busy.
+  const modelTimeout = Math.min(MODEL_TIMEOUT_MS, deadline.left() - POST_CALL_RESERVE_MS);
+  if (modelTimeout < MIN_MODEL_TIMEOUT_MS) {
+    if (!(await release(ddb, reservation, deadline))) return pause("E_SETTLE", 0);
+    line.micros = 0;
+    return stop("busy", "E_DEADLINE");
+  }
+  const outcome = await callModel(deps, config, reservation, prompt.system, prompt.user, model, modelTimeout);
   detail.modelCalled = outcome.modelCalled;
   detail.providerStopReason = outcome.providerStopReason;
   detail.providerText = outcome.providerText;
@@ -382,7 +405,7 @@ async function explain(
   if (outcome.kind === "not-billed") {
     line.actualMicros = 0;
     detail.actualMicros = 0;
-    if (!(await release(ddb, reservation))) return pause("E_SETTLE", 0);
+    if (!(await release(ddb, reservation, deadline))) return pause("E_SETTLE", 0);
     line.micros = 0;
     if (outcome.pauseInstance) state.pausedUntil = now + SETTINGS_INTERVAL_MS;
     return stop(outcome.answer, outcome.code);
@@ -405,12 +428,12 @@ async function explain(
   if (violated) line.billedBoundViolated = 1;
   const pauseDetail = violated ? { reason: "E_PROVIDER_BOUND" as const, nowMs: now, reservedMicros: reservation.micros,
     actualMicros: actual, event: reservation.event } : undefined;
-  if (!(await settle(ddb, reservation, actual, pauseDetail))) return pause("E_SETTLE", actual);
+  if (!(await settle(ddb, reservation, actual, pauseDetail, deadline))) return pause("E_SETTLE", actual);
   line.micros = actual;
   if (violated) {
     // The settlement committed this event's debt row; the shared fence is written on its own.
     state.pausedUntil = Number.POSITIVE_INFINITY;
-    const persisted = await persistPause(ddb, pauseDetail!);
+    const persisted = await persistPause(ddb, pauseDetail!, deadline);
     line.pausePersisted = persisted ? 1 : 0;
     detail.pausePersisted = persisted;
     return stop("paused", "E_PROVIDER_BOUND");
@@ -453,8 +476,9 @@ async function callModel(
   system: string,
   user: string,
   model: ModelInfo,
+  timeoutMs: number,
 ): Promise<ModelOutcome> {
   if (!(reservation.micros > 0)) throw new CodedError("E_INTERNAL");
   if (!modelReady(model) || model !== (deps.models ?? MODELS)[config.modelId]) throw new CodedError("E_CONFIG");
-  return converseModel(deps.transport, config.region, config.modelId, modelRequest(system, user, model), model);
+  return converseModel(deps.transport, config.region, config.modelId, modelRequest(system, user, model), model, timeoutMs);
 }

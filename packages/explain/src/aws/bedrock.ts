@@ -160,6 +160,7 @@ export async function converseModel(
   modelId: string,
   body: ModelRequest,
   model: ModelInfo | undefined = MODELS[modelId],
+  timeoutMs = MODEL_TIMEOUT_MS,
 ): Promise<ModelOutcome> {
   if (!modelReady(model) || modelId !== `us.${model.foundationModelId}` || region !== model.region || body.inferenceConfig.maxTokens !== model.maxTokens) {
     return { modelCalled: false, kind: "not-billed", code: "E_CONFIG", answer: "paused", pauseInstance: true };
@@ -173,7 +174,7 @@ export async function converseModel(
       path: `/model/${encodeURIComponent(modelId)}/converse`,
       headers: { "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify(body),
-      timeoutMs: MODEL_TIMEOUT_MS,
+      timeoutMs: Math.min(MODEL_TIMEOUT_MS, timeoutMs),
     });
   } catch (err) {
     const kind = err instanceof TransportError ? err.kind : "network";

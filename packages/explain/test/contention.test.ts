@@ -2,12 +2,13 @@
 // The 306 review showed routine concurrency losing the durable pause and debt
 // (fix b); these cases fail on that code.
 
-import { describe, expect, it } from "vitest";
-import type { EvaluationResult } from "../src/app.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { MIN_MODEL_TIMEOUT_MS, POST_CALL_RESERVE_MS, type EvaluationResult } from "../src/app.js";
 import { Ddb } from "../src/aws/dynamodb.js";
+import { TransportError } from "../src/aws/transport.js";
 import { BILLING_PAUSE_KEY, SETTLE_ATTEMPTS, persistBillingPause, reserve, settle, spendKeys } from "../src/spend.js";
 import { ConflictAws, sleep } from "./conflicts.js";
-import { FakeAws, config, evalEvent, harness, modelReply } from "./helpers.js";
+import { FakeAws, config, evalEvent, harness, httpEvent, lastLog, modelReply } from "./helpers.js";
 
 const cfg = config();
 const now = Date.UTC(2026, 9, 7, 14);
@@ -100,7 +101,11 @@ describe("a bound breach whose fence can't be written (306 b)", () => {
       h.aws.table.fault = (op, p) => op === "PutItem" && (p.Item as { pk: { S: string } }).pk.S === BILLING_PAUSE_KEY ? "network" : undefined;
       return { status: 200, json: modelReply({ outTok: 5_000 }) }; // over the 400-token billed bound
     };
-    const r = await h.handler(evalEvent()) as EvaluationResult;
+    vi.useFakeTimers();
+    const pending = h.handler(evalEvent());
+    await vi.runAllTimersAsync();
+    const r = await pending as EvaluationResult;
+    vi.useRealTimers();
     expect(r.evaluation.code).toBe("E_PROVIDER_BOUND");
     expect(r.evaluation.billedBoundViolated).toBe(true);
     expect(r.evaluation.pausePersisted).toBe(false);
@@ -186,5 +191,85 @@ describe("a definite settle cancellation is retried, not treated as an unknown c
     expect(forced).toBeGreaterThan(1);
     expect(r.status).toBe(200);
     expect(ca.aws.modelCalls).toHaveLength(1);
+  });
+});
+
+describe("the stop records fit the invocation (314 M1, M2)", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("writes the fence and the debt while another reserve holds billing#pause for 500 ms, and for 1.5 s", async () => {
+    for (const holdMs of [500, 1_500]) {
+      const ca = new ConflictAws();
+      const ddb = new Ddb(ca.transport, cfg.region, cfg.table);
+      const a = await reserve(ddb, cfg, now, 10_000);
+      if (!a.ok) throw new Error("no reservation");
+      ca.txMs = holdMs;
+      const b = reserve(ddb, cfg, now, 10_000);
+      await sleep(5);
+      const persisted = await persistBillingPause(ddb, { reason: "E_MODEL_NO_USAGE", nowMs: now, reservedMicros: 10_000, event: a.reservation.event });
+      expect((await b).ok).toBe(true); // a reservation already in flight may complete
+      expect(ca.conflicts, `${holdMs} ms`).toBeGreaterThan(1);
+      expect(persisted, `${holdMs} ms`).toBe(true);
+      expect(ca.aws.table.items.has(BILLING_PAUSE_KEY)).toBe(true);
+      expect(ca.items("billingdebt#")).toHaveLength(1);
+      ca.txMs = 0;
+      expect(await reserve(ddb, cfg, now, 1)).toEqual({ ok: false, which: "pause" });
+    }
+  });
+
+  it("writes the fence before Lambda's 28 s timeout though the debt key never answers, and logs it in time", async () => {
+    vi.useFakeTimers();
+    const start = Date.now();
+    const h = harness();
+    h.deps.now = () => Date.now();
+    h.aws.model = () => "timeout";
+    const delegate = h.aws.transport;
+    let modelTimeoutMs: number | undefined;
+    let fenceAt: number | undefined;
+    h.deps.transport = async (call) => {
+      if (call.host.startsWith("bedrock-runtime.")) {
+        modelTimeoutMs = call.timeoutMs;
+        await sleep(call.timeoutMs);
+      }
+      if (call.service === "dynamodb") {
+        const body = JSON.parse(call.body) as { Item?: { pk?: { S?: string } }; Key?: { pk?: { S?: string } } };
+        const key = body.Item?.pk?.S ?? body.Key?.pk?.S;
+        if (key?.startsWith("billingdebt#")) {
+          await sleep(call.timeoutMs);
+          throw new TransportError("timeout");
+        }
+        if (call.headers["x-amz-target"]?.endsWith("PutItem") && key === BILLING_PAUSE_KEY) fenceAt ??= Date.now() - start;
+      }
+      return delegate(call);
+    };
+    const pending = h.handler(evalEvent(), { getRemainingTimeInMillis: () => 28_000 });
+    await vi.advanceTimersByTimeAsync(28_000);
+    expect(h.logs).toHaveLength(1); // finished, log line written, inside the function's timeout
+    const r = await pending as EvaluationResult;
+    expect(modelTimeoutMs).toBeLessThanOrEqual(28_000 - POST_CALL_RESERVE_MS);
+    expect(fenceAt).toBeLessThan(modelTimeoutMs! + 1_000); // right after the model call, not after the debt's retries
+    expect(r.evaluation.code).toBe("E_MODEL_TIMEOUT");
+    expect(h.aws.table.items.has(BILLING_PAUSE_KEY)).toBe(true);
+    expect(r.evaluation.pausePersisted).toBe(false); // the debt never landed, and the log says so
+    expect(JSON.parse(h.logs[0]!)).toMatchObject({ code: "E_MODEL_TIMEOUT", pausePersisted: 0 });
+  });
+
+  it("releases the reservation and answers busy when too little time is left for the model and the stop records", async () => {
+    const h = harness();
+    const r = await h.call(httpEvent(), { getRemainingTimeInMillis: () => POST_CALL_RESERVE_MS + MIN_MODEL_TIMEOUT_MS - 1 });
+    expect(r.statusCode).toBe(503);
+    expect(r.json).toEqual({ v: 1, error: "busy" });
+    expect(lastLog(h).code).toBe("E_DEADLINE");
+    expect(h.aws.modelCalls).toHaveLength(0);
+    for (const key of Object.values(spendKeys(h.clock.ms))) expect(h.aws.table.num(key, "m")).toBe(0);
+    expect(h.aws.table.items.has(BILLING_PAUSE_KEY)).toBe(false);
+  });
+
+  it("cuts the model call to leave room for the ledger and the stop records", async () => {
+    const h = harness();
+    expect((await h.call(httpEvent(), { getRemainingTimeInMillis: () => 25_000 })).statusCode).toBe(200);
+    const timeout = h.aws.calls.find((c) => c.host.startsWith("bedrock-runtime."))!.timeoutMs;
+    expect(timeout).toBeLessThanOrEqual(25_000 - POST_CALL_RESERVE_MS);
+    expect(timeout).toBeGreaterThan(25_000 - POST_CALL_RESERVE_MS - 1_000);
   });
 });

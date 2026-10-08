@@ -58,6 +58,8 @@ export const CODES = [
   "E_SETTLE",
   "E_BILLING_PAUSE",
   "E_PROVIDER_BOUND",
+  // not enough of the invocation left for the model and the stop records (314 M1)
+  "E_DEADLINE",
   // per-connection limits (SPEC §9)
   "E_ADDRESS",
   "E_SALT",

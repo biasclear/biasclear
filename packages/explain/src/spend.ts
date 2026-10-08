@@ -5,7 +5,7 @@
 import { randomUUID } from "node:crypto";
 import type { Config } from "./config.js";
 import type { Code } from "./codes.js";
-import { DdbError, numberAttr, stringAttr, type Ddb, type Item } from "./aws/dynamodb.js";
+import { DDB_TIMEOUT_MS, DdbError, numberAttr, stringAttr, type Ddb, type Item } from "./aws/dynamodb.js";
 import { DAY_MS, dayKey, monthKey, seconds } from "./time.js";
 
 /** Synthetic/legacy arithmetic allowance only; live callers need model-specific evidence. */
@@ -13,6 +13,18 @@ export const FRAMING_TOKENS = 50;
 export const MONTH_TTL_MS = 100 * DAY_MS;
 export const DAY_TTL_MS = 3 * DAY_MS;
 export const BILLING_PAUSE_KEY = "billing#pause";
+
+/** Time left in this invocation, in ms (the Lambda context); Infinity when unknown (tests, scripts). */
+export interface Deadline { left(): number }
+export const NO_DEADLINE: Deadline = { left: () => Number.POSITIVE_INFINITY };
+/** Kept at the very end of an invocation for the fixed log line. */
+export const LOG_RESERVE_MS = 300;
+/** Kept after a settlement attempt for the fence and debt writes, if the settlement fails (314 M1). */
+export const FENCE_RESERVE_MS = 2_500;
+/** The longest the fence and debt writes keep retrying: a reserve can hold billing#pause for a
+ * second or more under contention (314 M2). Always cut to the time the invocation has left. */
+export const PERSIST_WINDOW_MS = 4_000;
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 type Prices = Pick<Config, "inNanosPerToken" | "outNanosPerToken">;
 
 /** A candidate bound, usable live only when the selected model's evidence says yes. */
@@ -147,48 +159,53 @@ function debtItem(p: PauseDetail): Item {
   return { ...pauseItem(p), pk: { S: `billingdebt#${p.event.slice("billing#".length)}` } };
 }
 
-/** Attempts per durable record write (306 b). */
-export const PERSIST_ATTEMPTS = 4;
-
-/** Writes one record that is safe to overwrite (no counter), retrying a conflict, a throttle or a
- * lost acknowledgment a bounded number of times, and reading back before each retry. */
-async function putDurably(ddb: Ddb, item: Item, landed: (found: Item | undefined) => boolean): Promise<boolean> {
+/** Writes one record that is safe to overwrite (no counter) until it lands or the time is up: each
+ * failure (a conflict, a throttle, a lost acknowledgment) is read back, then retried with growing
+ * backoff. Every call's timeout is cut to the time left, so nothing outlives the invocation. */
+async function putDurably(ddb: Ddb, item: Item, landed: (found: Item | undefined) => boolean, deadline: Deadline): Promise<boolean> {
   const pk = stringAttr(item, "pk")!;
-  for (let attempt = 0; attempt < PERSIST_ATTEMPTS; attempt++) {
-    if (attempt > 0) await new Promise((r) => setTimeout(r, 25 * attempt + Math.floor(Math.random() * 25)));
+  const stopAt = Date.now() + Math.min(PERSIST_WINDOW_MS, deadline.left() - LOG_RESERVE_MS);
+  const left = (): number => stopAt - Date.now();
+  for (let attempt = 0; left() > 0; attempt++) {
     try {
-      await ddb.put(item);
+      await ddb.put(item, Math.min(DDB_TIMEOUT_MS, left()));
       return true;
-    } catch { /* checked below, then written again */ }
+    } catch { /* read back below, then write again */ }
+    if (left() <= 0) break;
     try {
-      if (landed(await ddb.get(pk, 0, true))) return true;
+      if (landed(await ddb.get(pk, 0, true, Math.min(DDB_TIMEOUT_MS, left())))) return true;
     } catch { /* unreadable: write again */ }
+    const wait = Math.min(400, 25 * 2 ** attempt) + Math.floor(Math.random() * 25);
+    if (left() <= wait) break;
+    await sleep(wait);
   }
   return false;
 }
 
 /** The shared fence. Every reserve checks it, so it is written alone, never in a transaction
  * with another item (306 b); a later pause may overwrite an earlier one, as before. */
-export async function persistPause(ddb: Ddb, p: PauseDetail): Promise<boolean> {
-  return putDurably(ddb, pauseItem(p), (found) => found !== undefined);
+export async function persistPause(ddb: Ddb, p: PauseDetail, deadline: Deadline = NO_DEADLINE): Promise<boolean> {
+  return putDurably(ddb, pauseItem(p), (found) => found !== undefined, deadline);
 }
 
-/** Persist every unresolved event, not just the first pause, without text or keys. The event's
- * own debt row (a key nothing else writes) goes first, then the shared pause, each on its own and
- * retried: both are overwrites, and no money ADD is retried. A debt survives log expiry and month
- * rollover until an owner reconciles and removes it. */
-export async function persistBillingPause(ddb: Ddb, p: PauseDetail): Promise<boolean> {
-  const debt = debtItem(p);
-  const debtKept = await putDurably(ddb, debt, (known) => stringAttr(known, "event") === p.event &&
-    numberAttr(known, "reserved") === p.reservedMicros && numberAttr(known, "actual") === p.actualMicros);
-  const paused = await persistPause(ddb, p);
-  return debtKept && paused;
+/** Persist every unresolved event, not just the first pause, without text or keys. The shared fence
+ * and the event's own debt row (a key nothing else writes) are written at the same time, each on its
+ * own, so a slow or unavailable debt key can't delay the fence (314 M1). Both are overwrites; no
+ * money ADD is retried. A debt survives log expiry and month rollover until an owner reconciles it. */
+export async function persistBillingPause(ddb: Ddb, p: PauseDetail, deadline: Deadline = NO_DEADLINE): Promise<boolean> {
+  const [paused, debtKept] = await Promise.all([
+    persistPause(ddb, p, deadline),
+    putDurably(ddb, debtItem(p), (known) => stringAttr(known, "event") === p.event &&
+      numberAttr(known, "reserved") === p.reservedMicros && numberAttr(known, "actual") === p.actualMicros, deadline),
+  ]);
+  return paused && debtKept;
 }
 
 /** Atomic CAS event + month + day. A bound breach commits its own debt row with them (a key
  * nothing else writes); the caller then writes the shared pause on its own (persistPause), so the
- * settlement never contends on the item every reserve checks (306 b). */
-export async function settle(ddb: Ddb, r: Reservation, actual: number, breach?: PauseDetail): Promise<boolean> {
+ * settlement never contends on the item every reserve checks (306 b). Every attempt leaves
+ * FENCE_RESERVE_MS of the invocation for the stop records in case it fails (314 M1). */
+export async function settle(ddb: Ddb, r: Reservation, actual: number, breach?: PauseDetail, deadline: Deadline = NO_DEADLINE): Promise<boolean> {
   if (!Number.isSafeInteger(actual) || actual < 0) return false;
   const delta = actual - r.micros;
   const add = (pk: string) => ({ Key: { pk: { S: pk } }, UpdateExpression: "ADD #m :d", ExpressionAttributeNames: { "#m": "m" }, ExpressionAttributeValues: { ":d": { N: String(delta) } } });
@@ -197,15 +214,19 @@ export async function settle(ddb: Ddb, r: Reservation, actual: number, breach?: 
     { Update: add(r.month) }, { Update: add(r.day) },
   ];
   if (breach !== undefined) writes.push({ Put: { Item: debtItem(breach) } });
+  const budget = (): number => deadline.left() - FENCE_RESERVE_MS - LOG_RESERVE_MS;
   for (let attempt = 1; ; attempt++) {
+    if (budget() <= 0) return false; // Out of time: left unresolved for the caller's durable pause.
     try {
       // Distinct token from the reservation, fresh on each retry; the CAS is the durable idempotence fence.
-      await ddb.transact(writes, attempt === 1 ? r.token.replace(/.$/, r.token.endsWith("0") ? "1" : "0") : randomUUID());
+      await ddb.transact(writes, attempt === 1 ? r.token.replace(/.$/, r.token.endsWith("0") ? "1" : "0") : randomUUID(),
+        Math.min(DDB_TIMEOUT_MS, budget()));
       return true;
     } catch (err) {
       let item: Item | undefined;
       try {
-        item = await ddb.get(r.event, 0, true);
+        if (budget() <= 0) return false;
+        item = await ddb.get(r.event, 0, true, Math.min(DDB_TIMEOUT_MS, budget()));
       } catch { return false; }
       // The debt row commits atomically with the event, so a settled event proves it.
       if (matches(item, r) && stringAttr(item, "state") === "settled" && numberAttr(item, "actual") === actual) return true;
@@ -218,6 +239,6 @@ export async function settle(ddb: Ddb, r: Reservation, actual: number, breach?: 
   }
 }
 
-export async function release(ddb: Ddb, r: Reservation): Promise<boolean> {
-  return settle(ddb, r, 0);
+export async function release(ddb: Ddb, r: Reservation, deadline: Deadline = NO_DEADLINE): Promise<boolean> {
+  return settle(ddb, r, 0, undefined, deadline);
 }

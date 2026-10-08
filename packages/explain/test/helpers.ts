@@ -3,7 +3,7 @@
 // the two account settings), a clock, and builders for events and replies.
 // No test reaches the network or spends anything.
 
-import { createHandler, type Deps } from "../src/app.js";
+import { createHandler, type Deps, type InvocationContext } from "../src/app.js";
 import type { AwsCall, AwsReply, Transport } from "../src/aws/transport.js";
 import { TransportError } from "../src/aws/transport.js";
 import { MODELS, type ModelInfo } from "../src/models.js";
@@ -355,8 +355,8 @@ export interface Harness {
   clock: Clock;
   logs: string[];
   deps: Deps;
-  handler: (event: unknown) => Promise<unknown>;
-  call: (event: unknown) => Promise<HttpResult & { json: Record<string, unknown> }>;
+  handler: (event: unknown, context?: InvocationContext) => Promise<unknown>;
+  call: (event: unknown, context?: InvocationContext) => Promise<HttpResult & { json: Record<string, unknown> }>;
 }
 
 let counter = 0;
@@ -382,8 +382,8 @@ export function harness(over: Partial<Deps> & { env?: Record<string, string> } =
     ...over,
   };
   const handler = createHandler(deps);
-  const call = async (event: unknown) => {
-    const r = (await handler(event)) as HttpResult;
+  const call = async (event: unknown, context?: InvocationContext) => {
+    const r = (await handler(event, context)) as HttpResult;
     return { ...r, json: r.body ? (JSON.parse(r.body) as Record<string, unknown>) : {} };
   };
   return { aws, clock, logs, deps, handler, call };
