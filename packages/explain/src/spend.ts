@@ -125,16 +125,23 @@ async function reserveOnce(ddb: Ddb, cfg: Config, nowMs: number, micros: number)
     ], token);
     return { ok: true, reservation: r };
   } catch (err) {
-    // A read proving the unique event committed proves both counters committed.
-    // A missing/unreadable event never authorizes a model call or a refund.
-    const item = await ddb.get(r.event, seconds(nowMs), true);
-    if (matches(item, r) && stringAttr(item, "state") === "reserved") return { ok: true, reservation: r };
-    if (err instanceof DdbError) {
+    // A failed condition cancels the whole transaction: nothing was written, so the refusal is
+    // definite and needs no read-back, which could itself fail and hide a pause as E_DDB (306 LOW).
+    if (err instanceof DdbError && err.type === "TransactionCanceledException") {
       const reasons = err.cancellationReasons;
       if (reasons[0] === "ConditionalCheckFailed") return { ok: false, which: "pause" };
       if (reasons[1] === "ConditionalCheckFailed") return { ok: false, which: "month" };
       if (reasons[2] === "ConditionalCheckFailed") return { ok: false, which: "day" };
     }
+    // Otherwise a read proving the unique event committed proves both counters committed.
+    // A missing/unreadable event never authorizes a model call or a refund.
+    let item: Item | undefined;
+    try {
+      item = await ddb.get(r.event, seconds(nowMs), true);
+    } catch {
+      throw new DdbError("other");
+    }
+    if (matches(item, r) && stringAttr(item, "state") === "reserved") return { ok: true, reservation: r };
     if (item === undefined && definitelyNotWritten(err)) throw new BusyError("other");
     throw new DdbError("other");
   }

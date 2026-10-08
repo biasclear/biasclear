@@ -325,3 +325,14 @@ describe("the full persist window after settlement (9391673 re-check)", () => {
     }
   });
 });
+
+describe("a definite reserve refusal needs no read-back (306 LOW)", () => {
+  it("reports the pause even when the read-back would fail", async () => {
+    const aws = new FakeAws();
+    const ddb = new Ddb(aws.transport, cfg.region, cfg.table);
+    aws.table.items.set(BILLING_PAUSE_KEY, { pk: { S: BILLING_PAUSE_KEY }, reason: { S: "E_SETTLE" } });
+    aws.table.fault = (op) => op === "GetItem" ? "network" : undefined;
+    expect(await reserve(ddb, cfg, now, 10_000)).toEqual({ ok: false, which: "pause" });
+    expect(aws.table.ops.filter((o) => o === "GetItem")).toHaveLength(0);
+  });
+});
