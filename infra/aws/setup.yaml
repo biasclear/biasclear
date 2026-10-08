@@ -418,7 +418,8 @@ Resources:
   # ---- The counters -----------------------------------------------------
 
   # Spend (month and day), per-connection counts (under salted hashes) and the
-  # day's salt. Every item has a TTL. No backups, no point-in-time recovery, no
+  # day's salt. Every item has a TTL except the billing pause and debt rows, which
+  # wait for the owner's reconciliation. No backups, no point-in-time recovery, no
   # stream. It lives here, not in the service stack, so removing and
   # redeploying the service in the same month keeps the month's count (the $25
   # stop). Deleting this setup stack deletes it.

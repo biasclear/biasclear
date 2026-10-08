@@ -32,7 +32,7 @@ There are two parts, both in **US East (N. Virginia)**. The model is called thro
 
 - **GitHub's keyless login.** It lets the "Explain (AWS)" workflow in the BiasClear repository work in your account, only from the protected `explain-aws` environment, and only after you approve. No key is stored anywhere.
 - **Three roles** (sets of permissions): one for GitHub, one for CloudFormation (Amazon's setup tool), and one for the Explain function. The function may use only the three reviewed model profiles and their exact destination model ARNs, its own counters and its own log. One stack parameter selects the active model; unknown or unverified settings refuse startup.
-- **One table of counters**: money spent this month and today, and how often each connection used Explain, under a scrambled code (see "What stays private"). It lives here, not in the service, so removing and redeploying the service can't restart the month's count.
+- **One table of counters**: money spent this month and today, and how often each connection used Explain, under a scrambled code (see "What stays private"). It lives here, not in the service, so removing and redeploying the service can't restart the month's count. After a billing anomaly it also holds the billing pause and one debt record per unresolved charge; those never expire and wait for you (see "Reconciling a billing anomaly").
 - **A monthly budget of $30** for the whole account, which ignores credits. It emails `hello@biasclear.com` along the way. At $30 it takes the AI model away from Explain by itself, and at $45 it does so again (the last stop, see "If an email from AWS Budgets arrives").
 - **A private storage bucket** for build files. Each is about 70 KB; they are kept, so a failed update can always go back to the one before. Deleting everything empties it.
 
@@ -114,7 +114,7 @@ Every agent works through your GitHub account, so GitHub can't tell your clicks 
 
 ## Emergency stop (no GitHub needed)
 
-AWS console → Lambda → `biasclear-explain` → **Throttle**. Every Explain request fails at once, and nothing is charged. To undo it: **Edit concurrency** → **Use unreserved account concurrency** → **Save**.
+AWS console → Lambda → `biasclear-explain` → **Throttle**. Every new Explain request fails at once. Model calls already in flight can still be billed, and API Gateway still charges for requests it receives. To undo it: **Edit concurrency** → **Use unreserved account concurrency** → **Save**.
 
 If Throttle is refused on this account: CloudFormation → `biasclear-explain` → **Update** → **Use existing template** → **Next** → set **Explain** to `off` → **Next** → **Next** → **Submit**.
 
@@ -132,13 +132,22 @@ If Throttle is refused on this account: CloudFormation → `biasclear-explain` �
 - **Lower** (1 to 25 dollars): run **deploy** and type the number in **monthly cap**. Approve it.
 - **Higher than $25:** a small reviewed change to the files, plus one number in the setup stack's budget, done together. Ask the PM.
 
+## Reconciling a billing anomaly
+
+The PM does this with you at a sitting; the function itself can't delete these records (setup.yaml lets it delete only old salts).
+
+1. In DynamoDB → `biasclear-explain` → items, find `billing#pause` and every `billingdebt#…` row.
+2. For each debt row, open the event it names (`billing#…`). If its `state` is `settled`, the counters already hold its actual cost: change nothing. If it is still `reserved`, the counters hold only the reservation: when the debt has an `actual`, add actual minus reserved to the month and day counters the event names; when it has none (usage unknown), check the AWS bill before deciding.
+3. Events left `reserved` with no debt row (a lost acknowledgment) keep their reservation on the counters until the month's count expires. They over-count, which is the safe direction.
+4. Only then delete the debt rows and `billing#pause`. Explain stays paused until the pause is gone; resume doesn't clear it.
+
 ## Delete everything
 
 In this order, so visitors never see a dead button:
 
 1. **Hide the button.** The PM opens a change that switches Explain off on the website and restores the privacy wording. You merge it.
 2. **Remove the service.** Run the workflow with **remove** and approve it. (Or: CloudFormation → `biasclear-explain` → **Delete**.) This deletes the function, the web address and every log line. The counters stay with the setup until step 3.
-3. **Remove the setup too:**
+3. **Remove the setup too.** First reconcile any billing anomaly (above): deleting the setup deletes the pause and debt records with the counters.
    - S3 → the `biasclear-explain-build-…` bucket → **Empty**.
    - S3 → the `cf-templates-…-us-east-1` bucket → **Empty** → **Delete**.
    - CloudFormation → `biasclear-explain-setup` → **Delete**. This removes the GitHub login, the three roles, the counters, the budget and its two stops, the deny policy and the build bucket.
@@ -180,6 +189,6 @@ The selected Standard US input/output prices per million tokens are Grok 4.7 **$
 
 **IAM.** All permissions live in the setup stack. The function has `bedrock:InvokeModel` and `bedrock:GetInferenceProfile` on each exact reviewed `us-east-1` profile ARN. Each profile has exactly three destination foundation-model ARNs, with `bedrock:InferenceProfileArn` equal to that profile; no region wildcard or direct model call is allowed. It may read the two account settings, use its one counters table and write its one log group. The budget attaches a deny policy for `bedrock:*` and `bedrock-mantle:*`. The deploy role may change only the service stack through its named CloudFormation role, upload builds, read settings and invoke the evaluation function. CloudFormation may manage only the named function/log and HTTP APIs in us-east-1 and pass only the function role. The Budgets role may only attach/detach the one deny policy. The OIDC trust pins account/repository IDs and the protected `explain-aws` environment.
 
-**What is not locked by AWS.** Which API may invoke the function: IAM has no condition key for `lambda:AddPermission`'s `SourceArn` or `SourceAccount`, so CloudFormation's role could grant any API Gateway. The one grant `explain.yaml` makes is pinned to this account's API and route, and `test_templates.py` checks it exactly; review keeps it so. Even so, an evaluation event must carry a key that exists only while a deploy or evaluation run is going. And what the function's code does with text it already holds is guarded by review: the red team reads every change, these paths are owner-merged protected paths (`AGENTS.md`), and nothing deploys until the owner starts and approves a run. A private network (VPC endpoints) would make that technical too; it is not used (about $15 a month; SPEC §2, §19).
+**What is not locked by AWS.** Which API may invoke the function: IAM has no condition key for `lambda:AddPermission`'s `SourceArn` or `SourceAccount`, so CloudFormation's role could grant any API Gateway. The one grant `explain.yaml` makes is pinned to this account's API and route, and `test_templates.py` checks it exactly; review keeps it so. Even so, an evaluation event must carry this deploy's key. The key is stored only in the stack parameter and the function's environment; the run's last step clears it, on a best-effort basis, and it has no automatic expiry. And what the function's code does with text it already holds is guarded by review: the red team reads every change, these paths are owner-merged protected paths (`AGENTS.md`), and nothing deploys until the owner starts and approves a run. A private network (VPC endpoints) would make that technical too; it is not used (about $15 a month; SPEC §2, §19).
 
 **Before a first paid call.** Confirm account profile availability; the default model's documented bound on all billed reasoning/text output; the model's ability to run with account retention `none`; invocation logging off; the owner's policy proposal applied in its separate approved change; and the owner's live-evaluation approval. GPT-6.1 Sol additionally needs a documented lowest reasoning setting. The offline workflow gate runs before any OIDC credential request for deploy, resume or evaluation, and strict function startup independently rejects blocked settings. Pause/remove remain available for emergencies. The same cap-backed evaluation set runs separately for each explicitly selected model. Passing a stub test does not establish model behavior, account access, retention eligibility, cost or latency.

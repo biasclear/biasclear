@@ -489,7 +489,7 @@ class TestSetupBudget:
             assert "ExpirationInDays" not in rule and "ExpirationDate" not in rule
         assert b["OwnershipControls"]["Rules"][0]["ObjectOwnership"] == "BucketOwnerEnforced"
 
-    def test_the_counters_table_keeps_nothing_longer_than_its_ttl(self):
+    def test_the_counters_table_expires_by_ttl_with_no_backups_or_streams(self):
         t = one(SETUP, "AWS::DynamoDB::Table")
         assert t["TableName"] == "biasclear-explain"
         assert t["TimeToLiveSpecification"] == {"AttributeName": "ttl", "Enabled": True}
