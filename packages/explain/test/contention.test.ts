@@ -4,9 +4,9 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MIN_MODEL_TIMEOUT_MS, POST_CALL_RESERVE_MS, type EvaluationResult } from "../src/app.js";
-import { Ddb } from "../src/aws/dynamodb.js";
+import { DDB_TIMEOUT_MS, Ddb } from "../src/aws/dynamodb.js";
 import { TransportError } from "../src/aws/transport.js";
-import { BILLING_PAUSE_KEY, SETTLE_ATTEMPTS, persistBillingPause, reserve, settle, spendKeys } from "../src/spend.js";
+import { BILLING_PAUSE_KEY, FENCE_RESERVE_MS, LOG_RESERVE_MS, PERSIST_WINDOW_MS, SETTLE_ATTEMPTS, persistBillingPause, reserve, settle, spendKeys } from "../src/spend.js";
 import { ConflictAws, sleep } from "./conflicts.js";
 import { FakeAws, config, evalEvent, harness, httpEvent, lastLog, modelReply } from "./helpers.js";
 
@@ -271,5 +271,57 @@ describe("the stop records fit the invocation (314 M1, M2)", () => {
     const timeout = h.aws.calls.find((c) => c.host.startsWith("bedrock-runtime."))!.timeoutMs;
     expect(timeout).toBeLessThanOrEqual(25_000 - POST_CALL_RESERVE_MS);
     expect(timeout).toBeGreaterThan(25_000 - POST_CALL_RESERVE_MS - 1_000);
+  });
+});
+
+describe("the full persist window after settlement (9391673 re-check)", () => {
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  it("budgets two settlement round trips, then the whole persist window and the log line", () => {
+    expect(FENCE_RESERVE_MS).toBeGreaterThanOrEqual(PERSIST_WINDOW_MS);
+    expect(PERSIST_WINDOW_MS).toBeGreaterThan(DDB_TIMEOUT_MS);
+    expect(POST_CALL_RESERVE_MS).toBe(2 * DDB_TIMEOUT_MS + FENCE_RESERVE_MS + LOG_RESERVE_MS);
+  });
+
+  it("writes the fence after both settlement round trips time out, though a reserve holds the pause up to 2.8 s (Jarvis's probe)", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    for (const holdMs of [500, 1_500, 2_800, 2_990]) {
+      const ca = new ConflictAws();
+      const ddb = new Ddb(ca.transport, cfg.region, cfg.table);
+      const h = harness({ transport: ca.transport });
+      h.deps.now = () => Date.now();
+      let competitor: ReturnType<typeof reserve> | undefined;
+      h.deps.transport = async (call) => {
+        if (call.host.startsWith("bedrock-runtime.")) await sleep(call.timeoutMs);
+        if (call.service === "dynamodb") {
+          const op = call.headers["x-amz-target"]!.replace("DynamoDB_20120810.", "");
+          const body = JSON.parse(call.body) as { Item?: { pk?: { S?: string } }; Key?: { pk?: { S?: string } } };
+          const key = body.Item?.pk?.S ?? body.Key?.pk?.S;
+          if (op === "TransactWriteItems" && JSON.stringify(body).includes(":settled")) {
+            await sleep(call.timeoutMs);
+            throw new TransportError("timeout");
+          }
+          if (op === "GetItem" && key?.startsWith("billing#") && key !== BILLING_PAUSE_KEY) {
+            await sleep(call.timeoutMs - 5);
+            ca.txMs = holdMs; // a valid reservation starts 5 ms before recovery and holds the pause
+            competitor = reserve(ddb, cfg, Date.now(), 10_000);
+            await sleep(5);
+            throw new TransportError("timeout");
+          }
+        }
+        return ca.transport(call);
+      };
+      const pending = h.handler(evalEvent(), { getRemainingTimeInMillis: () => 28_000 });
+      await vi.runAllTimersAsync();
+      const r = await pending as EvaluationResult;
+      expect((await competitor!).ok).toBe(true); // already in flight: it may complete
+      ca.txMs = 0;
+      expect(JSON.parse(h.logs[0]!).ms, `${holdMs} ms`).toBeLessThan(28_000);
+      expect(r.evaluation.code).toBe("E_SETTLE");
+      expect(r.evaluation.pausePersisted, `${holdMs} ms`).toBe(true);
+      expect(ca.items("billingdebt#")).toHaveLength(1);
+      expect(await reserve(ddb, cfg, Date.now(), 1), `${holdMs} ms`).toEqual({ ok: false, which: "pause" });
+    }
   });
 });

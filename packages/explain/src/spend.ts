@@ -19,11 +19,12 @@ export interface Deadline { left(): number }
 export const NO_DEADLINE: Deadline = { left: () => Number.POSITIVE_INFINITY };
 /** Kept at the very end of an invocation for the fixed log line. */
 export const LOG_RESERVE_MS = 300;
-/** Kept after a settlement attempt for the fence and debt writes, if the settlement fails (314 M1). */
-export const FENCE_RESERVE_MS = 2_500;
-/** The longest the fence and debt writes keep retrying: a reserve can hold billing#pause for a
- * second or more under contention (314 M2). Always cut to the time the invocation has left. */
+/** The longest the fence and debt writes keep retrying: a reserve can hold billing#pause for up to a
+ * permitted 3 s DynamoDB call under contention (314 M2). Always cut to the time the invocation has left. */
 export const PERSIST_WINDOW_MS = 4_000;
+/** Kept after the settlement's round trips for the fence and debt writes: the whole persist window, so
+ * a hold up to the 3 s DynamoDB limit can't outlast the fence (314 M1, 9391673 re-check). */
+export const FENCE_RESERVE_MS = PERSIST_WINDOW_MS;
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 type Prices = Pick<Config, "inNanosPerToken" | "outNanosPerToken">;
 
