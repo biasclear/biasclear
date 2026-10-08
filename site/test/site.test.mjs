@@ -107,8 +107,34 @@ function assertNoInlineCode(html, label) {
       assert.ok(close >= 0, `${label}: a script without its closing tag`);
       assert.equal(html.slice(end + 1, close).trim(), "", `${label}: a script with inline code`);
     }
+    assertSafeUrls(tag, label);
   }
   assert.doesNotMatch(html, /javascript:/i, `${label}: a javascript: URL`);
+}
+
+/** Character references a browser decodes in an attribute value, as far as a scheme could hide behind them. */
+function decodeReferences(value) {
+  const named = { colon: ":", tab: "\t", newline: "\n", amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", sol: "/", period: "." };
+  return value
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#([0-9]+);?/g, (_, dec) => String.fromCodePoint(Number.parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (all, name) => named[name.toLowerCase()] ?? all);
+}
+
+/**
+ * Every URL-bearing attribute is relative, https: or mailto: once decoded as a browser would read it
+ * (character references decoded, ASCII tab and line breaks removed, leading spaces and controls
+ * trimmed), and srcdoc is refused outright (311 LOW). Still a check of this build's markup, not a sanitizer.
+ */
+function assertSafeUrls(tag, label) {
+  for (const a of tag.matchAll(/[\s/]([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
+    const name = a[1].toLowerCase();
+    assert.notEqual(name, "srcdoc", `${label}: a srcdoc attribute`);
+    if (!["href", "src", "action", "formaction", "xlink:href", "poster", "background", "cite", "data"].includes(name)) continue;
+    const value = decodeReferences(a[2] ?? a[3] ?? a[4] ?? "").replace(/[\t\n\r]/g, "").replace(/^[\u0000- ]+/, "");
+    const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(value)?.[1].toLowerCase();
+    assert.ok(scheme === undefined || scheme === "https" || scheme === "mailto", `${label}: a ${scheme}: URL in ${name}`);
+  }
 }
 
 before(async () => {
@@ -169,8 +195,27 @@ describe("pages", () => {
       "<img/onerror=alert(1)>",
       "<svg/onload=alert(1)></svg>",
       "<div/style=color:red></div>",
+      // Encoded and alternative schemes, and srcdoc (311 LOW).
+      '<a href="jav&#x61;script:alert(1)">link</a>',
+      '<a href="jav&#97;script:alert(1)">link</a>',
+      '<a href="javascript&colon;alert(1)">link</a>',
+      '<a href="java\tscript:alert(1)">link</a>',
+      '<a href="java&Tab;script:alert(1)">link</a>',
+      '<a href=" \njavascript:alert(1)">link</a>',
+      '<a href="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">link</a>',
+      "<a href='vbscript:msgbox(1)'>link</a>",
+      "<a href=vbscript:msgbox(1)>link</a>",
+      '<a href="http://example.org/">link</a>',
+      '<form action="javascript:alert(1)"></form>',
+      '<button formaction="data:text/html,x">go</button>',
+      '<iframe srcdoc="&lt;script&gt;alert(1)&lt;/script&gt;"></iframe>',
+      '<iframe SRCDOC="x"></iframe>',
     ];
     for (const html of unsafe) assert.throws(() => assertNoInlineCode(html, "mutation"), { name: "AssertionError" }, html);
+    for (const safe of ['<a href="https://biasclear.com/">x</a>', '<a href="mailto:hello@biasclear.com">x</a>', '<a href="./guide/">x</a>',
+      '<a href="#main">x</a>', '<a href="/method.html#status">x</a>', '<img src="./img/loupe.png" alt="">', '<a href="?q=1">x</a>']) {
+      assert.doesNotThrow(() => assertNoInlineCode(safe, "control"), safe);
+    }
   });
 
   it("has one h1, a language, a title, a description, and a skip link to <main id=main>", () => {
