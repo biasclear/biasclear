@@ -460,7 +460,8 @@ Resources:
             Resource: "*"
 
   # Budgets uses this role to attach the deny policy, and to take it off
-  # again when a person reverses the action. It can do nothing else.
+  # again when a person reverses the action or the budget period resets it.
+  # It can do nothing else.
   BudgetsActionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -545,9 +546,12 @@ Resources:
 
   # At 100% of actual spend, attach the deny policy to the function's role,
   # with no approval step. Explain then answers "paused" until a person
-  # reverses the action (Budgets > biasclear-explain > Actions > Reverse).
-  # Budgets stops checking a reversed action until the next month, so the
-  # second action below is the last stop after a reversal.
+  # reverses the action (Budgets > biasclear-explain > Actions > Reverse) or
+  # the next budget month begins: AWS resets IAM-policy actions at the start
+  # of each budget period and detaches the policy (AWS blog posts, 2020 and
+  # 2021; the user guide doesn't say). Nothing here makes a person look
+  # first. Budgets stops checking a reversed action until the next month, so
+  # the second action below is the last stop after a reversal.
   BudgetAction:
     Type: AWS::Budgets::BudgetsAction
     # BudgetName is a plain name, so the budget must exist first. The roles and

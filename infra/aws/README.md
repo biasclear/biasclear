@@ -122,7 +122,7 @@ If Throttle is refused on this account: CloudFormation → `biasclear-explain` �
 
 - **At $15 or on a forecast:** nothing stops. Tell the PM, who will look at the counters and the bill.
 - **At $30:** Amazon has taken the AI model away from Explain, and Explain answers "paused". This happens only if the program's own count was wrong or someone flooded the service. Tell the PM.
-  - **The safe choice is to leave Explain paused until the 1st of next month.** When Amazon's budget month starts again, Amazon resets this kind of stop by itself, and Explain works again within 15 minutes. If it doesn't by the 2nd, tell the PM.
+  - **The safe choice is to leave Explain paused until the 1st of next month.** When Amazon's budget month starts again, Amazon resets this kind of stop by itself (Amazon's own blog posts say so; its user guide doesn't, so check the action's history at the setup sitting), and Explain works again within 15 minutes. That happens whether or not anyone has looked, so find out why it fired before the 1st. If it doesn't come back by the 2nd, tell the PM.
   - If Explain must come back sooner, first understand why it fired, then run **deploy** with a lower monthly cap, then in AWS: Billing and Cost Management → **Budgets** → `biasclear-explain` → **Actions** → the $30 action → **Reverse**. Know this: **Amazon doesn't check a reversed action again that month.** From then on only the $45 last stop is automatic.
   - **Never press Reset** on the action while the month is over $30: it would fire again at once.
 - **At $45 (the last stop):** the same, but leave Explain paused until the 1st. Don't reverse it.
