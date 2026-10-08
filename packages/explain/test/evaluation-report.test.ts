@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { bankHash } from "../src/compose.js";
 import { classifySample, evaluationRequests, refusalLike, report, sampleOf, symmetricLengthDifference,
   type Fixtures, type HumanReview, type RawLine } from "../ops/ops.js";
 const MODEL = "Synthetic reviewed model", MODEL_ID = "synthetic-model";
@@ -12,7 +13,7 @@ const rows = (f: Fixtures): RawLine[] => evaluationRequests(f).map((p) => ({ id:
   body: { how: "The sentence asks for agreement as a reason.", plainer: null, model: MODEL },
   evaluation: { modelCalled: true, providerStopReason: "end_turn", providerText: '{"how":"The sentence asks for agreement as a reason."}',
     providerTextTruncated: false, providerTextChars: '{"how":"The sentence asks for agreement as a reason."}'.length,
-    inTok: 10, outTok: 20, inputBoundTokens: 500, outputBoundTokens: 400, actualMicros: 50, micros: 50, reservedMicros: 100, ms: 5 },
+    inTok: 10, outTok: 20, inputBoundTokens: 500, outputBoundTokens: 400, actualMicros: 50, micros: 50, reservedMicros: 100, ms: 5, bankHash: bankHash() },
 }));
 function reviewed(f: Fixtures, raw: RawLine[], alter?: (review: HumanReview) => void) {
   const pending = report(f, evaluationRequests(f).length, raw, { model: MODEL, modelId: MODEL_ID });
@@ -193,6 +194,7 @@ describe("planned calls that never reached the model (306)", () => {
   it("lets an injection the fixtures expect at the door stop there, and fails it if it reaches the model", () => {
     const f = fixtures();
     f.injections[0]!.expectedPreflightReject = true;
+    f.injections[0]!.expectedPreflightCode = "E_SENTENCE";
     const stopped = reviewed(f, rows(f).map((l) => l.part === "i" ? atDoorLine(l, "E_SENTENCE", 400) : l));
     expect(stopped.results).toMatchObject({ complete: true, allGatesPass: true, notExercised: 0, atDoorReachedModel: 0 });
     expect(stopped.ok).toBe(true);
@@ -228,5 +230,39 @@ describe("refusal wording the parity gate must see (306)", () => {
     expect(r.results).toMatchObject({ refusalLike: 1, unmatchedRefusalOutcomes: 1 });
     expect((r.results.gates as Record<string, boolean>).refusalParity).toBe(false);
     expect(r.ok).toBe(false);
+  });
+});
+describe("raw selections, the phrase bank and the door reason are evidence (314 M5, L3)", () => {
+  const gate = (r: ReturnType<typeof report>, name: string) => (r.results.gates as Record<string, boolean>)[name];
+  it("fails when accepted rows lose the raw selection, its length or the bank hash", () => {
+    const f = fixtures(), raw = rows(f);
+    for (const r of raw) {
+      const e = r.evaluation as Record<string, unknown>;
+      delete e.providerText; delete e.raw; delete e.bankHash; delete e.providerTextChars;
+    }
+    const r = reviewed(f, raw);
+    expect(r.ok).toBe(false);
+    expect(gate(r, "rawEvidence")).toBe(false);
+    expect(r.results.missingModelMetadata).toBe(raw.length);
+  });
+  it("fails when every row names a different phrase bank", () => {
+    const f = fixtures(), raw = rows(f);
+    for (const r of raw) (r.evaluation as Record<string, unknown>).bankHash = "b".repeat(64);
+    const r = reviewed(f, raw);
+    expect(r.ok).toBe(false);
+    expect(r.results).toMatchObject({ bankMismatch: raw.length, bankHash: bankHash() });
+    expect(gate(r, "rawEvidence")).toBe(false);
+    expect(reviewed(f, rows(f)).results.bankMismatch).toBe(0);
+  });
+  it("accepts a door refusal only for the code the fixture names", () => {
+    const f = fixtures();
+    f.injections[0]!.expectedPreflightReject = true;
+    f.injections[0]!.expectedPreflightCode = "E_SENTENCE";
+    const wrong = reviewed(f, rows(f).map((l) => l.part === "i" ? { ...l, status: 403, body: { error: "invalid" }, evaluation: { modelCalled: false, code: "E_ORIGIN" } } : l));
+    expect(wrong.ok).toBe(false);
+    expect(wrong.results).toMatchObject({ complete: false, atDoorWrongReason: 1 });
+    expect(wrong.markdown).toContain("refused at the door for a reason other than the expected one");
+    const right = reviewed(f, rows(f).map((l) => l.part === "i" ? { ...l, status: 400, body: { error: "invalid" }, evaluation: { modelCalled: false, code: "E_SENTENCE" } } : l));
+    expect(right.results).toMatchObject({ complete: true, atDoorWrongReason: 0 });
   });
 });

@@ -5,6 +5,7 @@
 // red team's report.
 
 import { readFileSync } from "node:fs";
+import { bankHash } from "../src/compose.js";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
@@ -148,8 +149,12 @@ describe("the evaluation fixtures", () => {
   for (const inj of f.injections) {
     it(`injection ${inj.id} is marked by ${inj.rule}`, () => {
       expect(markOf(inj.sentence, inj.rule)).toBeDefined();
-      if (inj.expectedPreflightReject) expect(() => validateRequest(requestFor(inj.sentence, inj.rule))).toThrow("E_SENTENCE");
-      else expect(() => validateRequest(requestFor(inj.sentence, inj.rule))).not.toThrow();
+      // A door exception must name the exact refusal the service gives (314 L3).
+      if (inj.expectedPreflightReject) {
+        expect(inj.expectedPreflightCode).toBe("E_SENTENCE");
+        expect(() => validateRequest(requestFor(inj.sentence, inj.rule))).toThrow(inj.expectedPreflightCode);
+      } else expect(inj.expectedPreflightCode).toBeUndefined();
+      if (!inj.expectedPreflightReject) expect(() => validateRequest(requestFor(inj.sentence, inj.rule))).not.toThrow();
     });
   }
 
@@ -197,14 +202,16 @@ describe("the workflow helpers", () => {
   it("report an incomplete run as incomplete, and fail it (RT: an expired session looked like a finished run)", () => {
     const small: Fixtures = { samples: { pairs: 1, injections: 1 }, pairs: [f.pairs[0]!], injections: [f.injections[0]!] };
     const planned = evaluationRequests(small).length;
-    const ok = (id: string, part: string) => ({ id, part, sample: 0, status: 200, body: { how: "It asks for trust.", plainer: null }, evaluation: { inTok: 10, promptBytes: 100 } });
+    const evidence = { modelCalled: true, providerStopReason: "end_turn", providerText: "{}", providerTextChars: 2, providerTextTruncated: false,
+      outTok: 20, inputBoundTokens: 150, outputBoundTokens: 400, promptBytes: 100, bankHash: bankHash() };
+    const ok = (id: string, part: string) => ({ id, part, sample: 0, status: 200, body: { how: "It asks for trust.", plainer: null }, evaluation: { ...evidence, inTok: 10 } });
     const full = report(small, planned, [ok("p01", "a"), ok("p01", "b"), ok("i01", "i")], { dryRun: true });
     expect(full.ok).toBe(true);
     expect(full.markdown).toContain(`All ${planned} planned calls ran.`);
     const cut = report(small, planned, [ok("p01", "a"), { id: "p01", part: "b", sample: 0, invokeFailed: 403 }]);
     expect(cut.ok).toBe(false);
     expect(cut.markdown).toContain("Incomplete: 1 of 3 planned calls ran, then a direct call to the function failed");
-    const tokens = report(small, planned, [ok("p01", "a"), ok("p01", "b"), { ...ok("i01", "i"), evaluation: { inTok: 500, promptBytes: 100 } }]);
+    const tokens = report(small, planned, [ok("p01", "a"), ok("p01", "b"), { ...ok("i01", "i"), evaluation: { ...evidence, inTok: 500 } }]);
     expect(tokens.ok).toBe(false);
     expect(tokens.results.tokenBoundViolations).toBe(1);
   });
