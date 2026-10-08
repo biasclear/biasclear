@@ -41,11 +41,14 @@ describe("one provider-independent Converse contract", () => {
     expect(JSON.stringify(outcome.reply)).not.toContain("private reasoning");
   });
 
-  it("charges all cached-input usage at the full rate and refuses unexplained totals", async () => {
+  it("charges cache reads at the full rate, treats any cache write as unknown usage, and refuses unexplained totals", async () => {
     const call = async (usage: Record<string, unknown>) => converseModel(async () => ({status:200,headers:{},body:JSON.stringify(reply([{text}],usage))}),
       "us-east-1", DEFAULT_MODEL_ID, modelRequest("p","s",STUB_MODELS[DEFAULT_MODEL_ID]!), STUB_MODELS[DEFAULT_MODEL_ID]);
-    const cached = await call({inputTokens:100,outputTokens:20,cacheReadInputTokens:30,cacheWriteInputTokens:10,totalTokens:160});
-    expect(cached).toMatchObject({kind:"reply",inTok:140,outTok:20});
+    const cached = await call({inputTokens:100,outputTokens:20,cacheReadInputTokens:30,totalTokens:150});
+    expect(cached).toMatchObject({kind:"reply",inTok:130,outTok:20});
+    // A cache write may bill at 1.25x or 2x the input price, and none is ever requested (306 LOW).
+    expect(await call({inputTokens:100,outputTokens:20,cacheReadInputTokens:30,cacheWriteInputTokens:10,totalTokens:160}))
+      .toMatchObject({kind:"maybe-billed",code:"E_MODEL_NO_USAGE"});
     expect(await call({inputTokens:100,outputTokens:20,totalTokens:500})).toMatchObject({kind:"maybe-billed",code:"E_MODEL_NO_USAGE"});
     expect(await call({inputTokens:Number.MAX_SAFE_INTEGER,outputTokens:20})).toMatchObject({kind:"maybe-billed",code:"E_MODEL_NO_USAGE"});
   });

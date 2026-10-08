@@ -46,7 +46,9 @@ export type ModelOutcome = ProviderDetail & (
  * Model-specific evidence must separately prove outputTokens includes billed reasoning.
  * All current live rows lack that proof and are blocked, including Sonnet's native
  * total-output bound (which does not prove Converse's usage mapping).
- * Cached input is conservatively charged at the full uncached input price. */
+ * Cache reads are charged at the full uncached input price, which over-counts. No cachePoint is
+ * ever sent, and a cache write can bill above the input price (1.25x or 2x), so any reported cache
+ * write is unknown usage: the reservation is kept and the service pauses (306 LOW). */
 function usageOf(reply: Record<string, unknown>, model: ModelInfo): { inTok: number; outTok: number } | undefined {
   const usage = reply.usage;
   if (usage === null || typeof usage !== "object" || Array.isArray(usage)) return undefined;
@@ -56,7 +58,8 @@ function usageOf(reply: Record<string, unknown>, model: ModelInfo): { inTok: num
   const read = u.cacheReadInputTokens ?? 0;
   const write = u.cacheWriteInputTokens ?? 0;
   if (!integer(read) || !integer(write)) return undefined;
-  const inTok = u.inputTokens + read + write;
+  if (write > 0) return undefined;
+  const inTok = u.inputTokens + read;
   if (!Number.isSafeInteger(inTok)) return undefined;
   const nanos = inTok * Math.round(model.inputPricePerMillion * 1000) +
     u.outputTokens * Math.round(model.outputPricePerMillion * 1000);
