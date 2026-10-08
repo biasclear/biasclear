@@ -1,0 +1,23 @@
+{
+  "status": "unapproved-draft",
+  "preparedDate": "2026-10-07",
+  "modelCallsExecuted": 0,
+  "stubQuestionRunsExecuted": 0,
+  "files": [
+    {
+      "file": "QUESTIONS-DRAFT.md",
+      "sha256": "91590074803079abd0de3445451ef7e55f1120872d1ae73d3a28108a72d82b94",
+      "bytes": 4928
+    },
+    {
+      "file": "DESIGN-DRAFT.md",
+      "sha256": "cdc50a62967c18819618b9b0596be7400b5bd94420a18ea18a439e3584dd99a5",
+      "bytes": 8493
+    },
+    {
+      "file": "questions.draft.json",
+      "sha256": "2a52b833ecc865856882ddae6340f64d368ef825fab53882e1f256c87c4f71af",
+      "bytes": 6791
+    }
+  ]
+}
