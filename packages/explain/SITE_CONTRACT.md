@@ -11,7 +11,7 @@ The design this follows is the Explain spec (Mode C), sections 3, 11 and 12. Whe
 `site/data/explain.json` holds:
 
 ```json
-{ "api": null, "rules": [], "retention": "none", "model": "grok47" }
+{ "api": null, "rules": [], "retention": "none", "model": "grok47", "consent": "c1-d28013dcbf8affab" }
 ```
 
 While `api` is `null`:
@@ -21,7 +21,7 @@ While `api` is `null`:
 - every current site test passes unchanged;
 - the page makes no request of any kind, as today.
 
-`rules` lists the rules versions the deployed service accepts. The PM updates it after each approved deploy. `retention` must be `none`, and `model` must equal the approved stack `Model` key. The model table supplies the display name, maker and source-specific destination regions for the consent and privacy drafts. No provider-default or review retention fallback is permitted.
+`rules` lists the rules versions the deployed service accepts. The PM updates it after each approved deploy. `retention` must be `none`, and `model` must equal the approved stack `Model` key. `consent` is that entry's consent fingerprint (`node infra/aws/model-table.mjs --consent KEY`, the same value as `consentFingerprint` in `src/models.ts`): a short code for exactly what the consent line names (the invocation profile, its maker, its display name, its route and every processing location). The page sends it with each request (section 5), and `infra/aws/ops.sh` refuses a deploy, resume or evaluate while `api` is set unless `model` and `consent` both match the selected entry. The model table supplies the display name, maker and source-specific destination regions for the consent and privacy drafts. No provider-default or review retention fallback is permitted.
 
 ## 2. Switching it on (ticket X5)
 
@@ -62,6 +62,7 @@ The consent line is the one sentence a visitor reads before sending, so it may n
 - Escape closes the box. Focus returns to the button.
 - The page's request counter counts the request.
 - Nothing is sent before **Send this sentence** is pressed.
+- Each request carries the `consent` fingerprint the page loaded with, so it names the consent line the visitor read. If the service's model, maker or route changed after the page loaded, the answer is `409 consent` (section 7) and nothing is sent to any model.
 
 ## 5. The request
 
@@ -74,7 +75,7 @@ fetch(api + "/v1/explain", {
   referrerPolicy: "no-referrer",
   cache: "no-store",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ v: 1, rules, rule, domain, sentence, start, end }),
+  body: JSON.stringify({ v: 1, rules, rule, domain, sentence, start, end, consent }),
 });
 ```
 
@@ -86,8 +87,9 @@ fetch(api + "/v1/explain", {
 | `domain` | `general` (the site's only domain today) |
 | `sentence` | The sentence (or the 500-character window), 1 to 500 characters |
 | `start`, `end` | Where the marked words sit in `sentence`, as JavaScript string indices (the engine's own) |
+| `consent` | The `consent` value from `site/data/explain.json` the page loaded with: the fingerprint of the consent line it showed |
 
-Exactly these keys; the service refuses any other. The body is at most 4,096 bytes. The service refuses control characters other than tab and line breaks, bidirectional override characters (U+202A to U+202E, U+2066 to U+2069) and Unicode tag characters (U+E0000 to U+E007F); the site may simply not offer the button for such a sentence.
+Exactly these keys; the service refuses any other, and refuses a request without `consent`. The body is at most 4,096 bytes. The service refuses control characters other than tab and line breaks, bidirectional override characters (U+202A to U+202E, U+2066 to U+2069) and Unicode tag characters (U+E0000 to U+E007F); the site may simply not offer the button for such a sentence.
 
 The page waits at most 30 seconds, then treats the request as unreachable.
 
@@ -124,6 +126,7 @@ Every error body is `{ "v": 1, "error": "<code>" }`. Each message is announced i
 | `429` with no `error` field (API Gateway's own answer) | The whole service is at its request limit | **Explain is busy.** Try again in a minute. |
 | `429 limit` | This connection's 10-minute or daily limit | **You've used Explain a lot from this connection.** Try again later; the limit resets within a day. |
 | `409 rules` | The site's rules version isn't one the service carries | **Explain is catching up with a rules update.** Try again later. |
+| `409 consent` | The service's model, maker or route changed after this page loaded, so the consent the visitor read no longer names it | **Explain's AI model has changed since you opened this page.** Reload the page to read the new consent before sending. |
 | `502 no_answer` | The model refused, ran out of room, or its answer failed the checks | **No explanation this time.** The move's description above still applies. |
 | `400`, `403` or `422 invalid` | A malformed request, a wrong origin, or not a mark. The site never sends these, so one means a bug | **Explain couldn't use this sentence.** |
 | Network error, timeout, any other status, or a body the page can't read | Includes a throttled answer that arrives without CORS headers | **Explain couldn't be reached.** The checker still runs on your device. |
@@ -187,4 +190,4 @@ In both modes (`api: null` and set): the policy on each page (only the checker p
 
 These placeholders are draft copy, not text published on the site. The complete per-model consent and privacy drafts are generated from the code table in [`PRIVACY-DRAFTS.md`](../../handoff/explain/PRIVACY-DRAFTS.md). Regenerate with `node packages/explain/scripts/privacy-drafts.mjs --write`; `--check` and the package test refuse stale wording. Unknown regions or routes fail instead of acquiring guessed privacy wording. Account-console confirmation of the exact profile and all processing destinations remains required.
 
-The switch-on site build must bind its privacy and consent to the selected stack entry, never infer the maker from free-form model output. To switch models later: pause visitor Explain; verify and evaluate the chosen entry under the shared cap; generate consent/privacy from that entry; publish the approved matching site configuration; only then resume. Selecting one stack parameter does not authorize running a model the visitor was not told about. Live model switching is not implemented by this code-only PR, and no new field is added to the one-sentence request here. `infra/aws/ops.sh` enforces two parts of this: a deploy stops before any change if Explain is on with a different model, and while `api` is set, deploy, resume and evaluate stop before signing in if the selected model isn't the published `model`. The approval summary names the selected model and its maker.
+The switch-on site build must bind its privacy and consent to the selected stack entry, never infer the maker from free-form model output. To switch models later: pause visitor Explain; verify and evaluate the chosen entry under the shared cap; generate consent/privacy from that entry; publish the approved matching site configuration; only then resume. Selecting one stack parameter does not authorize running a model the visitor was not told about. Live model switching is not implemented by this code-only PR, and no new field is added to the one-sentence request here. `infra/aws/ops.sh` enforces two parts of this: a deploy stops before any change if Explain is on with a different model, and while `api` is set, deploy, resume and evaluate stop before signing in if the selected model isn't the published `model` and `consent`. The service enforces the third: a request whose `consent` fingerprint isn't the selected model's gets `409 consent` before any table read, spend or model call, so a tab opened under one consent never reaches another maker (314 M3). The approval summary names the selected model and its maker.

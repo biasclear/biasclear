@@ -3,7 +3,7 @@
 // model reply or an error message is ever logged or returned in their place.
 
 /** The "error" field of an error response, and what the site shows for it (SITE_CONTRACT.md). */
-export const ERRORS = ["paused", "busy", "limit", "rules", "no_answer", "invalid"] as const;
+export const ERRORS = ["paused", "busy", "limit", "rules", "consent", "no_answer", "invalid"] as const;
 export type ErrorName = (typeof ERRORS)[number];
 
 /** The "outcome" field of a log line. */
@@ -13,6 +13,7 @@ export const OUTCOMES = [
   "busy",
   "limit",
   "rules",
+  "consent",
   "no_answer",
   "invalid",
   "forbidden",
@@ -49,6 +50,8 @@ export const CODES = [
   "E_RULE_RETIRED",
   "E_NOT_A_MARK",
   "E_ENGINE",
+  // the consent the page showed names another model (SITE_CONTRACT §5, 314 M3)
+  "E_CONSENT",
   // spend (SPEC §8)
   "E_TOO_COSTLY",
   "E_HEADROOM",

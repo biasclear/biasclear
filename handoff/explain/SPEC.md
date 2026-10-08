@@ -105,7 +105,8 @@ Headers: `Content-Type: application/json` only. No cookies (`credentials: "omit"
   "domain": "general",
   "sentence": "Every serious economist agrees that the Harlan Valley plan will lower rents within two years.",
   "start": 0,
-  "end": 30
+  "end": 30,
+  "consent": "c1-d28013dcbf8affab"
 }
 ```
 
@@ -117,6 +118,7 @@ Headers: `Content-Type: application/json` only. No cookies (`credentials: "omit"
 | `domain` | `general`, `legal`, `media`, `financial` or `all` (the engine's `Domain`). Today's site always sends `general` |
 | `sentence` | 1 to 500 Unicode code points. No C0 or C1 control characters except tab, line feed and carriage return; no bidirectional override characters (U+202A to U+202E, U+2066 to U+2069); no Unicode tag characters (U+E0000 to U+E007F, a known way to hide instructions from people) |
 | `start`, `end` | Integers, UTF-16 offsets into `sentence` (the engine's own units), `0 ≤ start < end ≤ sentence.length`, not splitting a surrogate pair |
+| `consent` | The fingerprint of the consent line the page showed (`consentFingerprint` in `src/models.ts`: version, invocation profile, maker, display name, route and processing locations). Required from visitors; optional on the evaluation's key-authorized direct invoke, and checked when present. Any other value than the selected model's gets `409 consent`, before any table read, spend or model call (314 M3) |
 
 **Success, `200`:**
 
@@ -361,6 +363,7 @@ Settings readback alone cannot prove how the exact selected model handles text. 
 | API Gateway `429` | Whole-service throttle | **Explain is busy.** Try again in a minute. |
 | `429 limit` | This connection's 10-minute or daily limit | **You've used Explain a lot from this connection.** Try again later; the limit resets within a day. |
 | `409 rules` | The site's rules version is neither of the two the server bundles. The site normally prevents this (§12) | **Explain is catching up with a rules update.** Try again later. |
+| `409 consent` | The request's consent fingerprint isn't the selected model's: the model, maker or route changed after the page loaded | **Explain's AI model has changed since you opened this page.** Reload the page to read the new consent before sending. |
 | `502 no_answer` | The model refused, ran out of room, the answer failed §7, or an internal error | **No explanation this time.** The move's description above still applies. |
 | `400`, `403` or `422 invalid` | Malformed request, wrong origin, not a mark. The site never sends these, so seeing one means a bug | **Explain couldn't use this sentence.** |
 | Network error, timeout (30 s on the page), 5xx, or a response the page can't read | Also covers a throttled response that arrives without CORS headers | **Explain couldn't be reached.** The checker still runs on your device. |

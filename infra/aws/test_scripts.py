@@ -149,6 +149,7 @@ if url.endswith("/v1/explain"):
     body = open(opt("--data-binary")[1:]).read()
     n = state.get("postCount", 0)
     state["postCount"] = n + 1
+    state.setdefault("postBodies", []).append(json.loads(body))
     json.dump(state, open(os.environ["FAKE_STATE"], "w"))
     status, reply, cors = posts[min(n, len(posts) - 1)]
     open(opt("-o"), "w").write(json.dumps(reply))
@@ -478,9 +479,13 @@ def stack_with(model, switch):
     return s
 
 
-def site_config(tmp_path, api, model="grok47"):
+def consent_of(model):
+    return subprocess.run(["node", str(HERE / "model-table.mjs"), "--consent", model], capture_output=True, text=True, check=True).stdout.strip()
+
+
+def site_config(tmp_path, api, model="grok47", consent=None):
     p = tmp_path / "explain.json"
-    p.write_text(json.dumps({"api": api, "rules": [], "retention": "none", "model": model}))
+    p.write_text(json.dumps({"api": api, "rules": [], "retention": "none", "model": model, "consent": consent_of(model) if consent is None else consent}))
     return {"EXPLAIN_SITE_CONFIG": str(p)}
 
 
@@ -527,6 +532,31 @@ def test_published_consent_binds_only_while_the_site_offers_explain(fake):
     assert r.returncode == 0, r.stdout + r.stderr
     fake.state(stack=stack_with("grok47", "off"))
     r = fake.run("ops.sh", "switch", "on", extra_env={"MODEL": "grok47", **site_config(fake.path, "https://abc123.execute-api.us-east-1.amazonaws.com")})
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_public_smoke_call_carries_the_selected_model_s_consent_fingerprint(fake):
+    # 314 M3: a visitor's request names the consent the page showed; the deploy's public test call does too.
+    z, s = smoke_file(fake.path)
+    fake.state(stack=stack_with("grok47", "off"), posts=[[422, {}, None], [200, GOOD, "https://biasclear.com"]], replies=[{"status": 200, "body": GOOD}])
+    r = fake.run("ops.sh", "deploy", str(z), str(s), extra_env={"MODEL": "sonnet55"})
+    assert r.returncode == 0, r.stdout + r.stderr
+    bodies = fake.read_state()["postBodies"]
+    assert bodies and all(b["consent"] == consent_of("sonnet55") for b in bodies)
+    assert consent_of("sonnet55") != consent_of("grok47")
+    # The direct (key-authorized) call needs none.
+    assert "consent" not in fake.read_state()["payloads"][0]["request"]
+
+
+def test_published_settings_must_carry_the_model_s_consent_fingerprint(fake):
+    api = "https://abc123.execute-api.us-east-1.amazonaws.com"
+    fake.state(stack=stack_with("grok47", "off"))
+    for consent in ("", consent_of("sonnet55"), "c1-0000000000000000"):
+        r = fake.run("ops.sh", "switch", "on", extra_env={"MODEL": "grok47", **site_config(fake.path, api, model="grok47", consent=consent)})
+        assert r.returncode == 1, consent
+        assert "don't carry the consent fingerprint for Grok 4.7, made by xAI" in fake.summary()
+    assert not fake.calls(["aws"])
+    r = fake.run("ops.sh", "switch", "on", extra_env={"MODEL": "grok47", **site_config(fake.path, api, model="grok47")})
     assert r.returncode == 0, r.stdout + r.stderr
 
 

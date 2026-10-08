@@ -6,7 +6,7 @@
 import { createHandler, type Deps, type InvocationContext } from "../src/app.js";
 import type { AwsCall, AwsReply, Transport } from "../src/aws/transport.js";
 import { TransportError } from "../src/aws/transport.js";
-import { MODELS, type ModelInfo } from "../src/models.js";
+import { MODELS, consentFingerprint, type ModelInfo } from "../src/models.js";
 import { readConfig, type Config } from "../src/config.js";
 import { bundledEngines } from "../src/engines.js";
 import type { HttpResult } from "../src/http.js";
@@ -71,8 +71,14 @@ export function config(overrides: Record<string, string> = {}): Config {
   return c;
 }
 
+/** The consent fingerprint for a model id, as the site would send it (src/models.ts). */
+export function consentFor(id: string = ENV.EXPLAIN_MODEL_ID!): string {
+  return consentFingerprint(id, MODELS[id]!);
+}
+
+/** A visitor's request: the seven fields plus the fingerprint of the consent the page showed. */
 export function requestBody(over: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
-  return { v: 1, rules: RULES_VERSION, rule: RULE, domain: "general", sentence: SENTENCE, start: START, end: END, ...over };
+  return { v: 1, rules: RULES_VERSION, rule: RULE, domain: "general", sentence: SENTENCE, start: START, end: END, consent: consentFor(), ...over };
 }
 
 export interface EventOptions {

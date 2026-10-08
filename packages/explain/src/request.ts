@@ -19,9 +19,15 @@ export interface ExplainRequest {
   sentence: string;
   start: number;
   end: number;
+  /** The fingerprint of the consent the page showed (models.ts consentFingerprint). */
+  consent?: string;
 }
 
 const KEYS = ["domain", "end", "rule", "rules", "sentence", "start", "v"];
+const CONSENT = /^c[0-9]{1,3}-[0-9a-f]{16}$/;
+
+/** A visitor's request must carry the consent fingerprint; the evaluation's key-authorized direct invoke may. */
+export interface RequestOptions { consent: "required" | "optional" }
 
 /**
  * C0 and C1 control characters other than tab, line feed and carriage
@@ -77,11 +83,14 @@ export function validSentence(sentence: unknown): sentence is string {
 }
 
 /** Checks a parsed body against SPEC §3: exactly these keys, these types, these bounds. */
-export function validateRequest(body: unknown): ExplainRequest {
+export function validateRequest(body: unknown, options: RequestOptions = { consent: "required" }): ExplainRequest {
   if (body === null || typeof body !== "object" || Array.isArray(body)) throw new CodedError("E_SHAPE");
-  const keys = Object.keys(body).sort();
-  if (keys.length !== KEYS.length || keys.some((k, i) => k !== KEYS[i])) throw new CodedError("E_SHAPE");
   const b = body as Record<string, unknown>;
+  const hasConsent = Object.hasOwn(b, "consent");
+  if (!hasConsent && options.consent === "required") throw new CodedError("E_SHAPE");
+  if (hasConsent && (typeof b.consent !== "string" || !CONSENT.test(b.consent))) throw new CodedError("E_SHAPE");
+  const keys = Object.keys(body).filter((k) => k !== "consent").sort();
+  if (keys.length !== KEYS.length || keys.some((k, i) => k !== KEYS[i])) throw new CodedError("E_SHAPE");
   if (b.v !== 1) throw new CodedError("E_SHAPE");
   if (typeof b.rules !== "string" || !/^[0-9A-Za-z.+-]{1,32}$/.test(b.rules)) throw new CodedError("E_SHAPE");
   if (typeof b.rule !== "string" || !/^[A-Z][A-Z0-9_]{0,63}$/.test(b.rule)) throw new CodedError("E_SHAPE");
@@ -104,7 +113,7 @@ export function validateRequest(body: unknown): ExplainRequest {
   ) {
     throw new CodedError("E_SPAN");
   }
-  return { v: 1, rules: b.rules, rule: b.rule, domain: b.domain as Domain, sentence, start, end };
+  return { v: 1, rules: b.rules, rule: b.rule, domain: b.domain as Domain, sentence, start, end, ...(hasConsent ? { consent: b.consent as string } : {}) };
 }
 
 /** The request body as text, or a CodedError when it is too big or badly encoded. */

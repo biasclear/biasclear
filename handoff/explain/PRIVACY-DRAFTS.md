@@ -10,6 +10,8 @@ Maker: xAI. Exact invocation ID: `us.xai.grok-4.7`. Route source: `us-east-1`. D
 
 Provenance: base ID — AWS Bedrock Model catalog, us-east-1, copied 2026-10-07; profile/destinations — https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-7.html. The profile and routes are documentation evidence; account confirmation remains required.
 
+Consent fingerprint (site/data/explain.json "consent", sent with each request): `c1-d28013dcbf8affab`.
+
 Consent draft:
 
 > Explain sends this sentence, and nothing else you pasted, to BiasClear's service on Amazon Web Services. It asks Grok 4.7, an AI model made by xAI, through Amazon Bedrock, how the wording works. Amazon may process it in N. Virginia (us-east-1), Ohio (us-east-2) or Oregon (us-west-2) in the United States. We keep no copy. Our Amazon account uses Bedrock's zero data retention setting; Explain stops within 15 minutes if that setting changes. The service sees your network address but keeps only a code made from it, to count requests.
@@ -24,6 +26,8 @@ Maker: Anthropic. Exact invocation ID: `us.anthropic.claude-sonnet-5-5`. Route s
 
 Provenance: base ID — AWS Bedrock Model catalog, us-east-1, copied 2026-10-07; profile/destinations — https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-sonnet-5-5.html. The profile and routes are documentation evidence; account confirmation remains required.
 
+Consent fingerprint (site/data/explain.json "consent", sent with each request): `c1-6d0f89ccc2a91284`.
+
 Consent draft:
 
 > Explain sends this sentence, and nothing else you pasted, to BiasClear's service on Amazon Web Services. It asks Claude Sonnet 5.5, an AI model made by Anthropic, through Amazon Bedrock, how the wording works. Amazon may process it in N. Virginia (us-east-1), Ohio (us-east-2) or Oregon (us-west-2) in the United States. We keep no copy. Our Amazon account uses Bedrock's zero data retention setting; Explain stops within 15 minutes if that setting changes. The service sees your network address but keeps only a code made from it, to count requests.
@@ -37,6 +41,8 @@ Privacy draft:
 Maker: OpenAI. Exact invocation ID: `us.openai.gpt-6.1-sol`. Route source: `us-east-1`. Destinations: N. Virginia (us-east-1), Ohio (us-east-2) or Oregon (us-west-2).
 
 Provenance: base ID — AWS Bedrock Model catalog, us-east-1, copied 2026-10-07; profile/destinations — https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-6-1-sol.html. The profile and routes are documentation evidence; account confirmation remains required.
+
+Consent fingerprint (site/data/explain.json "consent", sent with each request): `c1-63ce835f21feef68`.
 
 Consent draft:
 

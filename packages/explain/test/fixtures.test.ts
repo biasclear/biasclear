@@ -25,6 +25,9 @@ import { validateRequest } from "../src/request.js";
 import { isCapitalised, startsSentence, wordsOf } from "../src/text.js";
 import { bundledEngines } from "../src/engines.js";
 
+/** Evaluation and smoke bodies go to the key-authorized direct invoke, where the consent fingerprint is optional; ops.sh adds it to the public smoke call. */
+const EVAL = { consent: "optional" } as const;
+
 const f = JSON.parse(readFileSync(fileURLToPath(new URL("../eval/fixtures.json", import.meta.url)), "utf8")) as Fixtures;
 
 /**
@@ -98,7 +101,7 @@ describe("the evaluation fixtures", () => {
     expect(f.controls?.every((c) => c.set === "heldout")).toBe(true);
     for (const control of f.controls ?? []) {
       expect(markOf(control.sentence, control.rule), control.id).toBeDefined();
-      expect(() => validateRequest(requestFor(control.sentence, control.rule))).not.toThrow();
+      expect(() => validateRequest(requestFor(control.sentence, control.rule), EVAL)).not.toThrow();
     }
     expect(new Set(evaluationRequests(f).map((p) => `${p.id}/${p.part}/${p.sample}`)).size).toBe(evaluationRequests(f).length);
   });
@@ -133,8 +136,8 @@ describe("the evaluation fixtures", () => {
       expect(ma).toBeDefined();
       expect(mb).toBeDefined();
       expect(swap(p.a.slice(ma!.start, ma!.end), p.sides)).toBe(p.b.slice(mb!.start, mb!.end));
-      expect(() => validateRequest(requestFor(p.a, p.rule))).not.toThrow();
-      expect(() => validateRequest(requestFor(p.b, p.rule))).not.toThrow();
+      expect(() => validateRequest(requestFor(p.a, p.rule), EVAL)).not.toThrow();
+      expect(() => validateRequest(requestFor(p.b, p.rule), EVAL)).not.toThrow();
       // Label lengths may differ (for example "religious believers" /
       // "secularists"); the surrounding context must remain identical.
       const mask = (sentence: string, side: string) => sentence.split(side).join("SIDE").split(side[0]!.toUpperCase() + side.slice(1)).join("SIDE");
@@ -153,9 +156,9 @@ describe("the evaluation fixtures", () => {
       if (inj.expectedPreflightReject) {
         expect(inj.expectedPreflightCode).toBe("E_SENTENCE");
         expect(inj.expectedPreflightStatus).toBe(400);
-        expect(() => validateRequest(requestFor(inj.sentence, inj.rule))).toThrow(inj.expectedPreflightCode);
+        expect(() => validateRequest(requestFor(inj.sentence, inj.rule), EVAL)).toThrow(inj.expectedPreflightCode);
       } else expect([inj.expectedPreflightCode, inj.expectedPreflightStatus]).toEqual([undefined, undefined]);
-      if (!inj.expectedPreflightReject) expect(() => validateRequest(requestFor(inj.sentence, inj.rule))).not.toThrow();
+      if (!inj.expectedPreflightReject) expect(() => validateRequest(requestFor(inj.sentence, inj.rule), EVAL)).not.toThrow();
     });
   }
 
@@ -179,8 +182,8 @@ describe("the evaluation fixtures", () => {
 describe("the workflow helpers", () => {
   it("write the smoke test's requests from the current rules", () => {
     const s = smokeRequests();
-    expect(() => validateRequest(s.marked)).not.toThrow();
-    expect(() => validateRequest(s.notAMark)).not.toThrow();
+    expect(() => validateRequest(s.marked, EVAL)).not.toThrow();
+    expect(() => validateRequest(s.notAMark, EVAL)).not.toThrow();
     expect(markOf(s.notAMark.sentence as string, s.rule)).toBeUndefined();
     expect(s.marked.rule).toBe(s.rule);
   });

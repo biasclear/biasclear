@@ -1,7 +1,7 @@
 // Drafts only. No public site edits, network requests or account evidence.
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { modelTable } from "../../../infra/aws/model-table.mjs";
+import { consentFingerprint, modelTable } from "../../../infra/aws/model-table.mjs";
 
 export const DRAFT_FILE = fileURLToPath(new URL("../../../handoff/explain/PRIVACY-DRAFTS.md", import.meta.url));
 const REGION_NAMES = Object.freeze({
@@ -19,14 +19,19 @@ function places(regions) {
   return names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
 }
 
+/** The consent fingerprint the site's settings carry (infra/aws/model-table.mjs). */
+export function consentFingerprintOf(id, model) {
+  return consentFingerprint(id, model);
+}
+
 export function privacyDraft(id, model) {
   if (id !== `us.${model.foundationModelId}` || model.route !== "us-profile" || !Object.hasOwn(REGION_NAMES, model.region)) throw new Error("unreviewed model route");
   const destinations = places(model.destinationRegions);
   const source = REGION_NAMES[model.region];
   return {
-    id, key: model.key, maker: model.provider, displayName: model.displayName,
+    id, key: model.key, maker: model.provider, displayName: model.displayName, consent: consentFingerprint(id, model),
     sourceRegion: model.region, destinationRegions: [...model.destinationRegions],
-    consent: `Explain sends this sentence, and nothing else you pasted, to BiasClear's service on Amazon Web Services. It asks ${model.displayName}, an AI model made by ${model.provider}, through Amazon Bedrock, how the wording works. Amazon may process it in ${destinations} in the United States. We keep no copy. Our Amazon account uses Bedrock's zero data retention setting; Explain stops within 15 minutes if that setting changes. The service sees your network address but keeps only a code made from it, to count requests.`,
+    consentText: `Explain sends this sentence, and nothing else you pasted, to BiasClear's service on Amazon Web Services. It asks ${model.displayName}, an AI model made by ${model.provider}, through Amazon Bedrock, how the wording works. Amazon may process it in ${destinations} in the United States. We keep no copy. Our Amazon account uses Bedrock's zero data retention setting; Explain stops within 15 minutes if that setting changes. The service sees your network address but keeps only a code made from it, to count requests.`,
     privacy: `After you agree, the page sends one marked sentence (at most 500 characters), the move and its position, the domain and rules version to BiasClear's Explain service on Amazon Web Services. Nothing else you pasted is sent. The service rechecks the mark, then sends that sentence and our fixed wording prompt to ${model.displayName}, made by ${model.provider}, through Amazon Bedrock. It calls Amazon from ${source} (${model.region}); the approved US profile ${id} may process the sentence in ${destinations} in the United States. BiasClear does not request web or X search, grounding or tools. It sends no conversation history or the rest of your text. The service keeps no copy of the sentence, answer or reasoning. Its logs keep counts and settings only for 7 days. To apply the per-connection limits, the service reads your network address from the request and turns it into a salted hash with a random key made each UTC day. It keeps only that hash, as a request count: about an hour for the ten-minute count, and until the end of the next day for the daily count. The address itself is never stored or logged. Each day's key expires after two days and is deleted; Amazon erases expired items within a few days, after which no one can turn a stored hash back into an address. Amazon Web Services also handles the connection itself. If the account's retention or logging setting changes, Explain stops within 15 minutes: each running copy of the service rechecks it at least that often. The approved account retention setting is none; invocation logging must be off. Publishing this wording requires a successful owner-approved zero-retention compatibility check for this exact model and route.`,
   };
 }
@@ -44,7 +49,8 @@ export function renderDrafts(table = modelTable()) {
     lines.push("", `## ${model.displayName} (${model.key})`, "",
       `Maker: ${model.provider}. Exact invocation ID: \`${id}\`. Route source: \`${model.region}\`. Destinations: ${places(model.destinationRegions)}.`, "",
       `Provenance: base ID — ${model.source.baseId}; profile/destinations — ${model.source.profile}. The profile and routes are documentation evidence; account confirmation remains required.`, "",
-      "Consent draft:", "", `> ${draft.consent}`, "",
+      `Consent fingerprint (site/data/explain.json "consent", sent with each request): \`${draft.consent}\`.`, "",
+      "Consent draft:", "", `> ${draft.consentText}`, "",
       "Privacy draft:", "", `> ${draft.privacy}`);
   }
   return `${lines.join("\n")}\n`;

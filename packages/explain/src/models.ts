@@ -5,6 +5,23 @@
 // cross-region routes, not in-region calls. Brad approved these US profiles
 // on 2026-10-07; changing the route or adding a model requires a new review.
 
+import { createHash } from "node:crypto";
+
+/** Bumped when the consent sentence's template changes what it promises (SITE_CONTRACT §4). */
+export const CONSENT_VERSION = "c1";
+
+/**
+ * A fingerprint of what the visitor's consent names: the exact invocation profile, its maker, its
+ * display name, its route and every place it may process the sentence. The site sends it with each
+ * request (SITE_CONTRACT §5); the service refuses one that isn't the selected model's before any spend,
+ * so a page opened under one consent can't reach another maker (314 M3). infra/aws/model-table.mjs
+ * computes the same value for the site build and the deploy script; a test holds the two together.
+ */
+export function consentFingerprint(id: string, model: Pick<ModelInfo, "provider" | "displayName" | "route" | "region" | "destinationRegions">): string {
+  const named = JSON.stringify([id, model.provider, model.displayName, model.route, model.region, [...model.destinationRegions]]);
+  return `${CONSENT_VERSION}-${createHash("sha256").update(named).digest("hex").slice(0, 16)}`;
+}
+
 export interface ModelInfo {
   readonly displayName: string;
   readonly key: string;

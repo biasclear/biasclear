@@ -17,7 +17,7 @@ import type { Config } from "./config.js";
 import type { EngineRegistry } from "./engines.js";
 import { STATUS, ROUTE_PATH, errorResponse, header, jsonResponse, preflight, type HttpEvent, type HttpResult } from "./http.js";
 import { makeLogger, type LogLine, type LogSink } from "./log.js";
-import { MODELS, modelReady, type ModelInfo } from "./models.js";
+import { MODELS, consentFingerprint, modelReady, type ModelInfo } from "./models.js";
 import type { MovesTable } from "./moves.js";
 import { checkReply } from "./output.js";
 import { buildPrompt, type PromptMode } from "./prompt.js";
@@ -290,12 +290,17 @@ async function explain(
   }
   let req: ExplainRequest;
   try {
-    req = validateRequest(parsed);
+    req = validateRequest(parsed, { consent: evaluation ? "optional" : "required" });
   } catch (err) {
     return shapeStop(err);
   }
   line.rule = req.rule;
   line.rules = req.rules;
+  // 3b. The consent the page showed must name the selected model, maker and route; a page opened
+  //     before a model change gets "consent" (reload), before any table read, spend or call (314 M3).
+  if (req.consent !== undefined || !evaluation) {
+    if (req.consent !== consentFingerprint(config.modelId, model)) stop("consent", "E_CONSENT");
+  }
 
   // 4. The rules version: one of the engines this bundle carries.
   const build = deps.engines.builds.get(req.rules);

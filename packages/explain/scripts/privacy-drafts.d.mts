@@ -17,6 +17,9 @@ export const DRAFT_FILE: string;
 export function privacyDraft(id: string, model: ModelEntry): {
   id: string; key: string; maker: string; displayName: string;
   sourceRegion: string; destinationRegions: string[];
-  consent: string; privacy: string;
+  /** The consent fingerprint (models.ts consentFingerprint). */
+  consent: string;
+  consentText: string; privacy: string;
 };
+export function consentFingerprintOf(id: string, model: ModelEntry): string;
 export function renderDrafts(table?: Table): string;

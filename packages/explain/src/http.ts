@@ -28,6 +28,7 @@ export const STATUS: Readonly<Record<ErrorName | "forbidden", number>> = {
   busy: 503,
   limit: 429,
   rules: 409,
+  consent: 409,
   no_answer: 502,
   invalid: 400,
   forbidden: 403,

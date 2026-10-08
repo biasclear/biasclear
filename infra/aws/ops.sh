@@ -101,7 +101,11 @@ require_published_model() {
   api="$(jq -r '.api // ""' "$SITE_CONFIG" 2>/dev/null)" || fail "Stop: could not read the site's Explain settings. Nothing was changed."
   [ -n "$api" ] || return 0
   published="$(jq -r '.model // ""' "$SITE_CONFIG")"
-  [ "$published" = "$model" ] && return 0
+  if [ "$published" = "$model" ]; then
+    # The page sends this fingerprint with each request; the service refuses any other (314 M3).
+    [ "$(jq -r '.consent // ""' "$SITE_CONFIG")" = "$(node "$HERE/model-table.mjs" --consent "$model")" ] && return 0
+    fail "Stop: the site's Explain settings don't carry the consent fingerprint for $(model_name "$model"). Regenerate site/data/explain.json from the model table before this run. Nothing was changed."
+  fi
   fail "Stop: the site's consent and privacy text name $(model_name "$published"), but this run selects $(model_name "$model"). Visitors would send their sentences to a maker they weren't told about. Take Explain off the site, evaluate, publish consent for the new model, then run this. Nothing was changed."
 }
 
@@ -258,9 +262,12 @@ post() { # $1: request body file; prints the HTTP status; the reply lands in $TM
 
 # The deploy's live test calls. $1: smoke.json from the build, $2: this run's evaluation key.
 smoke() {
-  local smoke_file="$1" key="$2" rule status code cors
+  local smoke_file="$1" key="$2" rule status code cors consent
   rule="$(jq -r .rule "$smoke_file")"
-  jq -c .notAMark "$smoke_file" >"$TMP/req.json"
+  # A visitor's request carries the fingerprint of the consent the page showed (314 M3), so both
+  # public calls send the selected model's; the direct, key-authorized call needs none.
+  consent="$(node "$HERE/model-table.mjs" --consent "${MODEL:-grok47}")" || fail "Stop: unknown model key; nothing was called."
+  jq -c --arg consent "$consent" '.notAMark + {consent: $consent}' "$smoke_file" >"$TMP/req.json"
   status="$(post "$TMP/req.json")"
   [ "$status" = 422 ] || fail "Stop: a sentence that isn't a mark should be refused with 422, but the service answered $status."
   say "A sentence that isn't a mark was refused, as it should be."
@@ -277,7 +284,7 @@ smoke() {
   valid_answer "$TMP/direct-body.json" "$rule" || fail "Stop: the function's answer isn't in the expected shape. Tell the PM."
 
   # Then through the public address, as a visitor's page would call it.
-  jq -c .marked "$smoke_file" >"$TMP/req.json"
+  jq -c --arg consent "$consent" '.marked + {consent: $consent}' "$smoke_file" >"$TMP/req.json"
   status="$(post "$TMP/req.json")"
   cors="$(tr -d '\r' <"$TMP/headers" | awk -F': ' 'tolower($1) == "access-control-allow-origin" {print $2}')"
   if [ "$status" = 200 ] && valid_answer "$TMP/body" "$rule" && [ "$cors" = "$ORIGIN" ]; then
