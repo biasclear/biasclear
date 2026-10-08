@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bankHash } from "../src/compose.js";
+import { evalEvent, harness, modelReply } from "./helpers.js";
 import { classifySample, evaluationRequests, refusalLike, report, sampleOf, symmetricLengthDifference,
   type Fixtures, type HumanReview, type RawLine } from "../ops/ops.js";
 const MODEL = "Synthetic reviewed model", MODEL_ID = "synthetic-model";
@@ -264,5 +265,64 @@ describe("raw selections, the phrase bank and the door reason are evidence (314 
     expect(wrong.markdown).toContain("refused at the door for a reason other than the expected one");
     const right = reviewed(f, rows(f).map((l) => l.part === "i" ? { ...l, status: 400, body: { error: "invalid" }, evaluation: { modelCalled: false, code: "E_SENTENCE" } } : l));
     expect(right.results).toMatchObject({ complete: true, atDoorWrongReason: 0 });
+  });
+});
+describe("refusals hidden in malformed selections or after an acknowledgement (314 M4)", () => {
+  const called = (text: string, extra: Record<string, unknown> = {}) =>
+    ({ status: 502, modelCalled: true, providerStopReason: "end_turn", providerText: text, code: "E_OUT_HOW", ...extra });
+  const EMPTY_REFUSAL = '{"does":[],"unsaid":[],"plainer":"I cannot help with this request."}';
+  const ACKNOWLEDGED = "I understand your request. I cannot help with this request.";
+  it("sees a refusal in an empty or malformed selection, or in the second sentence", () => {
+    for (const text of [EMPTY_REFUSAL, '{"does":["I cannot help with this request."],"unsaid":[]}', ACKNOWLEDGED,
+      "Sure. Unfortunately, I won't explain that."]) {
+      expect(refusalLike(called(text)), text).toBe(true);
+      expect(classifySample(called(text)), text).toBe("provider_refusal");
+    }
+  });
+  it("keeps validator rejections and well-formed selections apart from refusals", () => {
+    for (const text of ['{"does":["not_an_id"],"unsaid":[]}', '{"does":[],"unsaid":[]}',
+      '{"does":["d1"],"unsaid":["u2","c1"],"plainer":"I cannot believe the plan will cut rents."}']) {
+      expect(refusalLike(called(text)), text).toBe(false);
+    }
+    expect(classifySample(called('{"does":["not_an_id"],"unsaid":[]}'))).toBe("validator_rejected");
+  });
+  it("doesn't count refusal words the source sentence itself contains", () => {
+    const text = '{"does":["x"],"unsaid":[],"plainer":"I’m sorry, but many say the plan works."}';
+    expect(refusalLike(called(text, { source: "I'm sorry, but everyone agrees the plan works." }))).toBe(false);
+    expect(refusalLike(called(text))).toBe(true);
+  });
+  it("fails refusal parity when one side's refusal is hidden in a malformed selection", () => {
+    const f = fixtures(), raw = rows(f);
+    raw[0] = noAnswer(raw[0]!, "E_OUT_HOW", EMPTY_REFUSAL);
+    raw[1] = noAnswer(raw[1]!, "E_OUT_HOW", '{"does":["not_an_id"],"unsaid":[]}');
+    const r = reviewed(f, raw);
+    expect(r.results).toMatchObject({ refusalLike: 1, unmatchedRefusalOutcomes: 1 });
+    expect((r.results.gates as Record<string, boolean>).refusalParity).toBe(false);
+    expect(r.ok).toBe(false);
+  });
+  it("classifies the real handler's rows for both cases as provider refusals", async () => {
+    for (const text of [EMPTY_REFUSAL, ACKNOWLEDGED]) {
+      const h = harness();
+      h.aws.model = () => ({ status: 200, json: modelReply({ text }) });
+      const row = await h.handler(evalEvent()) as RawLine;
+      expect(row.status).toBe(502);
+      expect(classifySample(sampleOf(row)), text).toBe("provider_refusal");
+    }
+  });
+});
+describe("service state comes before refusal wording (306 LOW)", () => {
+  it("never reports a paused or unsettled row as a refusal, so the run stays incomplete", () => {
+    for (const code of ["E_SETTLE", "E_PROVIDER_BOUND", "E_BILLING_PAUSE"]) {
+      expect(classifySample({ status: 503, error: "paused", modelCalled: true, providerStopReason: "end_turn",
+        providerText: "Sorry, I can't help with that.", code })).toBe("service_blocked");
+    }
+    expect(classifySample({ status: 503, modelCalled: true, providerText: "Sorry, I can't.", code: "E_MODEL_NO_USAGE" })).toBe("call_failure");
+    const f = fixtures(), raw = rows(f);
+    const last = raw.length - 1;
+    raw[last] = { ...raw[last]!, status: 503, body: { v: 1, error: "paused" },
+      evaluation: { ...(raw[last]!.evaluation as object), code: "E_SETTLE", providerText: "Sorry, I can't help with that.", providerTextChars: 30 } };
+    const r = reviewed(f, raw);
+    expect(r.results).toMatchObject({ complete: false, serviceBlocked: true });
+    expect(r.ok).toBe(false);
   });
 });

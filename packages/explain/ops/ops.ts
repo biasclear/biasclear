@@ -142,6 +142,8 @@ export interface Sample {
   outTok?: number;
   promptBytes?: number;
   raw?: string;
+  /** The sentence this row asked about, set by report(): refusal wording it contains doesn't count. */
+  source?: string;
   /** The phrase bank the raw selection's ids refer to. */
   bankHash?: string;
   micros?: number;
@@ -170,27 +172,58 @@ export function calledModel(sample: Sample): boolean {
 const REFUSAL_STOPS = new Set(["refusal", "content_filtered", "guardrail_intervened", "safety"]);
 const TRUNCATED_STOPS = new Set(["max_tokens", "length", "model_context_window_exceeded"]);
 
+const SELECTION_IDS = { does: /^d[0-9]{1,2}$/u, unsaid: /^[uc][0-9]{1,2}$/u };
+
+function stringsIn(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap(stringsIn);
+  if (value !== null && typeof value === "object") return Object.values(value).flatMap(stringsIn);
+  return [];
+}
+
+/** The provider text a refusal could be in. A well-formed selection (one or more "does" ids, "unsaid"
+ * ids) is the model doing the task; an empty or malformed one is read through its string values, so a
+ * refusal put in "plainer" or in place of an id is seen (314 M4). */
 function observableText(sample: Sample): string | undefined {
   const text = sample.providerText ?? sample.raw;
   if (text === undefined) return undefined;
   const unfenced = /^```[a-z]*\s*([\s\S]*?)\s*```$/iu.exec(text.trim())?.[1] ?? text;
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(unfenced) as { how?: unknown; does?: unknown };
-    if (typeof parsed?.how === "string") return parsed.how.trim();
-    // A reviewed-phrase selection is the model doing the task, whatever its rewrite says.
-    if (Array.isArray(parsed?.does)) return undefined;
-  } catch { /* Plain provider text remains observable evidence. */ }
-  return unfenced.trim();
+    parsed = JSON.parse(unfenced);
+  } catch {
+    return unfenced.trim(); // Plain provider text remains observable evidence.
+  }
+  if (parsed === null || typeof parsed !== "object") return unfenced.trim();
+  const reply = parsed as Record<string, unknown>;
+  if (typeof reply.how === "string") return reply.how.trim();
+  const ids = (value: unknown, pattern: RegExp): boolean => Array.isArray(value) && value.every((id) => typeof id === "string" && pattern.test(id));
+  if (Array.isArray(reply.does) && reply.does.length > 0 && ids(reply.does, SELECTION_IDS.does) &&
+    (reply.unsaid === undefined || ids(reply.unsaid, SELECTION_IDS.unsaid))) return undefined;
+  const words = stringsIn(reply).join("\n").trim();
+  return words === "" ? undefined : words; // An empty selection has no refusal wording; answer parity still sees it.
 }
 
-/** Curly apostrophes and quotes folded, leading quotes dropped, first sentence only. */
+const fold = (text: string): string => text.replace(/[‘’ʼ＇]/gu, "'").toLowerCase();
+
+/** Curly apostrophes folded, leading quotes dropped, the first three sentences, so an acknowledgement
+ * before the refusal ("I understand. I can't help with that.") doesn't hide it (314 M4). */
 function refusalWindow(text: string): string {
-  const folded = text.replace(/[\u2018\u2019\u02BC\uFF07]/gu, "'").replace(/^["'\u201C\u201D\s]+/u, "");
-  return /^[^.!?\n]*[.!?]?/u.exec(folded)?.[0] ?? folded;
+  return fold(text).replace(/^["'“”\s]+/u, "").split(/(?<=[.!?])\s+|\n+/u).slice(0, 3).join(" ");
 }
 
-/** Observable refusal evidence, never a synonym for every non-200 reply.
- * The heuristic is a review aid: exact provider stop reasons are retained. */
+const REFUSAL_WORDING: readonly RegExp[] = [
+  /\b(?:i'm sorry|i am sorry|i apologi[sz]e|my apologies|as an ai(?: model| assistant)?)\b/gu,
+  /(?:^|[.!?] )sorry\b/gu,
+  /\b(?:i|we) (?:cannot|can't|can not|won't|will not|am unable to|are unable to|am not able to|are not able to|must decline|have to decline|decline to)\b/gu,
+  /\b(?:i'm|we're) (?:unable to|not able to)\b/gu,
+  // A bare refusal only at a sentence's start, so "the writer is unable to provide a source" stays an answer.
+  /(?:^|[.!?] )(?:cannot|can't|unable to|not able to) (?:help|assist|provide|answer|comply)\b/gu,
+];
+
+/** Observable refusal evidence, never a synonym for every non-200 reply. Wording the source sentence
+ * itself contains doesn't count, so a reply quoting the text isn't a refusal. The heuristic is a review
+ * aid: exact provider stop reasons are retained. */
 export function refusalLike(sample: Sample): boolean {
   if (!calledModel(sample)) return false;
   if (REFUSAL_STOPS.has(sample.providerStopReason ?? "")) return true;
@@ -198,13 +231,9 @@ export function refusalLike(sample: Sample): boolean {
   const text = observableText(sample);
   if (text === undefined) return false; // Missing evidence is not an empty reply.
   if (text === "") return true;
-  const first = refusalWindow(text);
-  // An apology, "unfortunately" or a first-person refusal anywhere in the first sentence (306).
-  if (/\b(?:i(?:'m| am) sorry|sorry|i apologi[sz]e|my apologies|unfortunately|as an ai(?: model| assistant)?)\b/iu.test(first)) return true;
-  if (/\b(?:i|we) (?:cannot|can't|can not|won't|will not|am unable to|are unable to|am not able to|are not able to|must decline|have to decline|decline to)\b/iu.test(first)) return true;
-  if (/\b(?:i'm|we're) (?:unable to|not able to)\b/iu.test(first)) return true;
-  // A bare refusal only at the start, so "the writer is unable to provide a source" stays an answer.
-  return /^(?:cannot|can't|unable to|not able to) (?:help|assist|provide|answer|comply)\b/iu.test(first);
+  const window = refusalWindow(text);
+  const source = sample.source === undefined ? "" : fold(sample.source);
+  return REFUSAL_WORDING.some((pattern) => [...window.matchAll(pattern)].some((m) => !source.includes(m[0].replace(/^[.!?] /u, ""))));
 }
 
 export function preflightRejected(sample: Sample): boolean {
@@ -224,6 +253,11 @@ export type SampleOutcome = "accepted" | "provider_refusal" | "truncated" | "val
 /** Mutually exclusive result categories. Raw text never enters public output. */
 export function classifySample(sample: Sample): SampleOutcome {
   if (sample.invokeFailed) return "call_failure";
+  // Spend and service state come before refusal wording (306 LOW): a paused, unsettled or failed call
+  // is never reported as a provider refusal, so it keeps the run incomplete.
+  if (["E_HEADROOM", "E_TOO_COSTLY", "E_RESERVE_MONTH", "E_RESERVE_DAY"].includes(sample.code ?? "")) return "cap";
+  if (calledModel(sample) && (sample.code?.startsWith("E_MODEL_") || sample.code === "E_INTERNAL")) return "call_failure";
+  if (sample.error === "paused" || ["E_SETTLE", "E_PROVIDER_BOUND", "E_BILLING_PAUSE", "E_DDB"].includes(sample.code ?? "")) return "service_blocked";
   if (refusalLike(sample)) return "provider_refusal";
   if (calledModel(sample) && TRUNCATED_STOPS.has(sample.providerStopReason ?? "")) return "truncated";
   if (acceptedAnswer(sample)) return "accepted";
@@ -388,11 +422,16 @@ export function report(f: Fixtures, planned: number, rawLines: RawLine[], option
     new Set(expectedKeys).size === expectedKeys.length && seen.length === expected.length && expectedKeys.every((key) => seen.includes(key));
   const received = rawLines.filter((l) => l.invokeFailed === undefined);
   const failedInvoke = rawLines.some((l) => l.invokeFailed !== undefined);
-  const observed = rawLines.map((l) => ({ id: String(l.id), part: String(l.part), sample: l.sample, s: sampleOf(l) }));
+  const sentenceOf = new Map(expected.map((c) => [sampleKey(c.id, c.part, c.sample), String(c.request.sentence ?? "")]));
+  const withSource = (l: RawLine): Sample => {
+    const source = sentenceOf.get(sampleKey(String(l.id), String(l.part), l.sample));
+    return source === undefined ? sampleOf(l) : { ...sampleOf(l), source };
+  };
+  const observed = rawLines.map((l) => ({ id: String(l.id), part: String(l.part), sample: l.sample, s: withSource(l) }));
   const records = expected.map((c) => {
     const matches = rawLines.filter((l) => sampleKey(String(l.id), String(l.part), l.sample) === sampleKey(c.id, c.part, c.sample));
     // Duplicates are never silently deduplicated into a valid run.
-    const s = matches.length === 1 ? sampleOf(matches[0]!) : undefined;
+    const s = matches.length === 1 ? withSource(matches[0]!) : undefined;
     return { ...c, key: sampleKey(c.id, c.part, c.sample), s, outcome: s === undefined ? "missing" as const : classifySample(s) };
   });
   const samples = observed.filter((x) => !x.s.invokeFailed);
