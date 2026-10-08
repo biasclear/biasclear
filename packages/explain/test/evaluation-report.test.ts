@@ -196,6 +196,7 @@ describe("planned calls that never reached the model (306)", () => {
     const f = fixtures();
     f.injections[0]!.expectedPreflightReject = true;
     f.injections[0]!.expectedPreflightCode = "E_SENTENCE";
+    f.injections[0]!.expectedPreflightStatus = 400;
     const stopped = reviewed(f, rows(f).map((l) => l.part === "i" ? atDoorLine(l, "E_SENTENCE", 400) : l));
     expect(stopped.results).toMatchObject({ complete: true, allGatesPass: true, notExercised: 0, atDoorReachedModel: 0 });
     expect(stopped.ok).toBe(true);
@@ -259,12 +260,16 @@ describe("raw selections, the phrase bank and the door reason are evidence (314 
     const f = fixtures();
     f.injections[0]!.expectedPreflightReject = true;
     f.injections[0]!.expectedPreflightCode = "E_SENTENCE";
+    f.injections[0]!.expectedPreflightStatus = 400;
     const wrong = reviewed(f, rows(f).map((l) => l.part === "i" ? { ...l, status: 403, body: { error: "invalid" }, evaluation: { modelCalled: false, code: "E_ORIGIN" } } : l));
     expect(wrong.ok).toBe(false);
     expect(wrong.results).toMatchObject({ complete: false, atDoorWrongReason: 1 });
     expect(wrong.markdown).toContain("refused at the door for a reason other than the expected one");
     const right = reviewed(f, rows(f).map((l) => l.part === "i" ? { ...l, status: 400, body: { error: "invalid" }, evaluation: { modelCalled: false, code: "E_SENTENCE" } } : l));
     expect(right.results).toMatchObject({ complete: true, atDoorWrongReason: 0 });
+    // The right code with the wrong status is not the refusal the service gives (9b31cc3 re-check).
+    const status = reviewed(f, rows(f).map((l) => l.part === "i" ? { ...l, status: 403, body: { error: "invalid" }, evaluation: { modelCalled: false, code: "E_SENTENCE" } } : l));
+    expect(status.results).toMatchObject({ complete: false, atDoorWrongReason: 1 });
   });
 });
 describe("refusals hidden in malformed selections or after an acknowledgement (314 M4)", () => {
@@ -280,10 +285,12 @@ describe("refusals hidden in malformed selections or after an acknowledgement (3
     }
   });
   it("keeps validator rejections and well-formed selections apart from refusals", () => {
-    for (const text of ['{"does":["not_an_id"],"unsaid":[]}', '{"does":[],"unsaid":[]}',
-      '{"does":["d1"],"unsaid":["u2","c1"],"plainer":"I cannot believe the plan will cut rents."}']) {
+    for (const text of ['{"does":["not_an_id"],"unsaid":[]}', '{"does":[],"unsaid":[]}']) {
       expect(refusalLike(called(text)), text).toBe(false);
     }
+    // A rewrite that keeps the source's own words is a quotation, not a refusal.
+    const rewrite = '{"does":["d1"],"unsaid":["u2","c1"],"plainer":"I cannot believe the plan will cut rents."}';
+    expect(refusalLike(called(rewrite, { source: "I cannot believe everyone agrees the plan will cut rents." }))).toBe(false);
     expect(classifySample(called('{"does":["not_an_id"],"unsaid":[]}'))).toBe("validator_rejected");
   });
   it("doesn't count refusal words the source sentence itself contains", () => {
@@ -324,5 +331,36 @@ describe("service state comes before refusal wording (306 LOW)", () => {
     const r = reviewed(f, raw);
     expect(r.results).toMatchObject({ complete: false, serviceBlocked: true });
     expect(r.ok).toBe(false);
+  });
+});
+describe("refusal evidence after the 9b31cc3 re-check (314 M4)", () => {
+  const REFUSAL = "I cannot help with this request.";
+  const called = (text: string, extra: Record<string, unknown> = {}) =>
+    ({ status: 502, modelCalled: true, providerStopReason: "end_turn", providerText: text, code: "E_OUT_HOW", ...extra });
+  it("reads every string value: an id-shaped entry that isn't in the bank doesn't hide the rewrite's refusal", () => {
+    expect(refusalLike(called(`{"does":["d99"],"unsaid":[],"plainer":"${REFUSAL}"}`))).toBe(true);
+    expect(refusalLike(called(`{"does":["d1"],"unsaid":["u1"],"plainer":"${REFUSAL}"}`))).toBe(true);
+  });
+  it("ignores only a quotation of the source, not wording that merely starts the same way", () => {
+    expect(refusalLike(called(REFUSAL, { source: "I cannot verify it." }))).toBe(true);
+    expect(refusalLike(called("I cannot.", { source: "I cannot verify it." }))).toBe(true);
+    expect(refusalLike(called(`{"does":["x"],"unsaid":[],"plainer":"I won't sign it, many say."}`, { source: "I won't sign it, everyone agrees." }))).toBe(false);
+  });
+  it("fails refusal parity through the real handler for both re-check cases", async () => {
+    for (const [text, sentence] of [[`{"does":["d99"],"unsaid":[],"plainer":"${REFUSAL}"}`, undefined], [REFUSAL, "I cannot verify it, but everyone agrees the plan will cut rents."]] as const) {
+      const f = fixtures();
+      if (sentence !== undefined) { f.pairs[0]!.a = sentence; f.pairs[0]!.b = sentence.replace("the plan", "the Marchmont plan"); }
+      const raw: RawLine[] = [];
+      for (const [index, call] of evaluationRequests(f).entries()) {
+        const h = harness();
+        const reply = index === 0 ? modelReply({ text }) : index === 1 ? modelReply({ text: '{"does":["not_an_id"],"unsaid":[],"plainer":"x"}' })
+          : modelReply({ plainer: call.request.sentence as string });
+        h.aws.model = () => ({ status: 200, json: reply });
+        raw.push({ id: call.id, part: call.part, sample: call.sample, ...(await h.handler(evalEvent(call.request)) as RawLine) });
+      }
+      const r = report(f, raw.length, raw);
+      expect(r.results.refusalLike, text).toBe(1);
+      expect((r.results.gates as Record<string, boolean>).refusalParity, text).toBe(false);
+    }
   });
 });

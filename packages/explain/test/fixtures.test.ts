@@ -152,8 +152,9 @@ describe("the evaluation fixtures", () => {
       // A door exception must name the exact refusal the service gives (314 L3).
       if (inj.expectedPreflightReject) {
         expect(inj.expectedPreflightCode).toBe("E_SENTENCE");
+        expect(inj.expectedPreflightStatus).toBe(400);
         expect(() => validateRequest(requestFor(inj.sentence, inj.rule))).toThrow(inj.expectedPreflightCode);
-      } else expect(inj.expectedPreflightCode).toBeUndefined();
+      } else expect([inj.expectedPreflightCode, inj.expectedPreflightStatus]).toEqual([undefined, undefined]);
       if (!inj.expectedPreflightReject) expect(() => validateRequest(requestFor(inj.sentence, inj.rule))).not.toThrow();
     });
   }

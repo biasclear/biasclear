@@ -34,7 +34,8 @@ Parameters:
     Description: >-
       The whole account's monthly budget, credits excluded: Explain's model
       cap ($25) plus $5 for the small services around it. At 100% of it, the
-      budget takes the model away from the function until a person reverses it.
+      budget takes the model away from the function until a person reverses it
+      or the next budget month begins (AWS resets IAM-policy actions then).
   GitHubOwner:
     Type: String
     Default: biasclear
