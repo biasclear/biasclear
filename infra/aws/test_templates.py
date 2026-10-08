@@ -338,18 +338,23 @@ class TestSetupIam:
             assert all("bedrock:*" not in resource["Fn::Sub"] for resource in model["Resource"])
         assert sorted(by_sid["TheCounters"]["Action"]) == [
             "dynamodb:ConditionCheckItem",
-            "dynamodb:DeleteItem",
             "dynamodb:GetItem",
             "dynamodb:PutItem",
             "dynamodb:UpdateItem",
         ]
         assert by_sid["TheCounters"]["Resource"] == {"Fn::GetAtt": ["Table", "Arn"]}
+        # The function may delete only old salts, never the billing pause, a debt row or a counter (306 LOW).
+        salts = by_sid["DeleteOldSaltsOnly"]
+        assert salts["Action"] == "dynamodb:DeleteItem" and salts["Resource"] == {"Fn::GetAtt": ["Table", "Arn"]}
+        assert salts["Condition"] == {"ForAllValues:StringLike": {"dynamodb:LeadingKeys": ["salt#*"]}}
+        deleters = [s for s in stmts if s.get("Effect") == "Allow" and "dynamodb:DeleteItem" in as_list(s["Action"])]
+        assert deleters == [salts]
         assert sorted(by_sid["TheLogGroup"]["Action"]) == ["logs:CreateLogStream", "logs:PutLogEvents"]
         assert by_sid["TheLogGroup"]["Resource"]["Fn::Sub"].endswith(":log-group:/biasclear/explain:*")
         actions = {a for s in stmts for a in as_list(s["Action"])}
         assert not {a for a in actions if "Stream" in a and a.startswith("bedrock:")}
         assert not {a for a in actions if a.startswith(("aws-marketplace:", "bedrock:Put", "bedrock-mantle:", "iam:"))}
-        assert len(stmts) == 10
+        assert len(stmts) == 11  # + DeleteOldSaltsOnly (306 LOW)
 
     def test_privacy_reads_are_exact_and_region_scoped(self):
         for name in ["FunctionRole", "DeployRole"]:

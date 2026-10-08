@@ -392,9 +392,17 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
-                  - dynamodb:DeleteItem
                   - dynamodb:ConditionCheckItem
                 Resource: !GetAtt Table.Arn
+              # The function deletes only old daily salts (ratelimit.ts). It can't delete the
+              # billing pause, a debt row or a counter: clearing those is the owner's (306 LOW).
+              - Sid: DeleteOldSaltsOnly
+                Effect: Allow
+                Action: dynamodb:DeleteItem
+                Resource: !GetAtt Table.Arn
+                Condition:
+                  ForAllValues:StringLike:
+                    dynamodb:LeadingKeys: ["salt#*"]
               - Sid: TheLogGroup
                 Effect: Allow
                 Action:
