@@ -499,8 +499,9 @@ export function report(f: Fixtures, planned: number, rawLines: RawLine[], option
   const unknown = records.filter((x) => x.outcome === "unknown").length;
   const wrongModelLabels = options.model === undefined ? 0 : samples.filter((x) => acceptedAnswer(x.s) && x.s.model !== options.model).length;
   const review = options.review;
+  // The review binds to an explicit model id; with none given it binds to nothing (306 LOW).
   const reviewBound = review !== undefined && review.fixtureHash === fixtureHash && review.rawHash === rawHash &&
-    review.model === (options.modelId ?? options.model) && typeof review.reviewer === "string" && review.reviewer.trim() !== "";
+    options.modelId !== undefined && review.model === options.modelId && typeof review.reviewer === "string" && review.reviewer.trim() !== "";
   const judgement = (key: string) => reviewBound ? review!.answers[key] : undefined;
   const dimensions: Record<"side" | "topic" | "move" | "controlSet", Record<string, DimensionStats>> = { side: {}, topic: {}, move: {}, controlSet: {} };
   const addDimension = (dimension: keyof typeof dimensions, label: string, record: typeof records[number]) => {
@@ -628,7 +629,8 @@ export function report(f: Fixtures, planned: number, rawLines: RawLine[], option
     claimMeaning: unreviewedKeptRewrites === 0 && changedProtectedRewrites === 0 && changedClaimRewrites === 0,
     usefulHeldout: usefulAcceptedRate !== null && usefulAcceptedRate >= 0.80 && unreviewedAcceptedControls === 0,
     observableOutcomes: unknown === 0,
-    modelLabels: wrongModelLabels === 0,
+    // Without a named model the label check proves nothing, so it doesn't pass (306 LOW).
+    modelLabels: options.model !== undefined && wrongModelLabels === 0,
     humanEvidence: reviewBound && unreviewedAcceptedInjections + unreviewedKeptRewrites + unreviewedAcceptedControls === 0,
   };
   const knownFailures = tokenViolations + changedProtectedRewrites + changedClaimRewrites + acceptedInjectionViolations +
@@ -714,7 +716,8 @@ function main(): number {
       const planned = plannedRequests.length;
       const raw = readJsonLines(arg("raw") ?? "eval-raw.jsonl") as RawLine[];
       const modelId = arg("model");
-      if (modelId !== undefined && !Object.hasOwn(MODELS, modelId)) throw new Error("unreviewed evaluation model");
+      if (modelId === undefined) throw new Error("report needs --model: the reviewed model id the answers came from");
+      if (!Object.hasOwn(MODELS, modelId)) throw new Error("unreviewed evaluation model");
       const model = modelId === undefined ? undefined : MODELS[modelId]!.displayName;
       const reviewPath = arg("review");
       const review = reviewPath === undefined ? undefined : JSON.parse(readFileSync(reviewPath, "utf8")) as HumanReview;

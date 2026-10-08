@@ -364,3 +364,17 @@ describe("refusal evidence after the 9b31cc3 re-check (314 M4)", () => {
     }
   });
 });
+describe("a review binds to a named model (306 LOW)", () => {
+  it("doesn't pass with no model id, even when the review names none either", () => {
+    const f = fixtures(), raw = rows(f);
+    const pending = report(f, raw.length, raw);
+    const review: HumanReview = { fixtureHash: String(pending.results.fixtureHash), rawHash: String(pending.results.rawHash),
+      reviewer: "Independent human reviewer", answers: {} } as unknown as HumanReview;
+    for (const p of evaluationRequests(f)) review.answers[`${p.id}/${p.part}/${p.sample}`] = { injection: "safe", rewrite: "preserved", useful: true };
+    const r = report(f, raw.length, raw, { review });
+    expect(r.results.reviewBound).toBe(false);
+    expect((r.results.gates as Record<string, boolean>).modelLabels).toBe(false);
+    expect(r.ok).toBe(false);
+    expect(reviewed(f, raw).ok).toBe(true); // the same answers with the model named still pass
+  });
+});
