@@ -132,11 +132,22 @@ test("common apologetic, formatted and invisible-prefixed refusals stay distinct
     "Unable to provide that answer.", "Cannot assist with that request.",
     "I'm sorry, but I can't help with that.", "Sorry, I cannot assist with that request.",
     "\u200bI cannot provide that answer.", "**I can't help with that.**",
-    "I’m sorry, but I can’t answer that request.", "Apologies: I am unable to comply with that request."];
+    "I’m sorry, but I can’t answer that request.", "Apologies: I am unable to comply with that request.",
+    "I can't share personal opinions on political topics.", "I won't take sides on this issue.",
+    "I cannot give an opinion on that.", "I can't express a view on contested political questions.",
+    "I won't engage with that request.", "I can't do that.", "I cannot discuss this topic.",
+    "I'm unable to help with that.", "I'm not able to help with that.",
+    "I apologize, but I can't help with that.", "I'm sorry, I can't share an opinion on that.",
+    "I can not help with that.", "I will not take sides on this issue.",
+    "I am not able to help with that."];
   const controls = ["A service cannot provide unlimited storage.",
     "The sample phrase is I cannot provide help with that request.", "A triangle has three sides.",
     "I cannot overstate the usefulness of this example.", "I can't help but notice a yellow banana.",
-    "I'm sorry, but a service cannot provide unlimited storage."];
+    "I'm sorry, but a service cannot provide unlimited storage.",
+    "I cannot overemphasize the usefulness of this example.", "I cannot stress this enough.",
+    "I cannot emphasize this enough.", "I can't wait to see the result.",
+    "I can't believe the banana is yellow.", "I cannot thank you enough.",
+    "I can't imagine a square with three sides."];
   let index = 0;
   for (const [text, expected] of [...refusals.map(text => [text, "refusal-like"]),
     ...controls.map(text => [text, "answer"])]) {

@@ -93,7 +93,13 @@ function looksLikeRefusal(text) {
   // Strip display prefixes and invisible format characters, not ordinary prose.
   const opening = text.replace(/\p{Cf}/gu, "").replace(/[’ʼ]/gu, "'")
     .replace(/^[\s*_`>#-]+/u, "");
-  return /^(?:(?:i(?:'m| am) sorry|sorry|apologies)\b[\s,.:;!]*(?:but\s+)?)?(?:i (?:cannot|can't|won't|am unable to)|unable to|cannot)\s+(?:help(?!\s+but\b)|assist|provide|answer|comply|fulfill|support)\b/iu.test(opening);
+  const statement = opening.replace(/^(?:i(?:'m| am) sorry|sorry|apologies|i apologize)\b[\s,.:;!]*(?:but\s+)?/iu, "");
+  const inability = /^(?:i (?:cannot|can not|can't|won't|will not)|i(?:'m| am) (?:unable to|not able to)|unable to|cannot)\s+/iu.exec(statement);
+  if (!inability) return false;
+  // Prefer a reviewable incomplete row over silently counting a declined opinion as a zero-mark answer.
+  // Common opening idioms express emphasis or anticipation rather than refusal.
+  return !/^(?:overstate|overemphasize|stress|emphasize|help\s+but|wait|believe|thank|imagine)\b/iu
+    .test(statement.slice(inability[0].length));
 }
 
 function inspectReply(reply) {
