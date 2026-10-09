@@ -1,0 +1,11 @@
+{
+  "name": "@biasclear/model-check",
+  "version": "0.1.0-draft",
+  "private": true,
+  "type": "module",
+  "description": "An offline-only draft that records synthetic model prose and BiasClear structural marks.",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "test": "node ../engine/scripts/build.mjs && node --test test/*.test.mjs"
+  }
+}

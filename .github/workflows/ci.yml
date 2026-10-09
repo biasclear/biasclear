@@ -64,6 +64,14 @@ jobs:
             echo "::endgroup::"
           done
 
+      # Model Check: offline replay only. No provider, network or secret.
+      # Runs the archived-question integrity checks but never the questions.
+      - name: Model Check (offline)
+        working-directory: packages/model-check
+        run: |
+          set -euo pipefail
+          npm test
+
       # The website: builds it (engine included) in a temporary folder and
       # checks what it would ship: the security policy on every page, no
       # third-party requests, every link resolving, the engine bundle
