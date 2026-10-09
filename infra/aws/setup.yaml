@@ -36,6 +36,7 @@ Parameters:
       cap ($25) plus $5 for the small services around it. At 100% of it, the
       budget takes the model away from the function until a person reverses it
       or the next budget month begins (AWS resets IAM-policy actions then).
+      Explain's own lasting pause keeps it off after that (README.md).
   GitHubOwner:
     Type: String
     Default: biasclear
@@ -555,13 +556,19 @@ Resources:
           Value: explain
 
   # At 100% of actual spend, attach the deny policy to the function's role,
-  # with no approval step. Explain then answers "paused" until a person
+  # with no approval step. Bedrock then refuses the function until a person
   # reverses the action (Budgets > biasclear-explain > Actions > Reverse) or
   # the next budget month begins: AWS resets IAM-policy actions at the start
   # of each budget period and detaches the policy (AWS blog posts, 2020 and
-  # 2021; the user guide doesn't say). Nothing here makes a person look
-  # first. Budgets stops checking a reversed action until the next month, so
-  # the second action below is the last stop after a reversal.
+  # 2021; the user guide doesn't say). Explain stays off after that reset
+  # until a person checks (owner decision D5, 2026-10-09): the first refusal
+  # the function sees whose message says "explicit deny" writes its lasting
+  # billing#pause (reason E_BEDROCK_DENIED), which the function can't delete;
+  # clearing it needs a separately reviewed recovery tool (README.md). It is
+  # written only if a request arrives while the policy is attached, and only
+  # while AWS words the refusal that way. Budgets stops checking a reversed
+  # action until the next month, so the second action below is the last stop
+  # after a reversal.
   BudgetAction:
     Type: AWS::Budgets::BudgetsAction
     # BudgetName is a plain name, so the budget must exist first. The roles and

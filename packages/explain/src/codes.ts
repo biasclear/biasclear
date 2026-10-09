@@ -69,8 +69,15 @@ export const CODES = [
   "E_RATE_SHORT",
   "E_RATE_DAILY",
   "E_RATE_LISTED",
+  // Bedrock refused the function with an explicit deny (HTTP 403 / AccessDeniedException whose message
+  // says "explicit deny") on the model call or a settings read: most likely the $30 budget action's deny
+  // policy. It writes the lasting pause, so Explain stays off until a person checks, even after AWS
+  // resets the action (owner decision D5, 2026-10-09).
+  "E_BEDROCK_DENIED",
   // the model call (SPEC §8 step 7)
   "E_MODEL_THROTTLED",
+  // no credentials, or Amazon refusing without an explicit deny: the model isn't switched on yet (setup
+  // step 3), a missing permission or an expired token; this instance pauses for 15 minutes
   "E_MODEL_DENIED",
   "E_MODEL_NOT_FOUND",
   "E_MODEL_VALIDATION",

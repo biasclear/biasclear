@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { BILLING_PAUSE_KEY } from "../src/spend.js";
 import { ConflictAws } from "./conflicts.js";
-import { harness, httpEvent, modelReply, type Harness } from "./helpers.js";
+import { explicitDenyMessage, harness, httpEvent, modelReply, type Harness } from "./helpers.js";
 
 const yaml = readFileSync(decodeURIComponent(new URL("../../../infra/aws/explain.yaml", import.meta.url).pathname), "utf8");
 const pattern = /FilterPattern: '([^']+)'/.exec(yaml)![1]!;
@@ -66,6 +66,14 @@ describe("the billing-anomaly filter sees anomaly lines as Lambda stores them (3
     expect(lines.map((l) => (JSON.parse(l) as { code: string }).code)).toEqual(["E_PROVIDER_BOUND", "E_SETTLE", "E_MODEL_NO_USAGE"]);
     expect((JSON.parse(lines[1]!) as { pausePersisted: number }).pausePersisted).toBe(0);
     for (const line of lines) for (const event of stored(line)) expect(matches(event), event).toBe(true);
+  });
+
+  it("matches the lasting pause after Bedrock's refusal (the budget action fired; D5, 2026-10-09)", async () => {
+    const h = harness();
+    h.aws.model = () => ({ status: 403, errorType: "AccessDeniedException", json: { message: explicitDenyMessage("bedrock:InvokeModel") } });
+    await h.call(httpEvent());
+    expect(JSON.parse(lastLine(h))).toMatchObject({ code: "E_BEDROCK_DENIED", pausePersisted: 1 });
+    for (const event of stored(lastLine(h))) expect(matches(event), event).toBe(true);
   });
 
   it("stays quiet for an answer and for ordinary refusals", async () => {

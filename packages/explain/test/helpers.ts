@@ -154,6 +154,20 @@ export function converseReply(reply: Record<string, unknown>): Record<string, un
   return { output: { message: { role: "assistant", content } }, stopReason: reply.stop_reason, usage };
 }
 
+/** AWS's documentation example account and a made-up session: not real identifiers. */
+const ACCOUNT = "111122223333";
+const CALLER = `arn:aws:sts::${ACCOUNT}:assumed-role/biasclear-explain-function/biasclear-explain`;
+
+/** How AWS words a refusal by a Deny in an identity-based policy, such as the budget action's. */
+export function explicitDenyMessage(action: string, resource = "*"): string {
+  return `User: ${CALLER} is not authorized to perform: ${action} on resource: ${resource} with an explicit deny in an identity-based policy: arn:aws:iam::${ACCOUNT}:policy/biasclear-explain-deny-bedrock`;
+}
+
+/** How AWS words a refusal for want of an allow: no Deny involved. */
+export function noAllowMessage(action: string, resource = "*"): string {
+  return `User: ${CALLER} is not authorized to perform: ${action} on resource: ${resource} because no identity-based policy allows the ${action} action`;
+}
+
 export type ModelScript = (body: Record<string, unknown>) =>
   | { status: number; json?: unknown; errorType?: string }
   | "timeout"
@@ -306,10 +320,21 @@ export class FakeAws {
   readonly modelCalls: Array<Record<string, unknown>> = [];
   readonly calls: AwsCall[] = [];
   model: ModelScript = () => ({ status: 200, json: modelReply() });
-  settings: { logging: unknown; retention: string } | "fail" = { logging: {}, retention: "none" };
+  /** "fail" is a server error; "denied" a refusal by an explicit deny (the budget action's deny policy);
+   * "refused" a refusal without one (no policy allows the read); "network" and "timeout" no answer. */
+  settings: { logging: unknown; retention: string } | "fail" | "denied" | "refused" | "network" | "timeout" = { logging: {}, retention: "none" };
   settingsReads = 0;
   /** Regional retention fixtures; absent entries use the common settings above. */
-  regionalRetention: Record<string, string | "fail"> = {};
+  regionalRetention: Record<string, string | "fail" | "denied" | "refused"> = {};
+
+  /** A 403 AccessDeniedException as Bedrock words it, by an explicit deny or for want of an allow. */
+  static refusal(how: "denied" | "refused", action: string): AwsReply {
+    return {
+      status: 403,
+      headers: { "x-amzn-errortype": "AccessDeniedException:http://internal.amazon.com/coral/com.amazon.bedrock/" },
+      body: JSON.stringify({ message: how === "denied" ? explicitDenyMessage(action) : noAllowMessage(action) }),
+    };
+  }
 
   readonly transport: Transport = async (call) => {
     this.calls.push(call);
@@ -330,6 +355,10 @@ export class FakeAws {
     }
     if (call.host.startsWith("bedrock.")) {
       this.settingsReads++;
+      if (this.settings === "network" || this.settings === "timeout") throw new TransportError(this.settings);
+      if (this.settings === "denied" || this.settings === "refused") {
+        return FakeAws.refusal(this.settings, call.path === "/data-retention" ? "bedrock:GetAccountDataRetention" : "bedrock:GetModelInvocationLoggingConfiguration");
+      }
       if (this.settings === "fail") return { status: 500, headers: {}, body: "{}" };
       if (call.path === "/logging/modelinvocations") {
         const logging = this.settings.logging;
@@ -339,6 +368,7 @@ export class FakeAws {
       if (call.path === "/data-retention") {
         const region = call.host.split(".")[1]!;
         const mode = this.regionalRetention[region] ?? this.settings.retention;
+        if (mode === "denied" || mode === "refused") return FakeAws.refusal(mode, "bedrock:GetAccountDataRetention");
         if (mode === "fail") return { status: 500, headers: {}, body: "{}" };
         return { status: 200, headers: {}, body: JSON.stringify({ mode }) };
       }

@@ -128,14 +128,54 @@ export function errorMessage(body: string): string {
   return typeof m === "string" ? m.slice(0, 2000) : "";
 }
 
+/** Bedrock answered and refused the function. A timeout, a network failure, a throttle or a server
+ * error is never a refusal. */
+export function isAccessDenied(status: number, errorType: string): boolean {
+  return status === 403 || errorType.split(":")[0] === "AccessDeniedException";
+}
+
+/**
+ * AWS's wording for a refusal by a Deny statement (an identity-based policy, an SCP, a permissions
+ * boundary or a session policy): "... is not authorized to perform: <action> on resource: <arn> with an
+ * explicit deny in an identity-based policy[: <policy arn>]". The $30 budget action's deny policy is
+ * one (infra/aws/setup.yaml). Read from AWS's message, matched against this fixed pattern, never logged.
+ */
+const EXPLICIT_DENY = /explicit deny/iu;
+
+/**
+ * A refusal by an explicit Deny, on the model call or a settings read alike, so the two can't drift
+ * apart. Only this writes the lasting pause (owner decision D5, 2026-10-09). Any other refusal (model
+ * access not switched on yet, a Marketplace subscription AWS is still completing, a missing allow, an
+ * expired token, an empty 403) pauses one instance for 15 minutes, as before. If AWS ever changes
+ * this wording, the budget's stop still blocks the model, but no lasting pause is written.
+ */
+export function isExplicitDeny(status: number, errorType: string, message: string): boolean {
+  return isAccessDenied(status, errorType) && EXPLICIT_DENY.test(message);
+}
+
+/** A settings read Bedrock refused with an explicit deny. Its message is a fixed word, never AWS's text. */
+export class BedrockDenied extends Error {
+  constructor() {
+    super("denied");
+    this.name = "BedrockDenied";
+  }
+}
+
 /** Sorts a Bedrock error into billed or not, and what the visitor sees. */
 export function classifyError(status: number, errorType: string, message = ""): ModelOutcome {
   const type = errorType.split(":")[0] ?? "";
   if (status === 429 || type === "ThrottlingException" || type === "ModelNotReadyException") {
     return { modelCalled: true, kind: "not-billed", code: "E_MODEL_THROTTLED", answer: "busy", pauseInstance: false };
   }
-  if (status === 403 || type === "AccessDeniedException") {
-    // The budget action or a policy has taken the model away: a person should look.
+  if (isExplicitDeny(status, errorType, message)) {
+    // The budget action or another Deny has taken the model away. Not billed; the caller also writes
+    // the lasting pause, so Explain stays off until a person checks (owner decision D5, 2026-10-09).
+    return { modelCalled: true, kind: "not-billed", code: "E_BEDROCK_DENIED", answer: "paused", pauseInstance: true };
+  }
+  if (isAccessDenied(status, errorType)) {
+    // No explicit deny: most often the model isn't switched on yet (setup step 3; a third-party model's
+    // Marketplace subscription can keep refusing for a few minutes after), or a missing permission or
+    // an expired token. Not billed; this instance pauses for 15 minutes and nothing is written.
     return { modelCalled: true, kind: "not-billed", code: "E_MODEL_DENIED", answer: "paused", pauseInstance: true };
   }
   if (status === 404 || type === "ResourceNotFoundException") {
@@ -182,6 +222,7 @@ export async function converseModel(
   } catch (err) {
     const kind = err instanceof TransportError ? err.kind : "network";
     if (kind === "credentials") {
+      // No credentials to sign with: Bedrock never answered, so this is not its refusal (this instance only).
       return { modelCalled: false, kind: "not-billed", code: "E_MODEL_DENIED", answer: "paused", pauseInstance: true };
     }
     return { modelCalled: true, kind: "maybe-billed", code: kind === "timeout" ? "E_MODEL_TIMEOUT" : "E_MODEL_NETWORK" };
@@ -227,20 +268,29 @@ async function getJson(transport: Transport, region: string, path: string): Prom
     body: "",
     timeoutMs: SETTINGS_TIMEOUT_MS,
   });
-  if (reply.status !== 200) throw new Error("settings read failed");
+  if (reply.status !== 200) {
+    const denied = isExplicitDeny(reply.status, reply.headers["x-amzn-errortype"] ?? "", errorMessage(reply.body));
+    throw denied ? new BedrockDenied() : new Error("settings read failed");
+  }
   const json = parseJsonOrUndefined(reply.body);
   if (json === null || typeof json !== "object" || Array.isArray(json)) throw new Error("settings read failed");
   return json as Record<string, unknown>;
 }
 
 /** CRIS invocation logs remain in the source region. Retention is regional:
- * read every approved processing destination, with no unknown/default fallback. */
+ * read every approved processing destination, with no unknown/default fallback.
+ * Throws BedrockDenied when any read was refused with an explicit deny, whichever read failed first. */
 export async function readAccountSettings(transport: Transport, region: string, destinationRegions: readonly string[] = [region]): Promise<AccountSettings> {
   const regions = [...new Set([region, ...destinationRegions])];
-  const [logging, ...retentions] = await Promise.all([
+  const results = await Promise.allSettled([
     getJson(transport, region, "/logging/modelinvocations"),
     ...regions.map((r) => getJson(transport, r, "/data-retention")),
   ]);
+  if (results.some((r) => r.status === "rejected" && r.reason instanceof BedrockDenied)) throw new BedrockDenied();
+  const [logging, ...retentions] = results.map((r) => {
+    if (r.status === "rejected") throw new Error("settings read failed");
+    return r.value;
+  });
   const config = logging!.loggingConfig;
   const loggingOn = config !== undefined && config !== null && (typeof config !== "object" || Object.keys(config).length > 0);
   const modes: Record<string, string> = {};
