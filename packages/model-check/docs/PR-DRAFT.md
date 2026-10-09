@@ -14,7 +14,7 @@ Use the single unmerged Explain draft's registry with pinned reviewed content ha
 
 ## Changes
 
-- Add `packages/model-check` only, with no new dependency. Keep the October7 design, questions and manifest byte-for-byte unchanged and unrun.
+- Add `packages/model-check` and one offline-test step in the required `test` job, with no new dependency. Keep the October7 design, questions and manifest byte-for-byte unchanged and unrun.
 - Snapshot validation inputs; preserve source text and historical fingerprints across JSON round trips; derive bridge IDs from source hashes; enforce explicit question/registry/model/domain receipt binding.
 - Retain exact final text blocks, Unicode/CRLF, UTF-16 spans, settings, routes, timestamps, local-processing time, hashes and distinct incomplete/usage/scan states.
 - Rehearse fixed $25/month and $2.50/day admission with reservation before replay, run-start accounting periods, sticky cap stops and retained unknown charges.
@@ -26,7 +26,7 @@ This draft prepares Model Check without a provider transport or public interface
 
 ## How I know it works
 
-With Node22.23.3, `npm test` in `packages/model-check` rebuilds the existing engine and passes67/67 tests. Tests exercise request/settings identity, independently computed approval fingerprints, registry-price drift, receipt fields, source/hash/status tampering, archive integrity, cap stops, usage breaches/overflow, latency separation, Unicode and reasoning exclusions, exact spans, file modes/exclusive creation, real CLI artifacts/error codes and import boundaries. Node reports its experimental MockTimers warning for the clock tests. The real importer was independently run against the exact local Git object for Explain dfcc8d3: source/table hashes match, Sol stays unverified, output0600 and overwrite refusal pass, with no model calls. The earlier ten C1 mutants were killed at the preceding reviewed candidate. This delta adds a frozen real importer fixture and an accepting positive control, then independently refuses commit, source and verification tampering before replay. Its focused24/24 baseline kills all four newly surviving pin mutants, both input-snapshot removals, the restored refusal regression and the removed historical-ID restriction through assertions. No syntax failure or timeout counts as a kill. Claude's exact delta recheck is required before publication; its reference will be added after receipt.
+With Node22.23.3, `npm test` in `packages/model-check` rebuilds the existing engine and passes67/67 tests. Tests exercise request/settings identity, independently computed approval fingerprints, registry-price drift, receipt fields, source/hash/status tampering, archive integrity, cap stops, usage breaches/overflow, latency separation, Unicode and reasoning exclusions, exact spans, file modes/exclusive creation, real CLI artifacts/error codes and import boundaries. Node reports its experimental MockTimers warning for the clock tests. The real importer was independently run against the exact local Git object for Explain dfcc8d3: source/table hashes match, Sol stays unverified, output0600 and overwrite refusal pass, with no model calls. The earlier ten C1 mutants were killed at the preceding reviewed candidate. This delta adds a frozen real importer fixture and an accepting positive control, then independently refuses commit, source and verification tampering before replay. Its focused24/24 baseline kills all four newly surviving pin mutants, both input-snapshot removals, the restored refusal regression and the removed historical-ID restriction through assertions. No syntax failure or timeout counts as a kill. The final refusal fix adds 24 refusal forms and 13 ordinary-prose/idiom controls; restoring the prior verb list fails one assertion. Claude independently cleared the exact function/test fix at0c79f19 in review331 after verifying every327 acceptance probe. The separate workflow delta also needs Claude's review before publication.
 
 ## Testing
 
@@ -41,17 +41,17 @@ No public metric changes. The local test command reports67 tests, and all replay
 
 ## Protected paths touched
 
-None. All changes are under `packages/model-check`; engine source, rules, website, workflows, licenses, root instructions and ops are unchanged.
+`.github/workflows/ci.yml`: Issue13 now explicitly names this path. The sole workflow change adds `npm test` in `packages/model-check` after the engine step in the existing required `test` job. The owner merges this protected path. Engine source, rules, website, licenses, root instructions and ops are unchanged.
 
 ## Found along the way
 
-The required repository CI job does not execute this package; reviewed CI wiring is required before any merge. Existing PR10/12 CI also hit an unchanged engine timing guard; that investigation is separate and no limit was weakened. All actual model rows retain unresolved billed-reasoning/input-bound evidence, and Sol's low-effort settings remain unverified. The offline ledger cannot enforce account spending. Local approval receipts are unauthenticated and reusable; operators must independently verify the referenced approval. Overridden programmatic ledger methods, heuristic refusal labels, inherited ACLs/cloud synchronization and hostile parent directories remain explicit offline limitations. Declared engine revision and bundle hashes do not authenticate source or installation. The instruction ending “in a table per model and” remains unresolved.
+Current main does not execute this package in CI; this draft adds that coverage to the required `test` job. Its PR log must show the new step passing before merge. Existing PR10/12 CI also hit an unchanged engine timing guard; that investigation is separate and no limit was weakened. All actual model rows retain unresolved billed-reasoning/input-bound evidence, and Sol's low-effort settings remain unverified. The offline ledger cannot enforce account spending. Local approval receipts are unauthenticated and reusable; operators must independently verify the referenced approval. Overridden programmatic ledger methods, heuristic refusal labels, inherited ACLs/cloud synchronization and hostile parent directories remain explicit offline limitations. Declared engine revision and bundle hashes do not authenticate source or installation. The instruction ending “in a table per model and” remains unresolved.
 
 Duplicate JSON keys in historical source text remain a disclosed offline limitation: parsing uses the final value while raw text retains earlier values. Parsed records govern validation and execution; raw text is not an approval. Plain question sets now refuse the historical bridge-ID namespaces without verified lineage.
 
 ## Questions for the PM
 
-PM: Add reviewed CI coverage for this package before any merge; the protected workflow change needs its own named ticket scope and owner review.
+PM: Verify the new offline Model Check step passes in required CI and retain both this step and PR10's Explain step when rebasing whichever merges second. Issue13 names the workflow scope; the owner reviews and merges it.
 PM: Keep the original and proposed question sets unapproved/unrun until the owner chooses exact strings and completes the missing instruction.
 PM: Keep real execution separate and blocked until shared persistent accounting, total billed-token bounds, privacy checks and owner-authorized spend are independently proven.
 
@@ -64,6 +64,6 @@ PM: Keep real execution separate and blocked until shared persistent accounting,
 - [x] Rule structure and pack unchanged; no new persuasion rule or symmetry behavior.
 - [x] No public numeric claim added; local counts trace to the test command.
 - [x] No public interface changed; site accessibility checks do not apply to this offline CLI.
-- [x] No protected path changed; no triggering Codex handle in this text.
+- [x] The protected workflow change is explicitly named in Issue13; no triggering Codex handle in this text.
 
 — Codex (builder)
