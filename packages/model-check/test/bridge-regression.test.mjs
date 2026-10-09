@@ -75,6 +75,16 @@ test("a bridge ID binds its source bytes, and a synthetic bridge still needs a s
   // Neither synthetic set, nor the archived set, is passed to an adapter here.
 });
 
+test("a plain question set cannot use the historical bridge ID namespaces", () => {
+  for (const id of [`draft-${ARCHIVE_HASH.slice(0, 32)}`, "draft-synthetic", "oct07-unapproved-draft"]) {
+    const plain = { ...structuredClone(NEUTRAL_SET), kind: "owner-draft", id };
+    assert.throws(() => validateQuestionSet(plain), { code: "E_QUESTION_SET" }, id);
+  }
+  const control = { ...structuredClone(NEUTRAL_SET), kind: "owner-draft", id: "neutral-owner-draft" };
+  assert.equal(validateQuestionSet(control).set.id, control.id);
+  assert.equal(validateQuestionSet(bridge()).set.id, `draft-${ARCHIVE_HASH.slice(0, 32)}`);
+});
+
 test("hand-built bridge cannot change archive status or approval even with matching source hashes", () => {
   for (const change of [
     document => { document.ownerApproved = true; },

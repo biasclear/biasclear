@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,10 +10,24 @@ import { registryFromExplainSource } from "../src/registry-import.mjs";
 
 const FIXTURE_ID = "us.fixture.provenance";
 const SOL_ID = "us.openai.gpt-6.1-sol";
+const REVIEWED_FIXTURE_SHA256 = "a5100697c88c2244027859fc55c8095b285d3a65f7a13e1c02e1852143757661";
+const REVIEWED_TABLE_SHA256 = "1bba1367aded6a9dc94cd17d7b120872219623835b2c997f3758e7228404dcd9";
 const OFFICIAL_PROVENANCE = { repository: "biasclear/biasclear", path: "packages/explain/src/models.ts",
   commit: "19eebb338ad5676075c4ab5a971eec6d379ef1bc",
   sourceSha256: "b7d4cd785fad2ab611eb1089fd1ad81223bb07887b01e4eabeedfa0531f58ae0",
   commitVerification: "operator-asserted" };
+
+// Frozen output of the real importer over the local 19eebb3 models.ts Git object.
+// This is test evidence for a reviewed content pin, not current provider availability.
+async function reviewedRegistry() {
+  const bytes = await readFile(new URL("./fixtures/reviewed-registry.json", import.meta.url));
+  assert.equal(createHash("sha256").update(bytes).digest("hex"), REVIEWED_FIXTURE_SHA256);
+  const document = JSON.parse(bytes.toString("utf8"));
+  assert.deepEqual(document.provenance, OFFICIAL_PROVENANCE);
+  assert.equal(document.tableSha256, REVIEWED_TABLE_SHA256);
+  assert.equal(digest(document.table), REVIEWED_TABLE_SHA256);
+  return document;
+}
 
 function registry() {
   const model = { key: "provenance", displayName: "Synthetic fixture provenance", provider: "Synthetic fixture",
@@ -90,20 +105,42 @@ test("rehashed Sol settings under official source claims refuse before any neutr
   assert.deepEqual(await readdir(directory), []);
 }));
 
-test("made-up official commit/source provenance and mismatched reviewed triples refuse", () => {
-  for (const change of [
+test("the frozen real reviewed registry validates and permits neutral replay only", () => withTemp(async directory => {
+  const document = await reviewedRegistry(), modelId = document.table.defaultId;
+  const validated = validateRegistry(document, [modelId]);
+  assert.deepEqual(validated.document, document);
+  assert.equal(validated.document.kind, "explain-reviewed-registry");
+  assert.equal(validated.document.table.models[SOL_ID].settingsVerified, false);
+  const stub = adapter(modelId), artifactDirectory = join(directory, "output");
+  const report = await runModelCheck({ registry: document, modelIds: [modelId], questionSet: NEUTRAL_SET,
+    adapter: stub, artifactDirectory });
+  assert.equal(report.complete, true);
+  assert.equal(report.actualCostUsd, 0);
+  assert.equal(stub.calls.length, NEUTRAL_SET.questions.length);
+  const saved = JSON.parse(await readFile(join(artifactDirectory, "run.json"), "utf8"));
+  assert.deepEqual(saved.registry, document);
+}));
+
+test("real reviewed content refuses wrong commit, source, verification and mixed pins before replay", () => withTemp(async directory => {
+  const mutations = [
     doc => { doc.provenance.commit = "f".repeat(40); },
     doc => { doc.provenance.sourceSha256 = "e".repeat(64); },
+    doc => { doc.provenance.commit = "f".repeat(40); doc.provenance.sourceSha256 = "e".repeat(64); },
     doc => { doc.provenance.commitVerification = "verified"; },
     doc => { doc.provenance.commit = "dfcc8d3ef148420054a222de92d4f36cc6bb87b0"; },
-  ]) {
-    const document = registry();
-    document.kind = "explain-reviewed-registry"; document.provenance = { ...OFFICIAL_PROVENANCE };
-    document.tableSha256 = "1bba1367aded6a9dc94cd17d7b120872219623835b2c997f3758e7228404dcd9";
+    doc => { doc.tableSha256 = "e".repeat(64); },
+    doc => { doc.table.models[doc.table.defaultId].inputPricePerMillion = 1; doc.tableSha256 = digest(doc.table); },
+  ];
+  for (const change of mutations) {
+    const document = await reviewedRegistry(), modelId = document.table.defaultId;
     change(document);
-    assert.throws(() => validateRegistry(document, [FIXTURE_ID]), { code: "E_REGISTRY" });
+    const stub = adapter(modelId);
+    await assert.rejects(runModelCheck({ registry: document, modelIds: [modelId], questionSet: NEUTRAL_SET,
+      adapter: stub, artifactDirectory: join(directory, "must-not-exist") }), { code: "E_REGISTRY" });
+    assert.equal(stub.calls.length, 0);
+    assert.deepEqual(await readdir(directory), []);
   }
-});
+}));
 
 test("source parser labels the commit as operator-asserted without executing source or authenticating lineage", () => {
   const document = registry();

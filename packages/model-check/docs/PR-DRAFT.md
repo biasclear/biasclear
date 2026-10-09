@@ -26,18 +26,18 @@ This draft prepares Model Check without a provider transport or public interface
 
 ## How I know it works
 
-With Node22.23.3, `npm test` in `packages/model-check` rebuilds the existing engine and passes63/63 tests. Tests exercise request/settings identity, independently computed approval fingerprints, registry-price drift, receipt fields, source/hash/status tampering, archive integrity, cap stops, usage breaches/overflow, latency separation, Unicode and reasoning exclusions, exact spans, file modes/exclusive creation, real CLI artifacts/error codes and import boundaries. The real importer was independently run against the exact local Git object for Explain dfcc8d3: source/table hashes match, Sol stays unverified, output0600 and overwrite refusal pass, with no model calls. All ten previously surviving C1 gate-removal mutants now fail meaningful assertions in scratch copies, with9/9 focused baseline tests passing; no syntax failure or timeout counts as a kill. Claude's exact fix recheck is still required before publication; its reference will be added after receipt.
+With Node22.23.3, `npm test` in `packages/model-check` rebuilds the existing engine and passes67/67 tests. Tests exercise request/settings identity, independently computed approval fingerprints, registry-price drift, receipt fields, source/hash/status tampering, archive integrity, cap stops, usage breaches/overflow, latency separation, Unicode and reasoning exclusions, exact spans, file modes/exclusive creation, real CLI artifacts/error codes and import boundaries. Node reports its experimental MockTimers warning for the clock tests. The real importer was independently run against the exact local Git object for Explain dfcc8d3: source/table hashes match, Sol stays unverified, output0600 and overwrite refusal pass, with no model calls. The earlier ten C1 mutants were killed at the preceding reviewed candidate. This delta adds a frozen real importer fixture and an accepting positive control, then independently refuses commit, source and verification tampering before replay. Its focused24/24 baseline kills all four newly surviving pin mutants, both input-snapshot removals, the restored refusal regression and the removed historical-ID restriction through assertions. No syntax failure or timeout counts as a kill. Claude's exact delta recheck is required before publication; its reference will be added after receipt.
 
 ## Testing
 
-- Existing engine build succeeds and63/63 package tests pass locally.
+- Existing engine build succeeds and67/67 package tests pass locally.
 - The original four archived files retain their SHA-256 hashes; none of the archived questions was executed.
 - The real registry import source is unmerged Explain draft head dfcc8d3ef148420054a222de92d4f36cc6bb87b0, source SHA-25618686c745e90dc84155de9397bc98c744d281d4a3751a5fdd0cae8a9c99c48e8, table SHA-2561bba1367aded6a9dc94cd17d7b120872219623835b2c997f3758e7228404dcd9. Earlier19eebb3's source triple is also pinned. Commit labels remain operator-asserted.
 - All replay operations cost$0. No live question set or provider evaluation is implied.
 
 ## Numbers that changed
 
-No public metric changes. The local test command reports63 tests, and all replay costs are$0. The original archived28 questions remain unapproved and unrun; the separately prepared36-question proposal is also unapproved and unrun.
+No public metric changes. The local test command reports67 tests, and all replay costs are$0. The original archived28 questions remain unapproved and unrun; the separately prepared36-question proposal is also unapproved and unrun.
 
 ## Protected paths touched
 
@@ -46,6 +46,8 @@ None. All changes are under `packages/model-check`; engine source, rules, websit
 ## Found along the way
 
 The required repository CI job does not execute this package; reviewed CI wiring is required before any merge. Existing PR10/12 CI also hit an unchanged engine timing guard; that investigation is separate and no limit was weakened. All actual model rows retain unresolved billed-reasoning/input-bound evidence, and Sol's low-effort settings remain unverified. The offline ledger cannot enforce account spending. Local approval receipts are unauthenticated and reusable; operators must independently verify the referenced approval. Overridden programmatic ledger methods, heuristic refusal labels, inherited ACLs/cloud synchronization and hostile parent directories remain explicit offline limitations. Declared engine revision and bundle hashes do not authenticate source or installation. The instruction ending “in a table per model and” remains unresolved.
+
+Duplicate JSON keys in historical source text remain a disclosed offline limitation: parsing uses the final value while raw text retains earlier values. Parsed records govern validation and execution; raw text is not an approval. Plain question sets now refuse the historical bridge-ID namespaces without verified lineage.
 
 ## Questions for the PM
 

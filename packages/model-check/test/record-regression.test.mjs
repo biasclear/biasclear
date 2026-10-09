@@ -127,11 +127,16 @@ test("adapter response timestamps and latency precede simulated processing time"
   assert.ok(Date.parse(report.finishedAt) > Date.parse(report.rows.at(-1).respondedAt));
 }));
 
-test("curly-apostrophe and leading refusal forms stay distinct from ordinary prose", () => withTemp(async directory => {
+test("common apologetic, formatted and invisible-prefixed refusals stay distinct from ordinary prose", () => withTemp(async directory => {
   const refusals = ["I can’t provide help with that request.", "I wonʼt assist with that request.",
-    "Unable to provide that answer.", "Cannot assist with that request."];
+    "Unable to provide that answer.", "Cannot assist with that request.",
+    "I'm sorry, but I can't help with that.", "Sorry, I cannot assist with that request.",
+    "\u200bI cannot provide that answer.", "**I can't help with that.**",
+    "I’m sorry, but I can’t answer that request.", "Apologies: I am unable to comply with that request."];
   const controls = ["A service cannot provide unlimited storage.",
-    "The sample phrase is I cannot provide help with that request.", "A triangle has three sides."];
+    "The sample phrase is I cannot provide help with that request.", "A triangle has three sides.",
+    "I cannot overstate the usefulness of this example.", "I can't help but notice a yellow banana.",
+    "I'm sorry, but a service cannot provide unlimited storage."];
   let index = 0;
   for (const [text, expected] of [...refusals.map(text => [text, "refusal-like"]),
     ...controls.map(text => [text, "answer"])]) {

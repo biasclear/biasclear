@@ -1,0 +1,147 @@
+{
+  "kind": "explain-reviewed-registry",
+  "provenance": {
+    "commit": "19eebb338ad5676075c4ab5a971eec6d379ef1bc",
+    "commitVerification": "operator-asserted",
+    "path": "packages/explain/src/models.ts",
+    "repository": "biasclear/biasclear",
+    "sourceSha256": "b7d4cd785fad2ab611eb1089fd1ad81223bb07887b01e4eabeedfa0531f58ae0"
+  },
+  "schema": 1,
+  "table": {
+    "defaultId": "us.xai.grok-4.7",
+    "defaultKey": "grok47",
+    "models": {
+      "us.anthropic.claude-sonnet-5-5": {
+        "billedMaxTokens": 400,
+        "destinationRegions": [
+          "us-east-1",
+          "us-east-2",
+          "us-west-2"
+        ],
+        "displayName": "Claude Sonnet 5.5",
+        "foundationModelId": "anthropic.claude-sonnet-5-5",
+        "inputPricePerMillion": 2.2,
+        "inputTokenBound": {
+          "checkedOn": "2026-10-07",
+          "framingTokens": null,
+          "source": "Model-specific Converse input framing maximum not established; prompt bytes plus 50 is not a documented universal bound.",
+          "state": "unknown"
+        },
+        "key": "sonnet55",
+        "liveBlockReason": "Converse reasoning accounting and input token framing bounds remain unverified.",
+        "maxTokens": 400,
+        "outputPricePerMillion": 11,
+        "provider": "Anthropic",
+        "reasoningAccounting": {
+          "checkedOn": "2026-10-07",
+          "source": "Converse total billed reasoning mapping not established by current model-specific primary evidence.",
+          "state": "unknown"
+        },
+        "region": "us-east-1",
+        "requestFields": {
+          "output_config": {
+            "effort": "low"
+          },
+          "thinking": {
+            "type": "adaptive"
+          }
+        },
+        "route": "us-profile",
+        "settingsVerified": true,
+        "source": {
+          "baseId": "AWS Bedrock Model catalog, us-east-1, copied 2026-10-07",
+          "price": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrockFoundationModels/20260930001912/us-east-1/index.json",
+          "priceCheckedOn": "2026-10-07",
+          "profile": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-sonnet-5-5.html",
+          "profileCheckedOn": "2026-10-07",
+          "settings": "https://docs.aws.amazon.com/bedrock/latest/userguide/claude-messages-adaptive-thinking.html",
+          "settingsCheckedOn": "2026-10-07"
+        }
+      },
+      "us.openai.gpt-6.1-sol": {
+        "billedMaxTokens": null,
+        "destinationRegions": [
+          "us-east-1",
+          "us-east-2",
+          "us-west-2"
+        ],
+        "displayName": "GPT-6.1 Sol",
+        "foundationModelId": "openai.gpt-6.1-sol",
+        "inputPricePerMillion": 2.2,
+        "inputTokenBound": {
+          "checkedOn": "2026-10-07",
+          "framingTokens": null,
+          "source": "Model-specific Converse input framing maximum not established; prompt bytes plus 50 is not a documented universal bound.",
+          "state": "unknown"
+        },
+        "key": "sol61",
+        "liveBlockReason": "Bedrock lowest reasoning setting and billed total-token bound are unverified.",
+        "maxTokens": 400,
+        "outputPricePerMillion": 11,
+        "provider": "OpenAI",
+        "reasoningAccounting": {
+          "checkedOn": "2026-10-07",
+          "source": "Converse total billed reasoning mapping not established by current model-specific primary evidence.",
+          "state": "unknown"
+        },
+        "region": "us-east-1",
+        "requestFields": {},
+        "route": "us-profile",
+        "settingsVerified": false,
+        "source": {
+          "baseId": "AWS Bedrock Model catalog, us-east-1, copied 2026-10-07",
+          "price": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-6-1-sol.html",
+          "priceCheckedOn": "2026-10-07",
+          "profile": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-6-1-sol.html",
+          "profileCheckedOn": "2026-10-07",
+          "settings": "Lowest reasoning setting and total billed-token bound are unverified; live startup is blocked.",
+          "settingsCheckedOn": "2026-10-07"
+        }
+      },
+      "us.xai.grok-4.7": {
+        "billedMaxTokens": null,
+        "destinationRegions": [
+          "us-east-1",
+          "us-east-2",
+          "us-west-2"
+        ],
+        "displayName": "Grok 4.7",
+        "foundationModelId": "xai.grok-4.7",
+        "inputPricePerMillion": 2.2,
+        "inputTokenBound": {
+          "checkedOn": "2026-10-07",
+          "framingTokens": null,
+          "source": "Model-specific Converse input framing maximum not established; prompt bytes plus 50 is not a documented universal bound.",
+          "state": "unknown"
+        },
+        "key": "grok47",
+        "liveBlockReason": "Bedrock billed reasoning-token bound is unverified; visible maxTokens is not assumed to bound total cost.",
+        "maxTokens": 400,
+        "outputPricePerMillion": 6.6,
+        "provider": "xAI",
+        "reasoningAccounting": {
+          "checkedOn": "2026-10-07",
+          "source": "Converse total billed reasoning mapping not established by current model-specific primary evidence.",
+          "state": "unknown"
+        },
+        "region": "us-east-1",
+        "requestFields": {
+          "reasoning_effort": "low"
+        },
+        "route": "us-profile",
+        "settingsVerified": true,
+        "source": {
+          "baseId": "AWS Bedrock Model catalog, us-east-1, copied 2026-10-07",
+          "price": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-7.html",
+          "priceCheckedOn": "2026-10-07",
+          "profile": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-7.html",
+          "profileCheckedOn": "2026-10-07",
+          "settings": "https://aws.amazon.com/blogs/machine-learning/grok-4-7-is-now-available-on-amazon-bedrock/",
+          "settingsCheckedOn": "2026-10-07"
+        }
+      }
+    }
+  },
+  "tableSha256": "1bba1367aded6a9dc94cd17d7b120872219623835b2c997f3758e7228404dcd9"
+}

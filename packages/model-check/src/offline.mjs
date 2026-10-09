@@ -88,6 +88,14 @@ export function simulatedMicros(inputTokens, outputTokens, model) {
   return Math.ceil(nanos / 1000);
 }
 
+function looksLikeRefusal(text) {
+  // Inspect an opening only; retain the original bytes for recording and scans.
+  // Strip display prefixes and invisible format characters, not ordinary prose.
+  const opening = text.replace(/\p{Cf}/gu, "").replace(/[’ʼ]/gu, "'")
+    .replace(/^[\s*_`>#-]+/u, "");
+  return /^(?:(?:i(?:'m| am) sorry|sorry|apologies)\b[\s,.:;!]*(?:but\s+)?)?(?:i (?:cannot|can't|won't|am unable to)|unable to|cannot)\s+(?:help(?!\s+but\b)|assist|provide|answer|comply|fulfill|support)\b/iu.test(opening);
+}
+
 function inspectReply(reply) {
   const content = reply?.output?.message?.content;
   const finalTextBlocks = [];
@@ -118,7 +126,7 @@ function inspectReply(reply) {
   let status = !shape ? "invalid-reply" : finalTextBlocks.length === 0 ? "no-final-text" :
     finalTextBlocks.every(b => b.text.replace(/[\p{Cf}\s]/gu, "").length === 0) ? "empty-answer" :
       stopReason !== "end_turn" ? "incomplete-response" : "answer";
-  if (status === "answer" && finalTextBlocks.some(b => /^\s*(?:i (?:cannot|can't|won't|am unable to)|unable to (?:help|assist|provide)|cannot (?:help|assist|provide))\b/iu.test(b.text.replace(/[’ʼ]/gu, "'")))) status = "refusal-like";
+  if (status === "answer" && finalTextBlocks.some(b => looksLikeRefusal(b.text))) status = "refusal-like";
   return { finalTextBlocks, status, stopReason, usage: validUsage ? frozenCopy(usage) : null, reportedUsage,
     usageStatus: validUsage ? "reported-synthetic" : usage === undefined ? "unknown" :
       reportedUsage && Object.keys(reportedUsage).some(k => !["inputTokens", "outputTokens", "totalTokens", "cacheReadInputTokens", "cacheWriteInputTokens"].includes(k)) ? "unverified-fields" : "malformed" };

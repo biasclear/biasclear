@@ -51,6 +51,8 @@ export function validateQuestionSet(input) {
         q.text.length === 0 || q.text.length > 100_000 || !q.text.isWellFormed()) refuse("E_QUESTION_SET");
     ids.add(q.id);
   }
+  // These IDs describe bridged historical bytes, never an arbitrary plain set.
+  if (!Object.hasOwn(input, "sourceDraft") && /^(?:draft-|oct07-)/u.test(input.id)) refuse("E_QUESTION_SET");
   if (Object.hasOwn(input, "sourceDraft")) {
     // Canonical copies sort object keys. Reparse the bound source text instead of
     // relying on those copies for the archive's property-order fingerprint.
