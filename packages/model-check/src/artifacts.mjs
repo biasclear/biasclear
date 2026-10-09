@@ -12,31 +12,41 @@ function fence(text) {
   const delimiter = "`".repeat(longest + 1);
   return `${delimiter}\n${text}\n${delimiter}`;
 }
+function markdownJson(value, space) {
+  // JSON already escapes payload LF/CR and C0 controls. Preserve only its formatting
+  // newlines; escape other controls, invisible format characters and line separators.
+  return JSON.stringify(value, null, space).replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu,
+    c => c === "\n" ? c : Array.from({ length: c.length }, (_, i) =>
+      `\\u${c.charCodeAt(i).toString(16).padStart(4, "0")}`).join(""));
+}
 function cell(value) {
   // JSON escapes preserve the literal value; code spans prevent GFM URL autolinking as well.
-  const text = JSON.stringify(value).replace(/[&<>|*_[\]()!~\u202a-\u202e\u2066-\u2069]/gu,
+  const text = markdownJson(value).replace(/[&<>|*_[\]()!~]/gu,
     c => `\\u${c.codePointAt(0).toString(16).padStart(4, "0")}`);
   const delimiter = "`".repeat(Math.max(0, ...(text.match(/`+/g) ?? []).map(s => s.length)) + 1);
   return `${delimiter} ${text} ${delimiter}`;
 }
 function markdown(report, modelId, rows) {
   const lines = ["# Model Check — offline synthetic record", "", report.warning, "", "Actual cost: $0. All ledger amounts and usage estimates below are simulated.", "",
-    fence(JSON.stringify({ modelId, runHash: report.runHash, startedAt: report.startedAt,
-      engine: report.engine, complete: report.complete }, null, 2)), ""];
+    fence(markdownJson({ modelId, runHash: report.runHash, startedAt: report.startedAt,
+      registryKind: report.registry.kind, registryProvenance: report.registry.provenance,
+      approval: report.approval, sourceDraftStatusMeaning: report.sourceDraftStatusMeaning,
+      engine: report.engine, complete: report.complete }, 2)), ""];
   lines.push("| Question ID / position | Exact question | Raw final text blocks | Engine findings / exact spans | Response / scan status |",
     "|---|---|---|---|---|");
   for (const row of rows) lines.push(`| ${cell({ id: row.question.id, position: row.question.position ?? null, kind: row.question.kind ?? null })} | ${cell(row.question.text)} | ${cell(row.finalTextBlocks)} | ${cell(row.scans)} | ${cell({ response: row.responseStatus, code: row.code ?? null, scans: row.scans.map(s => s.status) })} |`);
   lines.push("");
   for (const row of rows) {
-    lines.push(`## ${row.question.id}`, "", "Question (exact text):", "", fence(row.question.text), "",
-      "Request and status:", "", fence(JSON.stringify({ requestedAt: row.requestedAt, respondedAt: row.respondedAt,
-        elapsedMs: row.elapsedMs, settings: row.settings, route: row.route, responseStatus: row.responseStatus,
+    lines.push(`## ${row.question.id}`, "", "Question (JSON string preserving exact text):", "", fence(markdownJson(row.question.text)), "",
+      "Request and status:", "", fence(markdownJson({ requestedAt: row.requestedAt, respondedAt: row.respondedAt,
+        elapsedMs: row.elapsedMs, processingElapsedMs: row.processingElapsedMs,
+        settings: row.settings, route: row.route, responseStatus: row.responseStatus,
         code: row.code ?? null, usageStatus: row.usageStatus, simulatedCost: row.simulatedCost,
-        questionMetadata: row.question, billingEvidence: row.billingEvidence }, null, 2)), "");
+        questionMetadata: row.question, billingEvidence: row.billingEvidence }, 2)), "");
     if (row.finalTextBlocks.length === 0) lines.push("No final text was returned. This is not a successful zero-mark answer.", "");
     for (const block of row.finalTextBlocks) {
-      lines.push(`Final text block ${block.blockIndex} (JSON string preserving exact text):`, "", fence(JSON.stringify(block.text)), "", "Structural scan (offsets refer to this block only):", "",
-        fence(JSON.stringify(row.scans.find(s => s.blockIndex === block.blockIndex), null, 2)), "");
+      lines.push(`Final text block ${block.blockIndex} (JSON string preserving exact text):`, "", fence(markdownJson(block.text)), "", "Structural scan (offsets refer to this block only):", "",
+        fence(markdownJson(row.scans.find(s => s.blockIndex === block.blockIndex), 2)), "");
     }
   }
   return lines.join("\n");

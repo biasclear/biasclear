@@ -37,9 +37,11 @@ export const NEUTRAL_SET = frozenCopy({ schema: 1, id: "neutral-unit-fixtures", 
 export const NEUTRAL_SET_HASH = digest(NEUTRAL_SET);
 
 export function validateQuestionSet(input) {
+  input = frozenCopy(input);
   const basicKeys = ["schema", "id", "kind", "questions"];
-  const sourceKeys = [...basicKeys, "sourceDraft", "sourceDraftSha256"];
-  if (!(exact(input, basicKeys) || exact(input, sourceKeys) && object(input.sourceDraft) && validHash(input.sourceDraftSha256)) || input.schema !== 1 || typeof input.id !== "string" || !ID.test(input.id) ||
+  const sourceKeys = [...basicKeys, "sourceDraft", "sourceDraftText", "sourceDraftSha256"];
+  if (!(exact(input, basicKeys) || exact(input, sourceKeys) && object(input.sourceDraft) &&
+      typeof input.sourceDraftText === "string" && validHash(input.sourceDraftSha256)) || input.schema !== 1 || typeof input.id !== "string" || !ID.test(input.id) ||
       !["neutral-fixture", "owner-draft"].includes(input.kind) || !Array.isArray(input.questions) ||
       input.questions.length < 1 || input.questions.length > 1000) refuse("E_QUESTION_SET");
   const ids = new Set();
@@ -50,9 +52,12 @@ export function validateQuestionSet(input) {
     ids.add(q.id);
   }
   if (Object.hasOwn(input, "sourceDraft")) {
-    const original = input.sourceDraft;
-    if (!Array.isArray(original.questions) || input.kind !== "owner-draft" ||
-        original.questionFingerprintSha256 !== bytesDigest(JSON.stringify(original.questions)) ||
+    // Canonical copies sort object keys. Reparse the bound source text instead of
+    // relying on those copies for the archive's property-order fingerprint.
+    if (bytesDigest(input.sourceDraftText) !== input.sourceDraftSha256) refuse("E_QUESTION_DRAFT_SOURCE_MISMATCH");
+    const original = parseQuestionDraft(input.sourceDraftText);
+    if (canonical(original) !== canonical(input.sourceDraft) || input.kind !== "owner-draft" ||
+        input.id !== questionDraftId(input.sourceDraftSha256) ||
         canonical(input.questions) !== canonical(original.questions.map(q => ({ id: q.id, text: q.question,
           axis: q.axis, position: q.position, kind: q.kind })))) refuse("E_QUESTION_DRAFT_SOURCE_MISMATCH");
   }
@@ -62,20 +67,34 @@ export function validateQuestionSet(input) {
   return { set, hash };
 }
 
-/** Lossless bridge for the archived 28-question draft. This does not approve or execute it. */
-export function importQuestionDraft(document, originalBytes) {
-  let parsed;
-  try { parsed = JSON.parse(typeof originalBytes === "string" ? originalBytes : Buffer.from(originalBytes).toString("utf8")); }
+function parseQuestionDraft(sourceText) {
+  let document;
+  try { document = JSON.parse(sourceText); }
   catch { refuse("E_QUESTION_DRAFT"); }
-  if (canonical(parsed) !== canonical(document)) refuse("E_QUESTION_DRAFT_SOURCE_MISMATCH");
-  document = parsed; // Preserve source property order for its historical JSON.stringify fingerprint.
   if (!exact(document, ["status", "preparedDate", "ownerApproved", "modelCallsExecuted", "stubQuestionRunsExecuted",
     "missingInstructionEnding", "proposedFirstRun", "questionFingerprintSha256", "questions"]) ||
     document.status !== "unapproved-draft" || document.ownerApproved !== false || !Array.isArray(document.questions) ||
     document.questions.some(q => !exact(q, ["id", "axis", "position", "question", "kind"]))) refuse("E_QUESTION_DRAFT");
   if (document.questionFingerprintSha256 !== bytesDigest(JSON.stringify(document.questions))) refuse("E_QUESTION_DRAFT_FINGERPRINT");
-  const set = { schema: 1, id: "oct07-unapproved-draft", kind: "owner-draft",
-    sourceDraft: document, sourceDraftSha256: bytesDigest(originalBytes), questions: document.questions.map(q =>
+  return document;
+}
+
+function questionDraftId(sourceHash) {
+  return `draft-${sourceHash.slice(0, 32)}`;
+}
+
+/** Lossless bridge for the archived 28-question draft. This does not approve or execute it. */
+export function importQuestionDraft(document, originalBytes) {
+  let sourceText;
+  try { sourceText = typeof originalBytes === "string" ? originalBytes : Buffer.from(originalBytes).toString("utf8"); }
+  catch { refuse("E_QUESTION_DRAFT"); }
+  // A decoded string must represent the original UTF-8 bytes exactly.
+  if (!sourceText.isWellFormed() || bytesDigest(sourceText) !== bytesDigest(originalBytes)) refuse("E_QUESTION_DRAFT_SOURCE_MISMATCH");
+  const parsed = parseQuestionDraft(sourceText);
+  if (canonical(parsed) !== canonical(document)) refuse("E_QUESTION_DRAFT_SOURCE_MISMATCH");
+  document = parsed;
+  const set = { schema: 1, id: questionDraftId(bytesDigest(originalBytes)), kind: "owner-draft",
+    sourceDraft: document, sourceDraftText: sourceText, sourceDraftSha256: bytesDigest(originalBytes), questions: document.questions.map(q =>
       ({ id: q.id, text: q.question, axis: q.axis, position: q.position, kind: q.kind })) };
   return validateQuestionSet(set).set;
 }
@@ -93,11 +112,43 @@ function safeSettings(value) {
     exact(value.output_config, ["effort"]) && value.output_config.effort === "low";
 }
 
+function safePrice(value) {
+  if (!Number.isFinite(value) || value <= 0) return false;
+  const thousandths = value * 1000, rounded = Math.round(thousandths);
+  // Arithmetic uses the same rounded thousandths. Allow binary float noise,
+  // while refusing unsupported fractional precision and unsafe unit values.
+  return Number.isSafeInteger(rounded) && rounded > 0 && Math.abs(thousandths - rounded) < 1e-6;
+}
+
+// These content triples were read from local Git objects during review. They
+// bind accepted content, not the caller's identity or claimed repository access.
+const REVIEWED_REGISTRY_PINS = [
+  { commit: "19eebb338ad5676075c4ab5a971eec6d379ef1bc",
+    sourceSha256: "b7d4cd785fad2ab611eb1089fd1ad81223bb07887b01e4eabeedfa0531f58ae0",
+    tableSha256: "1bba1367aded6a9dc94cd17d7b120872219623835b2c997f3758e7228404dcd9" },
+  { commit: "dfcc8d3ef148420054a222de92d4f36cc6bb87b0",
+    sourceSha256: "18686c745e90dc84155de9397bc98c744d281d4a3751a5fdd0cae8a9c99c48e8",
+    tableSha256: "1bba1367aded6a9dc94cd17d7b120872219623835b2c997f3758e7228404dcd9" },
+];
+
+function validRegistryProvenance(input) {
+  const p = input.provenance;
+  if (input.kind === "synthetic-offline-registry") {
+    return exact(p, ["kind", "fixture", "reviewedSource"]) && p.kind === "synthetic-unit-fixture" &&
+      p.fixture === "neutral-test-registry" && p.reviewedSource === false;
+  }
+  return input.kind === "explain-reviewed-registry" &&
+    exact(p, ["repository", "path", "commit", "sourceSha256", "commitVerification"]) &&
+    p.repository === "biasclear/biasclear" && p.path === "packages/explain/src/models.ts" &&
+    p.commitVerification === "operator-asserted" && REVIEWED_REGISTRY_PINS.some(pin =>
+      p.commit === pin.commit && p.sourceSha256 === pin.sourceSha256 && input.tableSha256 === pin.tableSha256);
+}
+
 export function validateRegistry(input, selectedIds) {
+  input = frozenCopy(input);
+  selectedIds = frozenCopy(selectedIds);
   if (!exact(input, ["schema", "kind", "provenance", "table", "tableSha256"]) || input.schema !== 1 ||
-      input.kind !== "explain-reviewed-registry" || !object(input.provenance) ||
-      input.provenance.repository !== "biasclear/biasclear" || input.provenance.path !== "packages/explain/src/models.ts" ||
-      !/^[a-f0-9]{40}$/.test(input.provenance.commit) || !validHash(input.provenance.sourceSha256) ||
+      !validRegistryProvenance(input) ||
       !exact(input.table, ["models", "defaultId", "defaultKey"]) || !object(input.table.models) ||
       !validHash(input.tableSha256) || input.tableSha256 !== digest(input.table) ||
       !Array.isArray(selectedIds) || selectedIds.length < 1 || new Set(selectedIds).size !== selectedIds.length) refuse("E_REGISTRY");
@@ -106,10 +157,12 @@ export function validateRegistry(input, selectedIds) {
       input.table.models[input.table.defaultId].key !== input.table.defaultKey) refuse("E_REGISTRY");
   const keys = new Set();
   for (const [id, m] of entries) {
+    if (input.kind === "synthetic-offline-registry" &&
+        (!id.startsWith("us.fixture.") || m?.provider !== "Synthetic fixture")) refuse("E_REGISTRY");
     if (!MODEL_ID.test(id) || !object(m) || id !== `us.${m.foundationModelId}` || typeof m.key !== "string" || m.key === "run" || !/^[a-z][a-z0-9]*$/.test(m.key) ||
         keys.has(m.key) || typeof m.displayName !== "string" || !m.displayName || typeof m.provider !== "string" || !m.provider ||
         m.region !== "us-east-1" || m.route !== "us-profile" || canonical(m.destinationRegions) !== canonical(["us-east-1", "us-east-2", "us-west-2"]) ||
-        ![m.inputPricePerMillion, m.outputPricePerMillion].every(n => Number.isFinite(n) && n > 0 && Number.isSafeInteger(n * 1000)) ||
+        ![m.inputPricePerMillion, m.outputPricePerMillion].every(safePrice) ||
         m.maxTokens !== 400 || typeof m.settingsVerified !== "boolean" || typeof m.liveBlockReason !== "string" ||
         !(m.billedMaxTokens === null || Number.isSafeInteger(m.billedMaxTokens) && m.billedMaxTokens >= m.maxTokens) ||
         !evidence(m.reasoningAccounting) || !evidence(m.inputTokenBound, true) || !object(m.requestFields) || !object(m.source)) refuse("E_REGISTRY");
@@ -131,6 +184,7 @@ export function runBinding(setHash, registryHash, modelIds, domain) {
 }
 export function validateApproval(set, binding, receipt) {
   if (digest(set) === NEUTRAL_SET_HASH) return { kind: "built-in-neutral-fixtures", runHash: binding };
+  if (receipt !== undefined) receipt = frozenCopy(receipt);
   if (!exact(receipt, ["schema", "kind", "runHash", "approvedBy", "approvedAt", "approvalReference"]) ||
       receipt.schema !== 1 || receipt.kind !== "owner-approval" || receipt.approvedBy !== "owner" ||
       receipt.runHash !== binding || !validDate(receipt.approvedAt) || typeof receipt.approvalReference !== "string" ||

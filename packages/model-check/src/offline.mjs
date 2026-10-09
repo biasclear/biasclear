@@ -27,8 +27,16 @@ export class OfflineLedger {
     if (!Number.isSafeInteger(micros) || micros <= 0) refuse("E_FAKE_RESERVATION");
     if (this.#paused) return { ok: false, code: "E_SIMULATED_LEDGER_PAUSE" };
     const month = isoDate.slice(0, 7), day = isoDate.slice(0, 10);
-    if ((this.#months.get(month) ?? 0) + micros > MONTHLY_CAP_MICROS) return { ok: false, code: "E_SIMULATED_MONTH_CAP" };
-    if ((this.#days.get(day) ?? 0) + micros > DAILY_CAP_MICROS) return { ok: false, code: "E_SIMULATED_DAY_CAP" };
+    // A cap refusal ends this run's admissions, even after a cheaper row, refund or calendar rollover.
+    // Keep the first refusal specific; the shared pause latch preserves all later rows as not-called.
+    if ((this.#months.get(month) ?? 0) + micros > MONTHLY_CAP_MICROS) {
+      this.#paused = true;
+      return { ok: false, code: "E_SIMULATED_MONTH_CAP" };
+    }
+    if ((this.#days.get(day) ?? 0) + micros > DAILY_CAP_MICROS) {
+      this.#paused = true;
+      return { ok: false, code: "E_SIMULATED_DAY_CAP" };
+    }
     this.#months.set(month, (this.#months.get(month) ?? 0) + micros);
     this.#days.set(day, (this.#days.get(day) ?? 0) + micros);
     const r = frozenCopy({ token: `offline-${++this.#next}`, month, day, micros });
@@ -108,9 +116,9 @@ function inspectReply(reply) {
       usage.totalTokens <= usage.inputTokens + usage.outputTokens + (usage.cacheReadInputTokens ?? 0) + (usage.cacheWriteInputTokens ?? 0));
   const stopReason = typeof reply?.stopReason === "string" ? reply.stopReason : null;
   let status = !shape ? "invalid-reply" : finalTextBlocks.length === 0 ? "no-final-text" :
-    finalTextBlocks.every(b => b.text.trim().length === 0) ? "empty-answer" :
+    finalTextBlocks.every(b => b.text.replace(/[\p{Cf}\s]/gu, "").length === 0) ? "empty-answer" :
       stopReason !== "end_turn" ? "incomplete-response" : "answer";
-  if (status === "answer" && finalTextBlocks.some(b => /\b(?:i (?:cannot|can't|won't|am unable to)|unable to (?:help|assist|provide)|cannot (?:help|assist|provide))\b/iu.test(b.text))) status = "refusal-like";
+  if (status === "answer" && finalTextBlocks.some(b => /^\s*(?:i (?:cannot|can't|won't|am unable to)|unable to (?:help|assist|provide)|cannot (?:help|assist|provide))\b/iu.test(b.text.replace(/[’ʼ]/gu, "'")))) status = "refusal-like";
   return { finalTextBlocks, status, stopReason, usage: validUsage ? frozenCopy(usage) : null, reportedUsage,
     usageStatus: validUsage ? "reported-synthetic" : usage === undefined ? "unknown" :
       reportedUsage && Object.keys(reportedUsage).some(k => !["inputTokens", "outputTokens", "totalTokens", "cacheReadInputTokens", "cacheWriteInputTokens"].includes(k)) ? "unverified-fields" : "malformed" };
@@ -135,42 +143,61 @@ export async function runModelCheck({ mode = "offline", registry, modelIds, ques
   if (mode !== "offline") refuse("E_OFFLINE_ONLY");
   if (!STUBS.has(adapter)) refuse("E_TRUSTED_OFFLINE_STUB_REQUIRED");
   if (!(ledger instanceof OfflineLedger) || !DOMAINS.includes(domain)) refuse("E_RUN_SETTINGS");
-  const reviewed = validateRegistry(registry, modelIds);
-  const questions = validateQuestionSet(questionSet);
   const selected = frozenCopy(modelIds);
+  const reviewed = validateRegistry(registry, selected);
+  const questions = validateQuestionSet(questionSet);
   const runHash = runBinding(questions.hash, reviewed.hash, selected, domain);
   const permission = validateApproval(questions.set, runHash, approval);
+  const startedAt = new Date().toISOString();
+  if (permission.kind === "owner-approval" && permission.approvedAt > startedAt) refuse("E_OWNER_APPROVAL_REQUIRED");
   const engine = scan("", { domain });
   const engineBundle = await readFile(new URL("../../engine/dist/index.js", import.meta.url));
-  const engineFingerprint = { baseRevision: ENGINE_BASE_REVISION, bundleSha256: bytesDigest(engineBundle),
+  const engineFingerprint = { declaredBaseRevision: ENGINE_BASE_REVISION, bundleSha256: bytesDigest(engineBundle),
     rulesVersion: engine.rulesVersion, rulesHash: engine.rulesHash, domain, spanCoordinates: "UTF-16 string offsets" };
+  // Detect every arithmetic overflow before any directory, reservation or replay is created.
+  const reservationAmounts = new Map(selected.map(modelId => [modelId, new Map(questions.set.questions.map(question =>
+    [question.id, simulatedMicros(Buffer.byteLength(question.text, "utf8") + SIMULATED_FRAMING_TOKENS,
+      reviewed.document.table.models[modelId].maxTokens, reviewed.document.table.models[modelId])]))]));
   await prepareArtifactDirectory(artifactDirectory);
   const initialLedger = ledger.snapshot();
   const rows = [];
-  const startedAt = new Date().toISOString();
   for (const modelId of selected) {
     const model = reviewed.document.table.models[modelId];
     for (const question of questions.set.questions) {
       const request = userOnlyRequest(question.text, model);
       const plannedAt = new Date().toISOString();
       const row = { modelId, question, questionSha256: bytesDigest(question.text), setHash: questions.hash,
-        registryHash: reviewed.hash, plannedAt, requestedAt: null, respondedAt: null, elapsedMs: null,
+        registryHash: reviewed.hash, plannedAt, requestedAt: null, respondedAt: null, elapsedMs: null, processingElapsedMs: null,
         settings: request, requestSha256: digest(request), route: { region: model.region, route: model.route, destinationRegions: model.destinationRegions },
         engine: engineFingerprint, responseStatus: "not-called", finalTextBlocks: [], scans: [], usage: null,
         usageStatus: "not-returned", actualCostUsd: 0, simulatedCost: { kind: "not-called", reservedMicros: 0, measuredMicros: null },
         billingEvidence: { billedMaxTokens: model.billedMaxTokens, inputTokenBound: model.inputTokenBound,
           reasoningAccounting: model.reasoningAccounting, liveBlockReason: model.liveBlockReason } };
       rows.push(row);
-      const reserveMicros = simulatedMicros(Buffer.byteLength(question.text, "utf8") + SIMULATED_FRAMING_TOKENS, model.maxTokens, model);
-      const reserved = ledger.reserve(plannedAt, reserveMicros);
+      const reserveMicros = reservationAmounts.get(modelId).get(question.id);
+      // One rehearsal uses its start's accounting periods, even across UTC rollover.
+      const reserved = ledger.reserve(startedAt, reserveMicros);
       if (!reserved.ok) { row.code = reserved.code; continue; }
       row.reservation = reserved.reservation;
       row.simulatedCost = { kind: "reserved", reservedMicros: reserveMicros, measuredMicros: null,
         boundSource: "synthetic question-byte plus 50 framing, 400 output-token fixture allowance; no provider bound" };
       const start = performance.now();
       row.requestedAt = new Date().toISOString();
+      let reply;
       try {
-        const reply = await STUBS.get(adapter)(request, { ledger, reservation: reserved.reservation, modelId, questionId: question.id });
+        reply = await STUBS.get(adapter)(request, { ledger, reservation: reserved.reservation, modelId, questionId: question.id });
+      } catch {
+        row.respondedAt = new Date().toISOString();
+        row.elapsedMs = Math.max(0, performance.now() - start);
+        ledger.unresolved(reserved.reservation.token);
+        row.responseStatus = "stub-failed"; row.code = "E_OFFLINE_STUB_FAILURE";
+        row.simulatedCost.kind = "unknown-retained-reservation";
+        continue;
+      }
+      row.respondedAt = new Date().toISOString();
+      row.elapsedMs = Math.max(0, performance.now() - start);
+      const processingStart = performance.now();
+      try {
         const parsed = inspectReply(reply);
         Object.assign(row, parsed);
         row.responseStatus = parsed.status;
@@ -178,7 +205,14 @@ export async function runModelCheck({ mode = "offline", registry, modelIds, ques
         row.scans = analyzeBlocks(parsed.finalTextBlocks, domain, row.responseStatus);
         if (parsed.usage) {
           const usageInput = parsed.usage.inputTokens + (parsed.usage.cacheReadInputTokens ?? 0) + (parsed.usage.cacheWriteInputTokens ?? 0);
-          const actual = simulatedMicros(usageInput, parsed.usage.outputTokens, model);
+          let actual;
+          try { actual = simulatedMicros(usageInput, parsed.usage.outputTokens, model); }
+          catch {
+            ledger.unresolved(reserved.reservation.token);
+            row.simulatedCost.kind = "synthetic-bound-breach-retained-reservation";
+            row.code = "E_SIMULATED_BOUND_BREACH";
+            continue;
+          }
           ledger.settle(reserved.reservation.token, actual);
           const boundViolated = actual > reserveMicros || parsed.usage.outputTokens > model.maxTokens ||
             usageInput > Buffer.byteLength(question.text, "utf8") + SIMULATED_FRAMING_TOKENS;
@@ -188,17 +222,21 @@ export async function runModelCheck({ mode = "offline", registry, modelIds, ques
         } else { ledger.unresolved(reserved.reservation.token); row.simulatedCost.kind = "unknown-retained-reservation"; row.code = "E_SYNTHETIC_USAGE_UNKNOWN"; }
       } catch {
         ledger.unresolved(reserved.reservation.token);
-        row.responseStatus = "stub-failed"; row.code = "E_OFFLINE_STUB_FAILURE";
+        row.responseStatus = "processing-failed"; row.code = "E_OFFLINE_PROCESSING_FAILURE";
         row.simulatedCost.kind = "unknown-retained-reservation";
+      } finally {
+        row.processingElapsedMs = Math.max(0, performance.now() - processingStart);
       }
-      row.respondedAt = new Date().toISOString();
-      row.elapsedMs = Math.max(0, performance.now() - start);
     }
   }
   const report = { schema: 1, mode: "offline", source: "synthetic replay fixtures", actualCostUsd: 0,
     warning: "Synthetic plumbing evidence only. Structural marks do not establish truth, neutrality, factual quality, or a model ranking.",
     runHash, setHash: questions.hash, registryHash: reviewed.hash, registry: reviewed.document,
-    questionSet: questions.set, approval: permission, modelIds: selected,
+    questionSet: questions.set, approval: { ...permission, authenticated: false,
+      verificationNote: permission.kind === "owner-approval" ? "Unauthenticated local receipt; operator must verify the referenced owner approval independently." :
+        "Built-in neutral fixtures; no human approval is claimed." },
+    sourceDraftStatusMeaning: "Any sourceDraft metadata describes its historical preparation only; this run's separate approval and rows describe execution.",
+    modelIds: selected,
     modelOrder: "model-major; questions in approved input order; no retries or fallback", engine: engineFingerprint,
     startedAt, finishedAt: new Date().toISOString(), adapter: { name: adapter.name, fixtureHash: adapter.fixtureHash },
     complete: rows.every(r => r.responseStatus === "answer" && r.usageStatus === "reported-synthetic" &&

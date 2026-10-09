@@ -1,62 +1,67 @@
-Issue: no issue number was supplied for this local draft. PM should add the correct `Closes #N` reference before publication.
+Closes #13
 
 ## Summary
 
-Prepare a separate offline Model Check package that asks the same approved questions through explicit replay fixtures and preserves each final answer beside BiasClear's structural marks. No live adapter, public route, account change, spending or provider comparison is included.
+Prepare an offline Model Check harness that records the same neutral fixture questions and each replayed final answer beside BiasClear's structural marks. Preserve the owner's original question archive for separate approval.
 
 ## Problem
 
-The existing Model Check preparation is a design and an unapproved question archive. It has no executable local rehearsal of request shape, approval binding, raw-block preservation, scan offsets or artifact generation. The real model rows still lack live billing evidence, and Sol's low-effort mapping is unverified.
+The design and unapproved question archive had no executable rehearsal of approval binding, request shape, exact response preservation, offsets or artifact generation. Claude's independent review318 also found four broken data/accounting gates and weak tests that allowed ten removed gates to pass.
 
 ## Solution
 
-Use a closed user-only Converse request builder, the single Explain registry as explicit provenance-bound data, an in-memory fake ledger and a branded built-in JSON replay adapter. Reject non-offline modes and unknown models/settings. Bind every question set beyond the fixed neutral unit fixtures to an explicit owner approval receipt for the exact set, registry, model order and scan domain.
-
-## What changed
-
-- Add `packages/model-check` only, with no new dependency or imported missing Explain implementation.
-- Preserve original final text blocks, UTF-16 marks, route/settings, timestamps, hashes and distinct failure/usage/scan states in private per-model Markdown/JSON and an aggregate record.
-- Preserve original October 7 design/questions/manifest byte-for-byte and add a lossless, separately hashed input bridge. Their status remains unapproved; none of those questions has been executed.
-- Document future live integration into the exact shared cap-backed execution path as separate, blocked work. Fake accounting is visibly simulated and actual cost remains $0.
+Use the single unmerged Explain draft's registry with pinned reviewed content hashes, separate visibly synthetic fixture registries, one user message, a branded JSON replay adapter and a simulated ledger. Fix the source bridge, edited-registry acceptance, cap continuation and false draft lineage; strengthen behavior tests against the identified removed gates.
 
 ## Changes
 
-The CLI accepts only explicit local registry, question and replay JSON inputs plus a chosen new artifact directory. It has no executable adapter loading, network transport, credential reads, retry, fallback or cap increase. Output creation is exclusive; Markdown text is escaped inside code spans/fences, and private reasoning is excluded.
+- Add `packages/model-check` only, with no new dependency. Keep the October7 design, questions and manifest byte-for-byte unchanged and unrun.
+- Snapshot validation inputs; preserve source text and historical fingerprints across JSON round trips; derive bridge IDs from source hashes; enforce explicit question/registry/model/domain receipt binding.
+- Retain exact final text blocks, Unicode/CRLF, UTF-16 spans, settings, routes, timestamps, local-processing time, hashes and distinct incomplete/usage/scan states.
+- Rehearse fixed $25/month and $2.50/day admission with reservation before replay, run-start accounting periods, sticky cap stops and retained unknown charges.
+- Escape Unicode controls in Markdown while raw JSON stays exact; refuse output reuse; emit fixed CLI errors and exit2 for written incomplete records.
+
+## What changed
+
+This draft prepares Model Check without a provider transport or public interface. Real model metadata comes from the single Explain table, and accepted source content is pinned; synthetic unit inputs are labeled separately throughout the records. The original28-question draft remains unapproved and has not reached a model or replay adapter. Only the two fixed neutral unit questions run in automated tests.
 
 ## How I know it works
 
-With Node 22.23.3, the package's `npm test` builds the existing TypeScript engine and passes 16 built-in Node tests. They exercise request/settings identity, digest drift, startup refusals, raw Unicode/CRLF and block offsets, excluded/malformed reasoning, incomplete categories, unknown reasoning usage, fake reservation/caps, safe artifact rendering, no overwrite, source-table parsing, archive hashes and a neutral-only CLI smoke run. The archived question list is read for integrity checks and has no harness/model/stub execution.
+With Node22.23.3, `npm test` in `packages/model-check` rebuilds the existing engine and passes63/63 tests. Tests exercise request/settings identity, independently computed approval fingerprints, registry-price drift, receipt fields, source/hash/status tampering, archive integrity, cap stops, usage breaches/overflow, latency separation, Unicode and reasoning exclusions, exact spans, file modes/exclusive creation, real CLI artifacts/error codes and import boundaries. The real importer was independently run against the exact local Git object for Explain dfcc8d3: source/table hashes match, Sol stays unverified, output0600 and overwrite refusal pass, with no model calls. All ten previously surviving C1 gate-removal mutants now fail meaningful assertions in scratch copies, with9/9 focused baseline tests passing; no syntax failure or timeout counts as a kill. Claude's exact fix recheck is still required before publication; its reference will be added after receipt.
 
 ## Testing
 
-`PATH=/path/to/node22/bin:$PATH npm test` from `packages/model-check`: existing engine build succeeds; 16 tests pass. Root's earlier bounded review independently reran the initial 14-test suite; final small boundary fixes and their tests are included in this candidate for exact-version review. Actual Claude review remains owed before publication.
+- Existing engine build succeeds and63/63 package tests pass locally.
+- The original four archived files retain their SHA-256 hashes; none of the archived questions was executed.
+- The real registry import source is unmerged Explain draft head dfcc8d3ef148420054a222de92d4f36cc6bb87b0, source SHA-25618686c745e90dc84155de9397bc98c744d281d4a3751a5fdd0cae8a9c99c48e8, table SHA-2561bba1367aded6a9dc94cd17d7b120872219623835b2c997f3758e7228404dcd9. Earlier19eebb3's source triple is also pinned. Commit labels remain operator-asserted.
+- All replay operations cost$0. No live question set or provider evaluation is implied.
 
 ## Numbers that changed
 
-None publicly. Test counts come from the package's built-in Node test command. The archived 28-question proposal and its planning counts remain unchanged and unexecuted.
+No public metric changes. The local test command reports63 tests, and all replay costs are$0. The original archived28 questions remain unapproved and unrun; the separately prepared36-question proposal is also unapproved and unrun.
 
 ## Protected paths touched
 
-None. All committed paths are under `packages/model-check`; root instructions, licenses, workflows, `ops`, engine source and website are unchanged.
+None. All changes are under `packages/model-check`; engine source, rules, website, workflows, licenses, root instructions and ops are unchanged.
 
 ## Found along the way
 
-The live registry still lacks model-specific input/total billed reasoning evidence; Sol also lacks verified low-effort settings. A receipt's owner reference is a local trust record, not authenticated proof of identity. Engine revision and bundle metadata establish local source/build lineage only. The missing instruction ending “in a table per model and” remains unresolved.
+The required repository CI job does not execute this package; reviewed CI wiring is required before any merge. Existing PR10/12 CI also hit an unchanged engine timing guard; that investigation is separate and no limit was weakened. All actual model rows retain unresolved billed-reasoning/input-bound evidence, and Sol's low-effort settings remain unverified. The offline ledger cannot enforce account spending. Local approval receipts are unauthenticated and reusable; operators must independently verify the referenced approval. Overridden programmatic ledger methods, heuristic refusal labels, inherited ACLs/cloud synchronization and hostile parent directories remain explicit offline limitations. Declared engine revision and bundle hashes do not authenticate source or installation. The instruction ending “in a table per model and” remains unresolved.
 
 ## Questions for the PM
 
-PM: Bind the issue reference and obtain the actual Claude review of this exact commit before draft publication.
-PM: Keep the original question list unapproved and unexecuted until the owner approves its exact digest and completes the missing instruction. Live execution requires its own reviewed cap-backed integration and approval.
+PM: Add reviewed CI coverage for this package before any merge; the protected workflow change needs its own named ticket scope and owner review.
+PM: Keep the original and proposed question sets unapproved/unrun until the owner chooses exact strings and completes the missing instruction.
+PM: Keep real execution separate and blocked until shared persistent accounting, total billed-token bounds, privacy checks and owner-authorized spend are independently proven.
 
 ## Airtight self-check
 
-- [x] No secrets, tokens or credentials are included in the diff, fixtures, logs or this text.
-- [x] No new personal information is added; original authorized preparation is preserved verbatim and the commit uses a noreply identity.
-- [x] No engine network call or site cookie, analytics, script or tracker change.
-- [x] Raw report text stays inert in Markdown; original bytes remain in JSON.
-- [x] No rule or pack change; existing engine structure and neutrality are preserved.
-- [x] No public numeric claim is added.
-- [x] No site interface is changed; site accessibility checks are not applicable to this private offline CLI draft.
-- [x] No protected path is changed; no triggering Codex handle is included.
+- [x] No secrets, tokens or credentials anywhere in the diff, fixtures, logs or this text.
+- [x] No private personal data added; requested archival owner references are preserved verbatim and commits use a noreply identity.
+- [x] No engine network call or site cookies, analytics, third-party scripts or trackers changed.
+- [x] Untrusted text renders as escaped Markdown/JSON; raw text never becomes an executable href/src/HTML sink.
+- [x] Rule structure and pack unchanged; no new persuasion rule or symmetry behavior.
+- [x] No public numeric claim added; local counts trace to the test command.
+- [x] No public interface changed; site accessibility checks do not apply to this offline CLI.
+- [x] No protected path changed; no triggering Codex handle in this text.
 
 — Codex (builder)

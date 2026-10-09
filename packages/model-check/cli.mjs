@@ -1,8 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { CheckError, importQuestionDraft, refuse } from "./src/contracts.mjs";
-import { createReplayStub, runModelCheck } from "./src/offline.mjs";
 
 try {
+  let implementation;
+  try { implementation = await import("./src/offline.mjs"); }
+  catch (err) {
+    // Only the missing engine bundle gets this code; unrelated import failures stay generic.
+    if (err?.code === "ERR_MODULE_NOT_FOUND" && err.url === new URL("../engine/dist/index.js", import.meta.url).href) refuse("E_ENGINE_NOT_BUILT");
+    throw err;
+  }
+  const { createReplayStub, runModelCheck } = implementation;
   const args = process.argv.slice(2);
   const allowed = new Set(["--mode", "--registry", "--models", "--questions", "--approval", "--fixtures", "--artifacts", "--domain"]);
   const options = {};
@@ -16,11 +23,15 @@ try {
   const questionBytes = await readFile(options["--questions"]);
   const questionDocument = JSON.parse(questionBytes.toString("utf8"));
   const questionSet = questionDocument.status === "unapproved-draft" ? importQuestionDraft(questionDocument, questionBytes) : questionDocument;
-  await runModelCheck({ mode: "offline", registry: await json(options["--registry"]),
+  const report = await runModelCheck({ mode: "offline", registry: await json(options["--registry"]),
     modelIds: options["--models"].split(","), questionSet,
     approval: options["--approval"] ? await json(options["--approval"]) : undefined,
     adapter: createReplayStub(await json(options["--fixtures"])), artifactDirectory: options["--artifacts"],
     domain: options["--domain"] ?? "general" });
+  if (!report.complete) {
+    process.stderr.write("E_RUN_INCOMPLETE\n");
+    process.exitCode = 2;
+  }
 } catch (err) {
   process.stderr.write(`${err instanceof CheckError ? err.code : "E_MODEL_CHECK_FAILED"}\n`);
   process.exitCode = 1;

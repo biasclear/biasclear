@@ -13,8 +13,7 @@ import { createReplayStub, DAILY_CAP_MICROS, MONTHLY_CAP_MICROS, OfflineLedger, 
 import { registryFromExplainSource } from "../src/registry-import.mjs";
 
 const MODELS = ["us.fixture.alpha", "us.fixture.beta"];
-const provenance = { repository: "biasclear/biasclear", path: "packages/explain/src/models.ts",
-  commit: "0".repeat(40), sourceSha256: "0".repeat(64) };
+const provenance = { kind: "synthetic-unit-fixture", fixture: "neutral-test-registry", reviewedSource: false };
 function registry() {
   const models = Object.fromEntries(MODELS.map((id, i) => [id, {
     key: i ? "beta" : "alpha", displayName: i ? "Synthetic fixture B" : "Synthetic fixture A", provider: "Synthetic fixture",
@@ -28,7 +27,7 @@ function registry() {
       settings: "Synthetic fixture", settingsCheckedOn: "2026-10-08" },
   }]));
   const table = { models, defaultId: MODELS[0], defaultKey: "alpha" };
-  return { schema: 1, kind: "explain-reviewed-registry", provenance, table, tableSha256: digest(table) };
+  return { schema: 1, kind: "synthetic-offline-registry", provenance, table, tableSha256: digest(table) };
 }
 function reply(text = "A ripe banana is yellow.", overrides = {}) {
   return { output: { message: { role: "assistant", content: [{ text }] } }, stopReason: "end_turn",
@@ -240,7 +239,8 @@ test("source parser preserves the single table verbatim and cannot execute adjac
   assert.deepEqual(imported.table, table);
   assert.equal(imported.provenance.sourceSha256, bytesDigest(source));
   assert.equal(imported.tableSha256, digest(table));
-  assert.equal(validateRegistry(imported, MODELS).hash, digest(imported));
+  assert.equal(imported.provenance.commitVerification, "operator-asserted");
+  assert.throws(() => validateRegistry(imported, MODELS), { code: "E_REGISTRY" });
 });
 
 test("malformed reasoning structures never make a reply complete and their bytes are excluded", () => withTemp(async dir => {
@@ -271,7 +271,8 @@ test("reserved artifact basename and malformed question identifiers refuse befor
 test("draft archival bytes and metadata remain unchanged; lossless bridge is not executed", async () => {
   const files = { "questions.draft.json": "2a52b833ecc865856882ddae6340f64d368ef825fab53882e1f256c87c4f71af",
     "DESIGN-DRAFT.md": "cdc50a62967c18819618b9b0596be7400b5bd94420a18ea18a439e3584dd99a5",
-    "QUESTIONS-DRAFT.md": "91590074803079abd0de3445451ef7e55f1120872d1ae73d3a28108a72d82b94" };
+    "QUESTIONS-DRAFT.md": "91590074803079abd0de3445451ef7e55f1120872d1ae73d3a28108a72d82b94",
+    "MANIFEST.json": "6332dad68529388dc6868739b10448db719305f199149e670c5e221a6fa7b4fa" };
   for (const [name, hash] of Object.entries(files)) assert.equal(bytesDigest(await readFile(new URL(`../drafts/${name}`, import.meta.url))), hash);
   const bytes = await readFile(new URL("../drafts/questions.draft.json", import.meta.url));
   const document = JSON.parse(bytes.toString("utf8"));
@@ -304,4 +305,29 @@ test("CLI rejects live mode with only a fixed code and never prints inputs", () 
   assert.equal(run.status, 0, run.stderr);
   assert.equal(run.stdout, "");
   assert.equal(run.stderr, "");
+}));
+
+test("CLI preserves incomplete records but signals exit 2 for failed, refused and unknown-usage replies", () => withTemp(async dir => {
+  const document = registry();
+  const registryPath = join(dir, "registry.json"), questionsPath = join(dir, "questions.json");
+  await writeFile(registryPath, JSON.stringify(document));
+  await writeFile(questionsPath, JSON.stringify(NEUTRAL_SET));
+  const cases = [[{ fixtureError: "timeout" }, "stub-failed"],
+    [reply("I cannot assist with that request."), "refusal-like"],
+    [reply("A ripe banana is yellow.", { usage: undefined }), "answer"]];
+  for (const [index, [value, responseStatus]] of cases.entries()) {
+    const fixturePath = join(dir, `fixtures-${index}.json`), artifactDirectory = join(dir, `incomplete-${index}`);
+    await writeFile(fixturePath, JSON.stringify(replay({ [`${MODELS[0]}/n01`]: value })));
+    const result = spawnSync(process.execPath, [fileURLToPath(new URL("../cli.mjs", import.meta.url)),
+      "--registry", registryPath, "--models", MODELS.join(","), "--questions", questionsPath,
+      "--fixtures", fixturePath, "--artifacts", artifactDirectory], { encoding: "utf8" });
+    assert.equal(result.status, 2);
+    assert.equal(result.stdout, "");
+    assert.equal(result.stderr, "E_RUN_INCOMPLETE\n");
+    const record = JSON.parse(await readFile(join(artifactDirectory, "run.json"), "utf8"));
+    assert.equal(record.complete, false);
+    assert.equal(record.rows[0].responseStatus, responseStatus);
+    assert.equal(record.actualCostUsd, 0);
+    if (index !== 1) assert.equal(record.rows[1].code, "E_SIMULATED_LEDGER_PAUSE");
+  }
 }));
