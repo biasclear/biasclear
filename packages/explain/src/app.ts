@@ -1,7 +1,8 @@
 // The Explain request, step by step (SPEC §4). Cheap checks come first, so
 // junk costs nothing but a Lambda millisecond, and nothing that fails before
-// the spend check touches DynamoDB. The model is called only with a spend
-// reservation in hand.
+// the spend check touches DynamoDB, except the lasting pause written when
+// Bedrock refuses the settings read with an explicit deny. The model is
+// called only with a spend reservation in hand.
 //
 // Everything runs inside one try/catch: anything that escapes is logged as
 // the fixed code E_INTERNAL, and the Lambda runtime never sees an error it
@@ -9,7 +10,7 @@
 
 import { timingSafeEqual } from "node:crypto";
 import { Ddb, DdbError } from "./aws/dynamodb.js";
-import { MODEL_TIMEOUT_MS, converseModel, modelRequest, readAccountSettings, type ModelOutcome } from "./aws/bedrock.js";
+import { BedrockDenied, MODEL_TIMEOUT_MS, converseModel, modelRequest, readAccountSettings, type ModelOutcome } from "./aws/bedrock.js";
 import type { Transport } from "./aws/transport.js";
 import { CodedError, type Code, type ErrorName, type PlainerState } from "./codes.js";
 import { bankHash, pickLimits, quotable } from "./compose.js";
@@ -248,6 +249,19 @@ async function explain(
   if (!config.on) stop("paused", "E_SWITCH_OFF");
   if (state.pausedUntil > now) stop("paused", "E_PAUSE_FLAG");
 
+  // Bedrock refused the function with an explicit deny: most likely the $30 budget action's deny
+  // policy. Explain stays off until a person checks, even after AWS resets the action next budget
+  // month (owner decision D5, 2026-10-09), so the shared fence is written. Nothing is owed, so there
+  // is no debt row. The function can't delete it; clearing it needs a separately reviewed recovery
+  // tool, and none exists yet (infra/aws/README.md, "If an email from AWS Budgets arrives").
+  const denied = async (ddb: Ddb): Promise<never> => {
+    state.pausedUntil = Number.POSITIVE_INFINITY;
+    const persisted = await persistPause(ddb, { reason: "E_BEDROCK_DENIED", nowMs: now, reservedMicros: 0 }, deadline);
+    line.pausePersisted = persisted ? 1 : 0;
+    detail.pausePersisted = persisted;
+    return stop("paused", "E_BEDROCK_DENIED");
+  };
+
   // 2. A concurrent request must await privacy proof; caching begins after it finishes.
   if (state.settingsCheck !== undefined || now >= state.nextSettingsCheck) {
     if (state.settingsCheck === undefined) {
@@ -257,12 +271,13 @@ async function explain(
           if (s.loggingOn) return "E_SETTINGS_LOGGING_ON";
           if (Object.values(s.retentionByRegion).some((mode) => mode !== config.retentionMode)) return "E_SETTINGS_RETENTION";
           return undefined;
-        } catch { return "E_SETTINGS_READ"; }
+        } catch (err) { return err instanceof BedrockDenied ? "E_BEDROCK_DENIED" : "E_SETTINGS_READ"; }
       })();
     }
     const code = await state.settingsCheck;
     state.settingsCheck = undefined;
     state.nextSettingsCheck = deps.now() + SETTINGS_INTERVAL_MS;
+    if (code === "E_BEDROCK_DENIED") return denied(new Ddb(deps.transport, config.region, config.table));
     if (code !== undefined) {
       state.pausedUntil = deps.now() + SETTINGS_INTERVAL_MS;
       stop("paused", code);
@@ -412,6 +427,7 @@ async function explain(
     detail.actualMicros = 0;
     if (!(await release(ddb, reservation, deadline))) return pause("E_SETTLE", 0);
     line.micros = 0;
+    if (outcome.code === "E_BEDROCK_DENIED") return denied(ddb);
     if (outcome.pauseInstance) state.pausedUntil = now + SETTINGS_INTERVAL_MS;
     return stop(outcome.answer, outcome.code);
   }

@@ -152,18 +152,22 @@ export interface PauseDetail {
   nowMs: number;
   reservedMicros: number;
   actualMicros?: number;
-  event: string;
+  /** The unresolved event. A Bedrock refusal (E_BEDROCK_DENIED) has none: nothing is owed. */
+  event?: string;
 }
+
+/** A pause that holds an unresolved event, with its own debt row. */
+export type DebtDetail = PauseDetail & { event: string };
 
 function pauseItem(p: PauseDetail): Item {
   return {
     pk: { S: BILLING_PAUSE_KEY }, reason: { S: p.reason }, at: { N: String(seconds(p.nowMs)) }, reserved: { N: String(p.reservedMicros) },
     ...(p.actualMicros === undefined ? {} : { actual: { N: String(p.actualMicros) } }),
-    event: { S: p.event },
+    ...(p.event === undefined ? {} : { event: { S: p.event } }),
   };
 }
 
-function debtItem(p: PauseDetail): Item {
+function debtItem(p: DebtDetail): Item {
   return { ...pauseItem(p), pk: { S: `billingdebt#${p.event.slice("billing#".length)}` } };
 }
 
@@ -191,7 +195,9 @@ async function putDurably(ddb: Ddb, item: Item, landed: (found: Item | undefined
 }
 
 /** The shared fence. Every reserve checks it, so it is written alone, never in a transaction
- * with another item (306 b); a later pause may overwrite an earlier one, as before. */
+ * with another item (306 b); a later pause may overwrite an earlier one, as before. Called on its
+ * own after a settled bound breach (whose debt row the settlement already committed) and after a
+ * Bedrock refusal (E_BEDROCK_DENIED: reservedMicros 0, no event and no debt row, as nothing is owed). */
 export async function persistPause(ddb: Ddb, p: PauseDetail, deadline: Deadline = NO_DEADLINE): Promise<boolean> {
   return putDurably(ddb, pauseItem(p), (found) => found !== undefined, deadline);
 }
@@ -200,7 +206,7 @@ export async function persistPause(ddb: Ddb, p: PauseDetail, deadline: Deadline 
  * and the event's own debt row (a key nothing else writes) are written at the same time, each on its
  * own, so a slow or unavailable debt key can't delay the fence (314 M1). Both are overwrites; no
  * money ADD is retried. A debt survives log expiry and month rollover until an owner reconciles it. */
-export async function persistBillingPause(ddb: Ddb, p: PauseDetail, deadline: Deadline = NO_DEADLINE): Promise<boolean> {
+export async function persistBillingPause(ddb: Ddb, p: DebtDetail, deadline: Deadline = NO_DEADLINE): Promise<boolean> {
   const [paused, debtKept] = await Promise.all([
     persistPause(ddb, p, deadline),
     putDurably(ddb, debtItem(p), (known) => stringAttr(known, "event") === p.event &&
@@ -213,7 +219,7 @@ export async function persistBillingPause(ddb: Ddb, p: PauseDetail, deadline: De
  * nothing else writes); the caller then writes the shared pause on its own (persistPause), so the
  * settlement never contends on the item every reserve checks (306 b). Every attempt leaves
  * FENCE_RESERVE_MS of the invocation for the stop records in case it fails (314 M1). */
-export async function settle(ddb: Ddb, r: Reservation, actual: number, breach?: PauseDetail, deadline: Deadline = NO_DEADLINE): Promise<boolean> {
+export async function settle(ddb: Ddb, r: Reservation, actual: number, breach?: DebtDetail, deadline: Deadline = NO_DEADLINE): Promise<boolean> {
   if (!Number.isSafeInteger(actual) || actual < 0) return false;
   const delta = actual - r.micros;
   const add = (pk: string) => ({ Key: { pk: { S: pk } }, UpdateExpression: "ADD #m :d", ExpressionAttributeNames: { "#m": "m" }, ExpressionAttributeValues: { ":d": { N: String(delta) } } });

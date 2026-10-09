@@ -428,7 +428,7 @@ describe("the spend cap fails closed", () => {
     }
   });
 
-  it("pauses the instance for 15 minutes after access denied (the budget action fired)", async () => {
+  it("pauses the instance for 15 minutes after access denied without an explicit deny (test/denied-pause.test.ts has the budget's)", async () => {
     const h = harness();
     h.aws.model = () => ({ status: 403, errorType: "AccessDeniedException:http://internal.amazon.com/coral/" });
     await h.call(httpEvent());

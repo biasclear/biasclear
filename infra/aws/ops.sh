@@ -160,7 +160,9 @@ explain_code() {
   case "$1" in
     E_MODEL_RETENTION) echo "Amazon refused zero data retention for this model. Stop and report to Brad; no default or review retention fallback is permitted." ;;
     E_MODEL_ROUTE) echo "Amazon refused the way Explain calls the model (the inference profile). Nothing is wrong with your settings. Tell the PM." ;;
-    E_MODEL_DENIED) echo "Amazon denied Explain the model: the budget's automatic stop may have fired, or the model isn't switched on yet (setup step 3)." ;;
+    E_BEDROCK_DENIED) echo "Amazon refused Explain with an explicit deny: most likely the budget's automatic stop fired. Explain now keeps a lasting pause, and no reviewed tool clears it yet: tell the PM and change nothing in the console." ;;
+    E_BILLING_PAUSE) echo "Explain is held off by its lasting pause (billing#pause). No reviewed tool clears it yet: tell the PM and change nothing in the console." ;;
+    E_MODEL_DENIED) echo "Amazon refused Explain the model, without an explicit deny: the model isn't switched on yet (setup step 3), a permission is missing, or credentials were missing or expired. This copy of the function pauses for 15 minutes. Switch the model on, wait a few minutes, then run deploy again." ;;
     E_MODEL_NOT_FOUND) echo "Amazon says the model isn't available to this account in this Region. Check setup step 3, then tell the PM." ;;
     E_MODEL_THROTTLED | E_MODEL_QUOTA) echo "The model was busy. Run deploy again in a few minutes." ;;
     E_SETTINGS_LOGGING_ON | E_SETTINGS_RETENTION | E_SETTINGS_READ) echo "An account privacy setting doesn't match what Explain expects (Bedrock > Settings)." ;;
