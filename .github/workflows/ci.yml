@@ -74,6 +74,67 @@ jobs:
           set -euo pipefail
           PYTHON="$RUNNER_TEMP/venv-3.14/bin/python" node --test site/test/site.test.mjs
 
+  # The optional Explain service (Mode C): packages/explain and infra/aws.
+  # A job of its own, outside the four required checks above.
+  explain:
+    name: explain
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CFN_LINT_VERSION: "1.57.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The Lambda runtime is nodejs24.x.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      # Typecheck, build the deployment zip, then the unit tests: a mocked
+      # Bedrock and DynamoDB, the spend cap and its races, rate limits, the
+      # kill switch, CORS, the answer checks, and no user text in any log.
+      - name: Explain function tests
+        working-directory: packages/explain
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
+
+      - name: Offline three-model evaluation (stubs only, no spend)
+        working-directory: packages/explain
+        run: npm run eval:dry
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: explain-offline-evaluation
+          path: |
+            packages/explain/dist/eval-dry-run.json
+            packages/explain/dist/eval-dry-run.md
+          retention-days: 14
+          if-no-files-found: error
+
+      # The templates (cfn-lint and their IAM, CORS and cost checks), and the
+      # deploy workflow's shell scripts against fake aws, curl and gh commands
+      # (shellcheck is on the runner image).
+      - name: Reviewed model table matches exact IAM, selector and prices
+        run: |
+          node infra/aws/model-table.mjs --check
+          node packages/explain/scripts/privacy-drafts.mjs --check
+
+      - name: cfn-lint, the template checks and the workflow scripts
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet "cfn-lint==${CFN_LINT_VERSION}" "pytest>=8"
+          cfn-lint infra/aws/explain.yaml infra/aws/setup.yaml
+          shellcheck infra/aws/ops.sh infra/aws/summary.sh
+          python -m pytest infra/aws/test_templates.py infra/aws/test_scripts.py infra/aws/test_model_table.py -q -p no:cacheprovider
+
   security:
     name: security
     runs-on: ubuntu-latest

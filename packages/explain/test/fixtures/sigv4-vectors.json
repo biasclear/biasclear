@@ -1,0 +1,85 @@
+{
+  "about": "SigV4 signatures made by botocore 1.43.103 (AWS's Python signer) with made-up credentials, for test/sigv4.test.ts. Made by test/fixtures/make_sigv4_vectors.py (needs botocore; not run in CI).",
+  "date": "2026-10-05T14:03:07Z",
+  "region": "us-east-1",
+  "cases": [
+    {
+      "name": "dynamodb UpdateItem",
+      "service": "dynamodb",
+      "method": "POST",
+      "host": "dynamodb.us-east-1.amazonaws.com",
+      "path": "/",
+      "headers": {
+        "content-type": "application/x-amz-json-1.0",
+        "x-amz-target": "DynamoDB_20120810.UpdateItem"
+      },
+      "body": "{\"TableName\": \"biasclear-explain\", \"Key\": {\"pk\": {\"S\": \"spend#2026-10\"}}}",
+      "scope": "20261005/us-east-1/dynamodb/aws4_request",
+      "signedHeaders": "content-type;host;x-amz-date;x-amz-security-token;x-amz-target",
+      "signature": "d4c7aaa232ab8f2b626e5aca30a0cff245686caa3b08a31e8ffe5f8b09c48d57",
+      "amzDate": "20261005T140307Z"
+    },
+    {
+      "name": "bedrock InvokeModel",
+      "service": "bedrock",
+      "method": "POST",
+      "host": "bedrock-runtime.us-east-1.amazonaws.com",
+      "path": "/model/anthropic.claude-sonnet-5/invoke",
+      "headers": {
+        "content-type": "application/json",
+        "accept": "application/json"
+      },
+      "body": "{\"anthropic_version\": \"bedrock-2023-05-31\", \"max_tokens\": 400, \"messages\": [{\"role\": \"user\", \"content\": \"Everyone agrees — ‹ok›\"}]}",
+      "scope": "20261005/us-east-1/bedrock/aws4_request",
+      "signedHeaders": "accept;content-type;host;x-amz-date;x-amz-security-token",
+      "signature": "36d0f5b89bb5b830ebebd3b5eeaa497c86a46d770695131f40cf164eb033c71b",
+      "amzDate": "20261005T140307Z"
+    },
+    {
+      "name": "bedrock InvokeModel, a model id with a colon",
+      "service": "bedrock",
+      "method": "POST",
+      "host": "bedrock-runtime.us-east-1.amazonaws.com",
+      "path": "/model/anthropic.claude-haiku-4-5-20251001-v1%3A0/invoke",
+      "headers": {
+        "content-type": "application/json",
+        "accept": "application/json"
+      },
+      "body": "{}",
+      "scope": "20261005/us-east-1/bedrock/aws4_request",
+      "signedHeaders": "accept;content-type;host;x-amz-date;x-amz-security-token",
+      "signature": "2eb620386a99189db702ec6723accb7ff9bdef7f84af324b1e361cb14ae1fe1b",
+      "amzDate": "20261005T140307Z"
+    },
+    {
+      "name": "bedrock GetAccountDataRetention",
+      "service": "bedrock",
+      "method": "GET",
+      "host": "bedrock.us-east-1.amazonaws.com",
+      "path": "/data-retention",
+      "headers": {
+        "accept": "application/json"
+      },
+      "body": "",
+      "scope": "20261005/us-east-1/bedrock/aws4_request",
+      "signedHeaders": "accept;host;x-amz-date;x-amz-security-token",
+      "signature": "65ae91daeea8692cdb7da36aa982df55abd958a3d63e1d38cd200dd75beda36c",
+      "amzDate": "20261005T140307Z"
+    },
+    {
+      "name": "lambda Invoke",
+      "service": "lambda",
+      "method": "POST",
+      "host": "lambda.us-east-1.amazonaws.com",
+      "path": "/2015-03-31/functions/biasclear-explain/invocations",
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"explainEvaluation\": 1}",
+      "scope": "20261005/us-east-1/lambda/aws4_request",
+      "signedHeaders": "content-type;host;x-amz-date;x-amz-security-token",
+      "signature": "2a79be944cafe5a53cd618db0772eec13c96fea0ca0788bf7e81725e23c373a5",
+      "amzDate": "20261005T140307Z"
+    }
+  ]
+}

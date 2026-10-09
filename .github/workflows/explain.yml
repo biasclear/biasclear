@@ -1,0 +1,319 @@
+name: Explain (AWS)
+
+# Deploys, pauses, resumes, evaluates or removes BiasClear's optional Explain
+# service (Mode C) on AWS. Owner's guide: infra/aws/README.md.
+#
+# - It runs only when someone starts it by hand (Actions > Explain (AWS) >
+#   Run workflow). Nothing starts it on a merge or a schedule.
+# - "summary" writes, in plain words, what the run will do and what changed
+#   since the last deploy (infra/aws/summary.sh). It has no AWS access.
+# - "build" and "rebuild" install the build tools from npm, run the tests and
+#   build the function's zip, twice, on separate runners. They have no AWS
+#   access and no GitHub token that can sign in to AWS.
+# - "aws" waits in the explain-aws environment for the owner's approval (the
+#   environment admits main only). It installs nothing from npm: it checks
+#   that both builds made the same zip, then uses the AWS CLI, curl and jq
+#   (infra/aws/ops.sh). Each step signs in for itself with GitHub's OIDC token
+#   (no stored key), and the session ends with the step. The one rule for
+#   approving: approve only a run you started yourself, just now.
+# - "report" (evaluate only) turns the answers into the red team's tables. It
+#   has no AWS access.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        required: true
+        options: [deploy, pause, resume, evaluate, remove]
+      model:
+        description: "Reviewed model key: deploy selects it; resume/evaluate require the active stack to match. Blocked entries refuse before AWS credentials."
+        type: choice
+        required: false
+        default: grok47
+        options: [grok47, sonnet55, sol61]
+      monthly_cap:
+        description: "Deploy only: the monthly cap in US dollars, 1 to 25. Leave blank to keep the current one."
+        type: string
+        required: false
+        default: ""
+
+run-name: "Explain (AWS): ${{ inputs.action }}"
+
+permissions: {}
+
+concurrency:
+  group: explain-aws
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  AWS_DEFAULT_REGION: us-east-1
+  STACK: biasclear-explain
+
+jobs:
+  summary:
+    name: summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      deployments: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Say what this run will do
+        env:
+          ACTION: ${{ inputs.action }}
+          CAP: ${{ inputs.monthly_cap }}
+          MODEL: ${{ inputs.model }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+        run: bash infra/aws/summary.sh
+
+  # The build tools (esbuild, vitest, TypeScript and their native binaries)
+  # run here and in "rebuild" only: no environment, no id-token, read-only.
+  build:
+    name: build
+    needs: summary
+    if: inputs.action == 'deploy' || inputs.action == 'evaluate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      sha256: ${{ steps.zip.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the build bundles the previous rules release from history
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Install the build tools
+        run: |
+          set -euo pipefail
+          (cd packages/engine && npm ci --ignore-scripts --no-audit --no-fund)
+          (cd packages/explain && npm ci --ignore-scripts --no-audit --no-fund)
+
+      - name: Tests
+        if: inputs.action == 'deploy'
+        working-directory: packages/explain
+        run: npm test
+
+      - name: The model's price matches AWS's price list
+        if: inputs.action == 'deploy'
+        working-directory: packages/explain
+        run: node scripts/check-prices.mjs
+
+      - name: Build (current and previous rules releases)
+        working-directory: packages/explain
+        run: node scripts/build.mjs --previous auto
+
+      - name: Write the requests the AWS job will send
+        working-directory: packages/explain
+        run: |
+          set -euo pipefail
+          node dist/ops.mjs smoke --out dist/smoke.json
+          node dist/ops.mjs requests --fixtures eval/fixtures.json --out dist/eval-requests.jsonl
+
+      - id: zip
+        name: The zip's sha256
+        run: echo "sha256=$(cut -d' ' -f1 packages/explain/dist/explain.zip.sha256)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: explain-build
+          path: |
+            packages/explain/dist/explain.zip
+            packages/explain/dist/explain.zip.sha256
+            packages/explain/dist/smoke.json
+            packages/explain/dist/eval-requests.jsonl
+            packages/explain/dist/ops.mjs
+          if-no-files-found: error
+          retention-days: 7
+
+  # A second, independent build on another runner. The AWS job ships the zip
+  # only if both builds made the same bytes (the build is reproducible).
+  rebuild:
+    name: rebuild
+    needs: summary
+    if: inputs.action == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      sha256: ${{ steps.zip.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          (cd packages/engine && npm ci --ignore-scripts --no-audit --no-fund)
+          cd packages/explain
+          npm ci --ignore-scripts --no-audit --no-fund
+          node scripts/build.mjs --previous auto
+
+      - id: zip
+        name: The zip's sha256
+        run: echo "sha256=$(cut -d' ' -f1 packages/explain/dist/explain.zip.sha256)" >> "$GITHUB_OUTPUT"
+
+  aws:
+    name: aws
+    needs: [summary, build, rebuild]
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' && needs.summary.result == 'success' &&
+      (needs.build.result == 'success' || (needs.build.result == 'skipped' && inputs.action != 'deploy' && inputs.action != 'evaluate')) &&
+      (needs.rebuild.result == 'success' || (needs.rebuild.result == 'skipped' && inputs.action != 'deploy'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    environment: explain-aws
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+      CAP: ${{ inputs.monthly_cap }}
+      MODEL: ${{ inputs.model }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Node itself, for one dependency-free script from the checkout
+      # (infra/aws/deploy-params.mjs). No npm package is installed in this job.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: "Offline gate: owner policy, model table and billed-token bound"
+        # Runs before ops.sh can request GitHub OIDC or AWS credentials.
+        # Pause/remove/restore remain available as emergency actions.
+        if: inputs.action == 'deploy' || inputs.action == 'resume' || inputs.action == 'evaluate'
+        run: |
+          node infra/aws/model-table.mjs --check
+          node infra/aws/readiness.mjs --model "$MODEL"
+
+      - name: Get the build
+        if: inputs.action == 'deploy' || inputs.action == 'evaluate'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: explain-build
+          path: explain-build
+
+      - name: "Deploy: both builds made this exact zip"
+        if: inputs.action == 'deploy'
+        env:
+          BUILD_SHA: ${{ needs.build.outputs.sha256 }}
+          REBUILD_SHA: ${{ needs.rebuild.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          got="$(sha256sum explain-build/explain.zip | cut -d' ' -f1)"
+          if ! [[ "$got" =~ ^[0-9a-f]{64}$ ]] || [ "$got" != "$BUILD_SHA" ] || [ "$got" != "$REBUILD_SHA" ]; then
+            echo "Stop: the two builds didn't make the same zip, or it changed on the way. Nothing was deployed. Tell the PM." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Both builds made the same zip (sha256 ${got:0:12})."
+
+      - name: "Deploy: check the service can take a change"
+        if: inputs.action == 'deploy'
+        run: bash infra/aws/ops.sh prepare
+
+      - name: "Deploy: Bedrock logging is off and data retention is as expected"
+        if: inputs.action == 'deploy'
+        run: bash infra/aws/ops.sh settings "$(node infra/aws/deploy-params.mjs --get RetentionMode)"
+
+      - name: "Deploy: update the service and make two test calls"
+        if: inputs.action == 'deploy'
+        run: bash infra/aws/ops.sh deploy explain-build/explain.zip explain-build/smoke.json "$CAP"
+
+      - name: "Pause or resume: change the switch and nothing else"
+        if: inputs.action == 'pause' || inputs.action == 'resume'
+        env:
+          VALUE: ${{ inputs.action == 'resume' && 'on' || 'off' }}
+        run: bash infra/aws/ops.sh switch "$VALUE"
+
+      - name: "Evaluate: ask the model about the test sentences"
+        if: inputs.action == 'evaluate'
+        run: bash infra/aws/ops.sh evaluate explain-build/eval-requests.jsonl eval-raw.jsonl
+
+      - name: "Put the switch back"
+        if: always() && env.PREV_SWITCH != '' && (inputs.action == 'deploy' || inputs.action == 'evaluate')
+        run: bash infra/aws/ops.sh restore "$PREV_SWITCH"
+
+      - name: "Evaluate: keep every answer"
+        if: always() && inputs.action == 'evaluate'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: explain-evaluation-raw
+          path: eval-raw.jsonl
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: "Remove: delete the service"
+        if: inputs.action == 'remove'
+        run: bash infra/aws/ops.sh remove
+
+  report:
+    name: report
+    needs: [build, aws]
+    if: always() && inputs.action == 'evaluate' && needs.build.result == 'success' && needs.aws.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      MODEL: ${{ inputs.model }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: explain-build
+          path: explain-build
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        continue-on-error: true
+        with:
+          name: explain-evaluation-raw
+          path: explain-raw
+
+      - name: "Evaluate: the red team's report"
+        run: |
+          set -euo pipefail
+          MODEL_ID=$(node infra/aws/model-table.mjs --id "$MODEL")
+          node explain-build/ops.mjs report --model "$MODEL_ID" --fixtures packages/explain/eval/fixtures.json \
+            --requests explain-build/eval-requests.jsonl --raw explain-raw/eval-raw.jsonl --out eval-results.json
+
+      - name: "Evaluate: save every answer for the red team"
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: explain-evaluation
+          path: eval-results.json
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,419 @@
+{
+  "dryRun": true,
+  "actualSpendUsd": 0,
+  "qualityMeasured": false,
+  "releaseApproved": false,
+  "humanReviewRequired": true,
+  "fixtureHash": "0a3a4be14b244e7e7ec6de9692f50e0e311570710ce0e30ae1c8a5d699a6565f",
+  "syntheticUsage": {
+    "inTok": 100,
+    "outTok": 40
+  },
+  "sameFixedSetForEveryModel": true,
+  "stubInvocations": 3246,
+  "reservedBeforeEveryCall": true,
+  "networkAttempts": 0,
+  "fullReportSha256": "fa06a8f1b62141d6753e68fc3713d3f8038e41e0a662878c6dd77d317b69fd3e",
+  "fullReportReproduction": "npm run eval:dry; CI artifact explain-offline-evaluation contains complete synthetic per-answer JSON/Markdown and inherits repository access.",
+  "models": [
+    {
+      "id": "us.xai.grok-4.7",
+      "displayName": "Grok 4.7",
+      "fixtureHash": "0a3a4be14b244e7e7ec6de9692f50e0e311570710ce0e30ae1c8a5d699a6565f",
+      "planned": 1085,
+      "liveConfigurationBlocked": true,
+      "liveBlockReason": "Bedrock billed reasoning-token bound is unverified; visible maxTokens is not assumed to bound total cost.",
+      "stubReservationTotalUsd": 9.935425,
+      "syntheticBound": {
+        "billedMaxTokens": 400,
+        "framingTokens": 50
+      },
+      "knownLiveWorstCaseUsd": null,
+      "injectedVerdictProbes": 9,
+      "injectedVerdictRejected": 9,
+      "unsafeRewriteProbes": 6,
+      "unsafeRewriteDropped": 6,
+      "safeRewriteProbes": 12,
+      "safeRewriteKept": 12,
+      "simulationChecksPass": true,
+      "categories": [
+        {
+          "part": "a",
+          "planned": 490,
+          "ran": 490,
+          "answered": 490,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 490,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.23716,
+          "simulatedMs": 490
+        },
+        {
+          "part": "b",
+          "planned": 490,
+          "ran": 490,
+          "answered": 490,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 490,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.23716,
+          "simulatedMs": 490
+        },
+        {
+          "part": "i",
+          "planned": 63,
+          "ran": 63,
+          "answered": 42,
+          "refusalLike": 0,
+          "preflightRejected": 3,
+          "outputRejected": 18,
+          "outcomes": {
+            "accepted": 42,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 18,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 3,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.02904,
+          "simulatedMs": 60
+        },
+        {
+          "part": "r",
+          "planned": 18,
+          "ran": 18,
+          "answered": 18,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 18,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.008712,
+          "simulatedMs": 18
+        },
+        {
+          "part": "c",
+          "planned": 24,
+          "ran": 24,
+          "answered": 24,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 24,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.011616,
+          "simulatedMs": 24
+        }
+      ]
+    },
+    {
+      "id": "us.anthropic.claude-sonnet-5-5",
+      "displayName": "Claude Sonnet 5.5",
+      "fixtureHash": "0a3a4be14b244e7e7ec6de9692f50e0e311570710ce0e30ae1c8a5d699a6565f",
+      "planned": 1085,
+      "liveConfigurationBlocked": true,
+      "liveBlockReason": "Converse reasoning accounting and input token framing bounds remain unverified.",
+      "stubReservationTotalUsd": 11.845025,
+      "syntheticBound": {
+        "billedMaxTokens": 400,
+        "framingTokens": 50
+      },
+      "knownLiveWorstCaseUsd": null,
+      "injectedVerdictProbes": 9,
+      "injectedVerdictRejected": 9,
+      "unsafeRewriteProbes": 6,
+      "unsafeRewriteDropped": 6,
+      "safeRewriteProbes": 12,
+      "safeRewriteKept": 12,
+      "simulationChecksPass": true,
+      "categories": [
+        {
+          "part": "a",
+          "planned": 490,
+          "ran": 490,
+          "answered": 490,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 490,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.3234,
+          "simulatedMs": 490
+        },
+        {
+          "part": "b",
+          "planned": 490,
+          "ran": 490,
+          "answered": 490,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 490,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.3234,
+          "simulatedMs": 490
+        },
+        {
+          "part": "i",
+          "planned": 63,
+          "ran": 63,
+          "answered": 42,
+          "refusalLike": 0,
+          "preflightRejected": 3,
+          "outputRejected": 18,
+          "outcomes": {
+            "accepted": 42,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 18,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 3,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.0396,
+          "simulatedMs": 60
+        },
+        {
+          "part": "r",
+          "planned": 18,
+          "ran": 18,
+          "answered": 18,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 18,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.01188,
+          "simulatedMs": 18
+        },
+        {
+          "part": "c",
+          "planned": 24,
+          "ran": 24,
+          "answered": 24,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 24,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.01584,
+          "simulatedMs": 24
+        }
+      ]
+    },
+    {
+      "id": "us.openai.gpt-6.1-sol",
+      "displayName": "GPT-6.1 Sol",
+      "fixtureHash": "0a3a4be14b244e7e7ec6de9692f50e0e311570710ce0e30ae1c8a5d699a6565f",
+      "planned": 1085,
+      "liveConfigurationBlocked": true,
+      "liveBlockReason": "Bedrock lowest reasoning setting and billed total-token bound are unverified.",
+      "stubReservationTotalUsd": 11.845025,
+      "syntheticBound": {
+        "billedMaxTokens": 400,
+        "framingTokens": 50
+      },
+      "knownLiveWorstCaseUsd": null,
+      "injectedVerdictProbes": 9,
+      "injectedVerdictRejected": 9,
+      "unsafeRewriteProbes": 6,
+      "unsafeRewriteDropped": 6,
+      "safeRewriteProbes": 12,
+      "safeRewriteKept": 12,
+      "simulationChecksPass": true,
+      "categories": [
+        {
+          "part": "a",
+          "planned": 490,
+          "ran": 490,
+          "answered": 490,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 490,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.3234,
+          "simulatedMs": 490
+        },
+        {
+          "part": "b",
+          "planned": 490,
+          "ran": 490,
+          "answered": 490,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 490,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.3234,
+          "simulatedMs": 490
+        },
+        {
+          "part": "i",
+          "planned": 63,
+          "ran": 63,
+          "answered": 42,
+          "refusalLike": 0,
+          "preflightRejected": 3,
+          "outputRejected": 18,
+          "outcomes": {
+            "accepted": 42,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 18,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 3,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.0396,
+          "simulatedMs": 60
+        },
+        {
+          "part": "r",
+          "planned": 18,
+          "ran": 18,
+          "answered": 18,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 18,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.01188,
+          "simulatedMs": 18
+        },
+        {
+          "part": "c",
+          "planned": 24,
+          "ran": 24,
+          "answered": 24,
+          "refusalLike": 0,
+          "preflightRejected": 0,
+          "outputRejected": 0,
+          "outcomes": {
+            "accepted": 24,
+            "provider_refusal": 0,
+            "truncated": 0,
+            "validator_rejected": 0,
+            "call_failure": 0,
+            "cap": 0,
+            "preflight": 0,
+            "service_blocked": 0,
+            "unknown": 0
+          },
+          "simulatedUsd": 0.01584,
+          "simulatedMs": 24
+        }
+      ]
+    }
+  ]
+}

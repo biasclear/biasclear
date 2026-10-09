@@ -1,0 +1,27 @@
+{
+  "name": "@biasclear/explain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BiasClear's optional Explain service: re-check one marked sentence and request a checked explanation through a reviewed Bedrock Converse model. No runtime dependencies.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "gen": "node scripts/gen-engines.mjs",
+    "typecheck": "node scripts/gen-engines.mjs && tsc -p tsconfig.json",
+    "build": "node scripts/build.mjs",
+    "check-prices": "node scripts/check-prices.mjs",
+    "eval:dry": "node eval/build-dry-run.mjs && node dist/eval-dry-run.mjs",
+    "test": "npm run typecheck && npm run build && vitest run"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
+  },
+  "overrides": {
+    "source-map-js": "1.2.2"
+  }
+}
