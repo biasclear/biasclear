@@ -32,7 +32,7 @@ There are two parts, both in **US East (N. Virginia)**. The model is called thro
 
 - **GitHub's keyless login.** It lets the "Explain (AWS)" workflow in the BiasClear repository work in your account, only from the protected `explain-aws` environment, and only after you approve. No key is stored anywhere.
 - **Three roles** (sets of permissions): one for GitHub, one for CloudFormation (Amazon's setup tool), and one for the Explain function. The function may use only the three reviewed model profiles and their exact destination model ARNs, its own counters and its own log. One stack parameter selects the active model; unknown or unverified settings refuse startup.
-- **One table of counters**: money spent this month and today, and how often each connection used Explain, under a scrambled code (see "What stays private"). It lives here, not in the service, so removing and redeploying the service can't restart the month's count. After a billing anomaly it also holds the billing pause and one debt record per unresolved charge; those never expire and wait for you (see "Reconciling a billing anomaly").
+- **One table of counters**: money spent this month and today, and how often each connection used Explain, under a scrambled code (see "What stays private"). It lives here, not in the service, so removing and redeploying the service can't restart the month's count. After a billing anomaly it also holds the billing pause and one debt record per unresolved charge; those never expire and stay until a reviewed reconciliation exists (see "After a billing anomaly").
 - **A monthly budget of $30** for the whole account, which ignores credits. It emails `hello@biasclear.com` along the way. At $30 it takes the AI model away from Explain by itself, and at $45 it does so again (the last stop, see "If an email from AWS Budgets arrives").
 - **A private storage bucket** for build files. Each is about 70 KB; they are kept, so a failed update can always go back to the one before. Deleting everything empties it.
 
@@ -132,14 +132,11 @@ If Throttle is refused on this account: CloudFormation → `biasclear-explain` �
 - **Lower** (1 to 25 dollars): run **deploy** and type the number in **monthly cap**. Approve it.
 - **Higher than $25:** a small reviewed change to the files, plus one number in the setup stack's budget, done together. Ask the PM.
 
-## Reconciling a billing anomaly
+## After a billing anomaly
 
-The PM does this with you at a sitting; the function itself can't delete these records (setup.yaml lets it delete only old salts).
+**No safe reconciliation tool is supplied yet.** Leave `billing#pause`, every `billingdebt#…` row and every event still marked `reserved` exactly as they are, and don't edit the counters or delete these records by hand. Hand edits aren't safe: the counter changes and the event's state can't be written together from the console, so a step repeated after an interruption can count a charge twice or not at all. For example, a reservation of 10,000 with an actual cost of 3,000 adjusted by −7,000 twice leaves the counters at −4,000 while 3,000 was billed.
 
-1. In DynamoDB → `biasclear-explain` → items, find `billing#pause` and every `billingdebt#…` row.
-2. For each debt row, open the event it names (`billing#…`). If its `state` is `settled`, the counters already hold its actual cost: change nothing. If it is still `reserved`, the counters hold only the reservation: when the debt has an `actual`, add actual minus reserved to the month and day counters the event names; when it has none (usage unknown), check the AWS bill before deciding.
-3. Events left `reserved` with no debt row (a lost acknowledgment) keep their reservation on the counters until the month's count expires. They over-count, which is the safe direction.
-4. Only then delete the debt rows and `billing#pause`. Explain stays paused until the pause is gone; resume doesn't clear it.
+Explain stays paused until a separately reviewed, atomic and idempotent reconciliation exists and the owner approves its use. The function itself can't delete these records (setup.yaml lets it delete only old salts). Tell the PM; nothing here needs a click from you.
 
 ## Delete everything
 
@@ -147,7 +144,7 @@ In this order, so visitors never see a dead button:
 
 1. **Hide the button.** The PM opens a change that switches Explain off on the website and restores the privacy wording. You merge it.
 2. **Remove the service.** Run the workflow with **remove** and approve it. (Or: CloudFormation → `biasclear-explain` → **Delete**.) This deletes the function, the web address and every log line. The counters stay with the setup until step 3.
-3. **Remove the setup too.** First reconcile any billing anomaly (above): deleting the setup deletes the pause and debt records with the counters.
+3. **Remove the setup too.** Not while a billing anomaly is unresolved (see "After a billing anomaly"): deleting the setup deletes the pause and debt records with the counters, and with them the evidence of the unresolved charges.
    - S3 → the `biasclear-explain-build-…` bucket → **Empty**.
    - S3 → the `cf-templates-…-us-east-1` bucket → **Empty** → **Delete**.
    - CloudFormation → `biasclear-explain-setup` → **Delete**. This removes the GitHub login, the three roles, the counters, the budget and its two stops, the deny policy and the build bucket.
