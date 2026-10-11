@@ -79,7 +79,7 @@ Nothing is decided unless it's written here. Changing a decision means changing 
 | Asset | Where | Notes |
 |---|---|---|
 | Code, rules, site source, plan | `biasclear/biasclear` on GitHub | Seeded by one PR on top of the repository's README commit, which the owner merges (§6). |
-| Website | GitHub Pages on `biasclear/biasclear`, built by `.github/workflows/pages.yml` | A public preview at `https://biasclear.github.io/biasclear/`; later at `https://biasclear.com/` (owner step, private checklist). GitHub logs visitor IP addresses, and the Privacy page says so. Pages can't send response headers, so the site's policies are meta tags. |
+| Website | GitHub Pages on `biasclear/biasclear`, built by `.github/workflows/pages.yml` | A public preview at `https://biasclear.com/` since 2026-10-06 (it started at `https://biasclear.github.io/biasclear/`, which GitHub now redirects). GitHub logs visitor IP addresses, and the Privacy page says so. Pages can't send response headers, so the site's policies are meta tags. |
 | Python package | PyPI project `biasclear` | Published only by `release.yml` through Trusted Publishing and the owner-approved `pypi` environment. The first release claims the name. First version 2.0.0a1, never 0.x or 1.x. Never delete the project, a release or a file; yank instead. The PyPI account and its pending publisher are owner steps (private checklist). |
 | npm `@biasclear/engine` | Later (after launch) | npm Trusted Publishing can't make a first publish, so the first npm release gets its own plan. |
 | Retired v1 code | The tag `v1-final` | The PIT preprint refers to it. Kept under AGPL-3.0. |

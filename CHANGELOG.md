@@ -8,6 +8,8 @@ The first release of v2: one rule pack, a Python engine and a TypeScript engine 
 
 Package version 2.0.0a1; rules version 2.0.0a5.
 
+The site moved from its preview address to https://biasclear.com/ on 2026-10-06; links in the README, the PyPI readme and the package metadata (`Homepage`) point there.
+
 Test inputs, in `tests/` and in `rules/RULE_CHANGES.md`, are paired with their mirrors and some quote insults. The people, parties, organizations, faith bodies, outlets, schools, awards and programs in them are made up, each with the shape of the name it replaced, and the golden files were made again from the renamed texts: every text raises the same rules on the same words. This file describes each change by its structure.
 
 ### Rules version 2.0.0a5 (preview review)

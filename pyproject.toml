@@ -31,9 +31,7 @@ classifiers = [
 ]
 
 [project.urls]
-# No Homepage yet: the site is at a preview address until biasclear.com
-# serves it, and a release's metadata can't be edited. Add
-# Homepage = "https://biasclear.com" in the first release after that.
+Homepage = "https://biasclear.com"
 Repository = "https://github.com/biasclear/biasclear"
 
 [project.optional-dependencies]

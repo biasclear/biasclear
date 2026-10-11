@@ -2,7 +2,7 @@
 
 **See how a text is built to move you.** BiasClear is a free persuasion checker. It marks the moves a text makes on its reader and names each one. It points at structure, never at people.
 
-This is the Python engine. The same rules run in your browser at [biasclear.github.io/biasclear](https://biasclear.github.io/biasclear/), and nothing you type there is sent anywhere.
+This is the Python engine. The same rules run in your browser at [biasclear.com](https://biasclear.com/), and nothing you type there is sent anywhere.
 
 ## Use
 
@@ -44,7 +44,7 @@ The rules are an alpha and will change. How often they are right on new text has
 ## More
 
 - Source, tests and the rule pack: [github.com/biasclear/biasclear](https://github.com/biasclear/biasclear)
-- What each move is and what the rules miss: [the Field Guide](https://biasclear.github.io/biasclear/guide/) and [the Method page](https://biasclear.github.io/biasclear/method.html)
+- What each move is and what the rules miss: [the Field Guide](https://biasclear.com/guide/) and [the Method page](https://biasclear.com/method.html)
 - Every rule change and why: [rules/RULE_CHANGES.md](https://github.com/biasclear/biasclear/blob/main/rules/RULE_CHANGES.md)
 - Changes by version: [CHANGELOG.md](https://github.com/biasclear/biasclear/blob/main/CHANGELOG.md)
 
