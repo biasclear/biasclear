@@ -1,131 +1,64 @@
-// ReDoS guard: every regex in the pack, as translated for JavaScript, must
-// finish in under 50 ms on 20,000-character adversarial strings built from
-// its own literals (its words and punctuation, repeated in the shapes that
-// make backtracking engines slow). Each time is the best of three runs, so
-// a slow CI machine's hiccup doesn't fail the build but a real blow-up does.
+// ReDoS guard. Every regex in the pack, as translated for JavaScript, is run
+// over adversarial strings of 20,000 characters built from its own words and
+// punctuation, repeated in the shapes that make backtracking slow
+// (redos-fixtures.ts; the test prints how many strings).
+//
+// How it judges, in plain words:
+// - It runs in a separate, plain Node process (redos-worker.mjs), so the test
+//   framework does not change how fast the regexes run.
+// - It counts CPU time, not wall-clock time: only the time the processor
+//   spent on the scan counts, not time spent waiting while a busy runner
+//   serves other jobs. A slower processor still takes longer; the limits
+//   leave room for that.
+// - Ceiling: one scan of a 20,000-character string must use under 150 CPU ms.
+//   A run over the ceiling is timed once more to confirm, and the faster run
+//   counts.
+// - Growth (redos-growth.ts): for a scan of 10 CPU ms or more, it also times
+//   the first quarter and the first half of the string, in three rounds, and
+//   takes the median round. A linear scan takes about 4 times as long for 4
+//   times the text, a quadratic one about 16 times. It fails at more than 10
+//   times, with each doubling over 3 times.
+// - Every growth timing repeats the scan until the timing spans at least
+//   10 CPU ms and at least 20 steps of the CPU clock, whose step it measures
+//   first (a microsecond or so on a Mac; Linux can count a thread's CPU time
+//   in whole timer ticks of 1 or 4 ms), and about as long as one scan of the
+//   whole string. The time per scan is the timing divided by the scans. A
+//   single short scan can read as 0 or as a whole tick; 20 ticks are off by
+//   under a twentieth. A scan that reads just under the floor, within one
+//   step of it, is timed again the same way.
+// - Deadline: a scan still running after 300 CPU ms (twice the ceiling) is
+//   stopped and fails. Each scan in a timing has its own deadline.
+//   Exponential backtracking never finishes a scan, so this is what catches
+//   it.
+// - The first line of a failure names each failing regex and why; the lines
+//   after it give the numbers and the string. A 120-second wall-clock
+//   watchdog is the last resort, and it names the last regex started.
+// The ceiling catches slow patterns whose growth looks linear at these
+// lengths; growth catches quadratic patterns that are still under the ceiling
+// on a fast machine. It is a regression guard, not a proof for every input.
+// redos-controls.test.ts sends known-bad regexes through the same process;
+// redos-growth.test.ts checks the growth decision on fake coarse clocks.
 
-import { expect, it } from "vitest";
+import { afterAll, expect, it } from "vitest";
 import { scan } from "../src/index.js";
-import { translate } from "../src/regex.js";
-import { readPack } from "./helpers.js";
+import { adversarial, fill, LIMIT_MS, SENTENCE_ENDS } from "./redos-fixtures.js";
+import { packRegexes, removeGuardScript, runGuard, summary, verdict } from "./redos-guard.js";
 
-const LENGTH = 20_000;
-const LIMIT_MS = 50;
-const EMOJI = "\u{1F642}";
-// Sentence ends with a closing mark, quoted dialogue and bare whitespace: a
-// pattern whose sentence start and sentence body read the same terminator
-// differently starts again after every one of them (rules 2.0.0a4 fixed one
-// in INSTITUTIONAL_POSITION_AS_SETTLED and one in MEDIA_EMOTIONAL_LEAD).
-const SENTENCE_ENDS = [
-  "A?\u201d ",
-  "A.) ",
-  "Dr.) ",
-  "A.\" ",
-  "\u201cWhy?\u201d \u201cYes.\u201d \u201cIs it done?\u201d ",
-  // Rules 2.0.0a5: skip every following space before testing lowercase.
-  "a.  a ",
-  "a!  a ",
-  "a.\t a ",
-  "a.\u00a0 a ",
-  " ",
-  "\n",
-  "\t",
-  "\u00a0",
-];
+afterAll(removeGuardScript);
 
-/** The words and punctuation a pattern contains, as literal text. */
-function literals(pattern: string): { words: string[]; marks: string[] } {
-  // Drop escapes that stand for classes or assertions, keep escaped punctuation.
-  const plain = pattern.replace(/\\([bBdDsSwW])|\\(.)/gu, (_m, cls: string | undefined, ch: string | undefined) =>
-    cls !== undefined ? " " : (ch ?? ""),
-  );
-  const words = [...new Set(plain.match(/[A-Za-z]{2,}/g) ?? [])];
-  const marks = [...new Set(plain.replace(/[A-Za-z0-9\s(){}[\]|?*+^$\\.:=!<-]/gu, "").split(""))];
-  return { words, marks };
-}
-
-function fill(unit: string): string {
-  // A whitespace-only unit is kept as it is: a run of spaces or newlines is
-  // itself an adversarial string (rules 2.0.0a4 fixed one).
-  const u = unit === "" ? "a " : unit;
-  return u.repeat(Math.ceil(LENGTH / u.length)).slice(0, LENGTH);
-}
-
-/** Adversarial strings for one pattern. */
-function adversarial(pattern: string): string[] {
-  const { words, marks } = literals(pattern);
-  const out = [
-    fill(words.join(" ") + " "),
-    fill(words.join(", ") + ", "),
-    fill(words.join("")),
-    fill(words.join(` ${EMOJI} `) + " "),
-    fill(words.map((w) => w.toUpperCase()).join("\n") + "\n"),
-    "x".repeat(250) + fill(words.join(" ") + " ").slice(250),
-  ];
-  for (const w of words) {
-    out.push(fill(`${w} `), fill(`${w}, `), fill(`${w} x `));
-  }
-  for (const m of marks) {
-    out.push(fill(`${m}abc${m} `), fill(`${m}${words[0] ?? "a"} `), fill(m));
-    // a bracket, then a chain of tokens joined by the mark: the shape of a
-    // citation's list of names, where a mark that both joins tokens and sits
-    // inside one splits the chain 2^n ways (rules 2.0.0a3 fixed one)
-    out.push(`(${fill(`A${m}`)}`, `[${fill(`A${m}`)}`);
-  }
-  // a bracket, then a run of one non-ASCII letter, bare or spaced: a pattern
-  // that can read such a letter by two alternatives (a word character, or
-  // any non-ASCII character) reads the run 2^n ways (rules 2.0.0a3 fixed two)
-  for (const ch of ["\u00e9", "\u738b"]) {
-    out.push(`(${fill(ch)}`, `(${fill(`${ch} `)}`);
-  }
-  out.push(...SENTENCE_ENDS.map(fill));
-  return out;
-}
-
-function bestOfThree(re: RegExp, text: string): number {
-  let best = Infinity;
-  for (let run = 0; run < 3; run++) {
-    const start = performance.now();
-    re.lastIndex = 0;
-    while (re.exec(text) !== null) {
-      // Every pack regex needs at least one character, so exec always moves on.
-    }
-    best = Math.min(best, performance.now() - start);
-    if (best < LIMIT_MS / 5) break;
-  }
-  return best;
-}
-
-it("runs every regex in under 50 ms on 20,000-character adversarial strings", () => {
-  const pack = readPack();
-  const regexes = [
-    ...pack.rules.flatMap((r) => r.indicators.map((p, i) => [`${r.id}[${i}]`, p, r.flags] as const)),
-    ...pack.citation_suppression.patterns.map((p, i) => [`citation[${i}]`, p, pack.citation_suppression.flags] as const),
-  ];
-  const slow: string[] = [];
-  const timings: Array<[number, string]> = [];
-  let strings = 0;
-  for (const [where, pattern, flags] of regexes) {
-    const re = new RegExp(translate(pattern, flags).source, "gu");
-    let worst = 0;
-    for (const text of adversarial(pattern)) {
-      expect(text.length).toBeGreaterThanOrEqual(LENGTH);
-      strings++;
-      const ms = bestOfThree(re, text);
-      worst = Math.max(worst, ms);
-      if (ms >= LIMIT_MS) slow.push(`${where}: ${ms.toFixed(1)} ms on ${JSON.stringify(text.slice(0, 40))}...`);
-    }
-    timings.push([worst, where]);
-  }
-  timings.sort((a, b) => b[0] - a[0]);
-  console.log(
-    `ReDoS guard: ${regexes.length} regexes, ${strings} strings; slowest: ` +
-      timings.slice(0, 3).map(([ms, where]) => `${where} ${ms.toFixed(1)} ms`).join(", "),
-  );
-  expect(slow).toEqual([]);
-  // The whole sweep (every regex on about 32,000 strings) takes several
-  // seconds; the limit that matters is the 50 ms per regex above.
-}, 120_000);
+it("bounds CPU time and growth on every adversarial string", () => {
+  const regexes = packRegexes();
+  const run = runGuard({ regexes });
+  if (run.report === undefined) throw new Error(run.problem);
+  const { report } = run;
+  // A failure's message ends with the same summary, so it is printed only on a pass.
+  if (report.failures.length > 0) throw new Error(verdict(report));
+  console.log(summary(report));
+  expect(report.ceilingMs).toBe(LIMIT_MS);
+  expect(report.measured).toBe(regexes.length);
+  // Nothing is skipped: the parent counts the strings on its own.
+  expect(report.strings).toBe(regexes.reduce((n, [, pattern]) => n + adversarial(pattern).length, 0));
+}, 130_000);
 
 it.each(["  ", "\t ", "\u00a0 "])("reads an institutional sentence boundary across %j", (separator) => {
   const prefix = "The meeting ended." + separator;

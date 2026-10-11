@@ -4,7 +4,8 @@ Every number in the public docs comes from scripts/site_facts.py, a build
 script or a test (the README's are checked in tests/test_readme.py). This file
 checks the current counts that the CHANGELOG and RULE_CHANGES quote against
 the rule pack, the golden files and the symmetry suite, and pins the window
-sizes they quote on the rules themselves. Older counts in their history
+sizes they quote on the rules themselves. It also checks that the engine
+README quotes the ReDoS guard's current limits. Older counts in their history
 sections are dated ("measured 2026-09-28"), and tests/test_readme.py checks
 that an undated count of known limits or retired pairs is the current one.
 """
@@ -193,13 +194,52 @@ def test_shorter_bounds_the_docs_quote(facts):
     assert f"when a citation sits within {window} characters" in RULE_CHANGES
 
 
-def test_redos_limits_the_changelog_quotes():
-    require_repo_files("packages/engine/test/redos.test.ts")
-    guard = (ROOT / "packages" / "engine" / "test" / "redos.test.ts").read_text(encoding="utf-8")
-    length = int(re.search(r"const LENGTH = ([\d_]+);", guard).group(1).replace("_", ""))
-    limit = int(re.search(r"const LIMIT_MS = (\d+);", guard).group(1))
-    assert f"{limit} ms on each {length:,}-character string" in CHANGELOG
-    assert f"under the {limit} ms limit" in RULE_CHANGES
+def _redos_guard() -> dict:
+    """The current ReDoS guard's limits, read from the guard itself."""
+    require_repo_files("packages/engine/test/redos-fixtures.ts", "packages/engine/test/redos-growth.ts")
+    test_dir = ROOT / "packages" / "engine" / "test"
+    fixtures = (test_dir / "redos-fixtures.ts").read_text(encoding="utf-8")
+    growth = (test_dir / "redos-growth.ts").read_text(encoding="utf-8")
+
+    def number(pattern: str, text: str) -> int:
+        return int(re.search(pattern, text).group(1).replace("_", ""))
+
+    ceiling = number(r"export const LIMIT_MS = ([\d_]+);", fixtures)
+    return {
+        "length": number(r"export const LENGTH = ([\d_]+);", fixtures),
+        "ceiling": ceiling,
+        "floor": number(r"export const GROWTH_FLOOR_MS = (\d+);", growth),
+        "growth": number(r"export const GROWTH_LIMIT = (\d+);", growth),
+        "doubling": number(r"export const DOUBLING_LIMIT = (\d+);", growth),
+        "deadline": ceiling * number(r"export const DEADLINE_FACTOR = (\d+);", growth),
+        "sample": number(r"export const MIN_SAMPLE_MS = (\d+);", growth),
+        "steps": number(r"export const RESOLUTION_MULTIPLE = (\d+);", growth),
+    }
+
+
+def test_engine_readme_quotes_the_current_redos_guard():
+    guard = _redos_guard()
+    readme = (ROOT / "packages" / "engine" / "README.md").read_text(encoding="utf-8")
+    assert f"{guard['length']:,}-character strings" in readme
+    assert f"Each scan must use under {guard['ceiling']} CPU ms" in readme
+    assert f"For a scan of {guard['floor']} CPU ms or more" in readme
+    assert (
+        f"more than {guard['growth']} times the CPU time and each doubling more than {guard['doubling']} times"
+        in readme
+    )
+    assert f"at least {guard['sample']} CPU ms and at least {guard['steps']} steps of the clock" in readme
+    assert f"still running after {guard['deadline']} CPU ms" in readme
+    assert re.search(r"(?<![\d.])50 ms", readme) is None  # the old wall-clock limit
+
+
+def test_redos_history_quotes_the_old_limit():
+    # CHANGELOG and RULE_CHANGES record the preview round, when the guard
+    # failed a regex that took 50 ms of wall-clock time (best of three) on a
+    # 20,000-character string. Issue #5 replaced that limit with the CPU-time
+    # limits above. These quotes are dated history and stay as they were:
+    # the site links to RULE_CHANGES, and Issue #5 changes no public copy.
+    assert "50 ms on each 20,000-character string" in CHANGELOG
+    assert "under the 50 ms limit" in RULE_CHANGES
 
 
 def _report_rows() -> dict[str, list[str]]:
