@@ -23,7 +23,9 @@ Status: revision 3, public edition. Maintained by the PM (Claude). Last updated:
 
 The PM doesn't decide these. Answer in chat whenever it suits you.
 
-1. **`.github/FUNDING.yml`.** It still points the repository's Sponsor button at a personal account. The README no longer links it (owner decision 2026-10-11). Keep the file, or delete it?
+None open right now.
+
+Decided 2026-10-14: **`.github/FUNDING.yml`** is deleted, so the repository shows no Sponsor button for a personal account (this follows the owner's 2026-10-11 decision to keep the personal sponsor link out).
 
 Decided 2026-10-14: **`severity`** stays in 2.0.0a1 as labeled. Each move keeps its hand-set `severity` label carried over from v1, which has never been measured, with the README's existing note that says so (README, "In Python").
 
@@ -151,6 +153,7 @@ Numbered decisions keep their numbers from the full log. The ones about accounts
 | 2026-10-14 | Merge the stable ReDoS guard, #20, after the independent review's GO; the PM carried it out on this instruction | Owner |
 | 2026-10-14 | Keep the unmeasured `severity` field in 2.0.0a1, labeled as it is in the README | Owner |
 | 2026-10-14 | Every merge needs the owner's go-ahead for that specific PR, with Jarvis checking Claude's work (`AGENTS.md`, "Merging" and "The loop") | Owner |
+| 2026-10-14 | Delete `.github/FUNDING.yml` (the personal Sponsor button) after the independent review's check; merge #21 (docs cleanup), carried out by the PM on this instruction | Owner |
 
 ## Owner time log
 
