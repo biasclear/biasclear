@@ -15,6 +15,16 @@ Nothing is decided unless it's written here. Changing a decision means changing 
 - **The first PyPI release (2.0.0a1) has written contents** (§6), and the access test covers every step nobody has proven yet.
 - **The owner's step list is private** (decision 25). Public docs name owner steps by outcome only.
 
+## Updates since revision 3 (2026-10-14)
+
+The owner's later decisions, written here because nothing is decided until it is on this page, and one correction. Where §2, §5 or §6 still describe the earlier flow, this section and `AGENTS.md` hold.
+
+- **2026-10-09: Claude leads, Jarvis reviews.** Claude (the PM) leads and builds; Jarvis (GPT) independently reviews Claude's work, and Claude checks what Jarvis builds; the owner decides every major step and presses every owner button. The Codex ticket loop, the standing Claude red team and its labels (§2) and the access test (§6, step 7) are not in use. `AGENTS.md`, "The loop", describes the flow, with review sized by risk tier. With no access test, the owner creates every tag.
+- **Every merge waits for the owner's go-ahead for that PR** (owner decisions 2026-10-09, 2026-10-11 and 2026-10-14). A reviewer's GO never merges anything on its own: the PM merges an unprotected-path PR only on the owner's go-ahead in chat, and the owner merges protected paths (`AGENTS.md`, "Merging").
+- **Jarvis's verdicts are relayed by the PM.** The PM sends Jarvis its briefs and gets Jarvis's written verdicts directly; the owner no longer relays them. When one is posted on GitHub, the PM posts it unedited in a quote block labeled "Jarvis (GPT) review, relayed by the PM" (`AGENTS.md`). This replaces "relayed by the owner" in §2 and in the gates table.
+- **2026-10-11: `v1-final` follows the first release** (§6, step 9), because the 2.0.0a1 README and CHANGELOG say the tag is added after that version is published. The personal Sponsors link stays off the release.
+- **Correction: access.** The Claude GitHub App has no Administration, Deployments, Environments, Secrets or Pages permission, as §2 and §5 say. Any session acting with a broader key than the app's, such as the owner's own sign-in, may hold those powers, so it treats "no agent changes a setting or approves a deployment" as a process rule, not a GitHub control.
+
 ---
 
 ## 1. Principles
@@ -173,7 +183,7 @@ New CI jobs become required when the owner adds them to the ruleset after their 
    - The red team posts its review and label, and the PM merges that unprotected-path PR with `redteam:clear`.
    - The first release (step 9) shows the run waiting for the owner's Approve, with no way for an agent to approve it.
 8. **`v1-final`:** after the seed merges, the PM builds the retired v1 code as an orphan commit from a recorded commit of the old code. It passes the same gate and carries the withdrawal notice at the top of its README and CHANGELOG. The tag is created by the PM if the access test shows it can, and otherwise by the owner on the Releases page. That tree has no release workflow, so its tag can't start a release. v1 code, including this tag, stays under AGPL-3.0.
-9. **First release (2.0.0a1),** after the seed, the `protect-main` ruleset, the owner's PyPI step and the `v1-final` tag: the PM posts the built files and their metadata. Unless the access test showed the PM can create tags, the owner creates the tag on the Releases page, then presses Approve and deploy. The name is claimed when that run exchanges its token. That's two owner clicks per release, both deliberate.
+9. **First release (2.0.0a1),** after the seed, the `protect-main` ruleset and the owner's PyPI step (the `v1-final` tag follows it, as the shipped `CHANGELOG.md` says): the PM posts the built files and their metadata. Unless the access test showed the PM can create tags, the owner creates the tag on the Releases page, then presses Approve and deploy. The name is claimed when that run exchanges its token. That's two owner clicks per release, both deliberate.
 10. **Owner step (private checklist): retire the old repository** so that it points to this one, `v1-final` and the preprint's DOI, and link the preprint record to this repository.
 
 **First release contents (2.0.0a1).** The first release claims the name and stays public for good, so its contents are fixed here:

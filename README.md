@@ -117,7 +117,7 @@ The same engine in TypeScript, for browsers and Node, with no runtime dependenci
 
 ## How it works
 
-- **One rule pack.** Every rule lives in one file, [rules/biasclear-rules.json](rules/biasclear-rules.json): patterns over English wording, each with a name, a description and a PIT tier. It is the single source of truth for every engine and carries its own rules version. [rules/RULE_CHANGES.md](rules/RULE_CHANGES.md) records the changes and why, in plain words. The patterns themselves are long: letters are spelled as `[Ee]`, so that a word matches in any case while capitals still count elsewhere in the same pattern, and word lists hold both sides' words.
+- **One rule pack.** Every rule lives in one file, [rules/biasclear-rules.json](rules/biasclear-rules.json): patterns over English wording, each with a name, a description and a PIT tier. It is the single source of truth for every engine and carries its own rules version. [rules/RULE_CHANGES.md](rules/RULE_CHANGES.md) records the changes and why, in plain words. The patterns themselves are long: letters are spelled as `[Ee]`, so that a word matches in any case while capitals still count elsewhere in the same pattern. Word lists are meant to hold both sides' words, but that coverage is not complete yet: some insults are marked while their mirror aimed at the other side is not. The missing mirrors are being added, each with a swapped-pair test, or listed with a written reason where the mirror is a word no rule may hold ([rules/RULE_CHANGES.md](rules/RULE_CHANGES.md), "Mirror coverage").
 - **Two engines, one result.** The Python engine ([src/biasclear](src/biasclear/)) and the TypeScript engine ([packages/engine](packages/engine/)) read the same pack. [A parity script](packages/engine/scripts/parity.mjs) runs both on every pinned text and every swapped pair, in every domain, and fails on any difference. CI runs it against Python 3.10 to 3.14.
 - **The site runs the same engine.** The checker loads the TypeScript engine's browser build byte for byte, and the site's build checks every example it shows against the rules ([site/README.md](site/README.md)).
 - **A citation can quiet a rule.** Some rules stay quiet when something shaped like a citation, such as a name and a year in brackets, sits beside the claim. The rules check the shape of a citation, not whether the source exists.
@@ -179,6 +179,5 @@ The tiers come from Persistent Influence Theory. To cite the preprint:
 BiasClear is free and open source, and it stays that way.
 
 - **Follow along:** star or watch this repository to see new rules, the first measured numbers and the first release.
-- **Questions and ideas:** start a thread in [Discussions](https://github.com/biasclear/biasclear/discussions), or [open an issue](https://github.com/biasclear/biasclear/issues).
-- **Support the work:** [sponsor it on GitHub](https://github.com/sponsors/bws82). Sponsorship pays for the time to write and test new rules and to measure every rule on data someone else labeled.
+- **Questions and ideas:** [open an issue](https://github.com/biasclear/biasclear/issues).
 - **Email:** hello@biasclear.com
