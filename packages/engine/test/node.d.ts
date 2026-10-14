@@ -7,6 +7,8 @@ declare module "node:fs" {
   export function readFileSync(path: string, encoding: "utf8"): string;
   export function readdirSync(path: string): string[];
   export function existsSync(path: string): boolean;
+  export function mkdtempSync(prefix: string): string;
+  export function rmSync(path: string, options: { recursive: boolean; force: boolean }): void;
 }
 
 declare module "node:path" {
@@ -36,6 +38,30 @@ declare module "node:vm" {
 declare module "node:zlib" {
   export function gzipSync(data: Uint8Array, options?: { level?: number }): Uint8Array;
 }
+
+declare module "node:child_process" {
+  interface SpawnSyncResult {
+    status: number | null;
+    signal: string | null;
+    stdout: string;
+    stderr: string;
+    error?: Error & { code?: string };
+  }
+  export function spawnSync(file: string, args: string[], options: {
+    input: string;
+    encoding: "utf8";
+    timeout: number;
+    killSignal: "SIGKILL";
+    maxBuffer: number;
+    stdio: ["pipe", "pipe", "pipe"];
+  }): SpawnSyncResult;
+}
+
+declare module "node:os" {
+  export function tmpdir(): string;
+}
+
+declare const process: { readonly execPath: string };
 
 interface ImportMeta {
   readonly url: string;
