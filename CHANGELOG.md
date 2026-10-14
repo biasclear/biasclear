@@ -2,7 +2,7 @@
 
 Versions follow PEP 440. The package version and the rules version are listed separately when they differ.
 
-## 2.0.0a1 (unreleased)
+## 2.0.0a1 (2026-10-19)
 
 The first release of v2: one rule pack, a Python engine and a TypeScript engine with no runtime dependencies, and a website that runs the rules in the visitor's browser. Alpha. The Python package is what goes to PyPI; the TypeScript engine is not on npm yet.
 
