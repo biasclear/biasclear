@@ -21,7 +21,7 @@ Open **[biasclear.com](https://biasclear.com/)** and paste an email, a post, an 
 - **No cookies, no accounts.** Nothing to sign up for.
 - **The moves are explained.** The [Field Guide](https://biasclear.com/guide/) shows how they work, with examples and what the rules miss.
 
-It is an alpha: 43 rules, rules version 2.0.0a5. How often the rules are right on new text has not been measured yet. See [Status and roadmap](#status-and-roadmap).
+It is an alpha: 43 rules, rules version 2.0.0a5. How often the rules are right on new text has not been measured yet. See [Status](#status).
 
 ## What it catches
 
@@ -71,7 +71,7 @@ The pairs are in [tests/test_symmetry.py](tests/test_symmetry.py) and run on eve
 
 ## Install and use
 
-`pip install biasclear` is coming with the first release. Until then, run it from source. It needs Python 3.10 or later and nothing else.
+BiasClear is not published on PyPI, so install it from this repository. It needs Python 3.10 or later and nothing else.
 
 ```bash
 git clone https://github.com/biasclear/biasclear.git
@@ -113,25 +113,21 @@ python -m biasclear --domain all < draft.txt
 
 ### In JavaScript
 
-The same engine in TypeScript, for browsers and Node, with no runtime dependencies: [packages/engine](packages/engine/README.md). It is not on npm yet.
+The same engine in TypeScript, for browsers and Node, with no runtime dependencies: [packages/engine](packages/engine/README.md). It is not published on npm.
 
 ## How it works
 
-- **One rule pack.** Every rule lives in one file, [rules/biasclear-rules.json](rules/biasclear-rules.json): patterns over English wording, each with a name, a description and a PIT tier. It is the single source of truth for every engine and carries its own rules version. [rules/RULE_CHANGES.md](rules/RULE_CHANGES.md) records the changes and why, in plain words. The patterns themselves are long: letters are spelled as `[Ee]`, so that a word matches in any case while capitals still count elsewhere in the same pattern. Word lists are meant to hold both sides' words, but that coverage is not complete yet: some insults are marked while their mirror aimed at the other side is not. The missing mirrors are being added, each with a swapped-pair test, or listed with a written reason where the mirror is a word no rule may hold ([rules/RULE_CHANGES.md](rules/RULE_CHANGES.md), "Mirror coverage").
+- **One rule pack.** Every rule lives in one file, [rules/biasclear-rules.json](rules/biasclear-rules.json): patterns over English wording, each with a name, a description and a PIT tier. It is the single source of truth for every engine and carries its own rules version. [rules/RULE_CHANGES.md](rules/RULE_CHANGES.md) records the changes and why, in plain words. The patterns themselves are long: letters are spelled as `[Ee]`, so that a word matches in any case while capitals still count elsewhere in the same pattern. Word lists are meant to hold both sides' words, but that coverage is not complete yet: some insults are marked while their mirror aimed at the other side is not. The ones found are listed in [rules/RULE_CHANGES.md](rules/RULE_CHANGES.md) ("Mirror coverage").
 - **Two engines, one result.** The Python engine ([src/biasclear](src/biasclear/)) and the TypeScript engine ([packages/engine](packages/engine/)) read the same pack. [A parity script](packages/engine/scripts/parity.mjs) runs both on every pinned text and every swapped pair, in every domain, and fails on any difference. CI runs it against Python 3.10 to 3.14.
 - **The site runs the same engine.** The checker loads the TypeScript engine's browser build byte for byte, and the site's build checks every example it shows against the rules ([site/README.md](site/README.md)).
 - **A citation can quiet a rule.** Some rules stay quiet when something shaped like a citation, such as a name and a year in brackets, sits beside the claim. The rules check the shape of a citation, not whether the source exists.
 - **No side effects.** Neither engine has runtime dependencies, makes network calls or writes files. Tests check this.
 
-## Status and roadmap
+## Status
 
-Public preview. The Python package is version 2.0.0a1 and the rules are version 2.0.0a5, both alphas. The rules will change. Every scan from the Python and TypeScript engines returns the rules version and a hash of the exact rules that ran; the site shows the version in its header. [CHANGELOG.md](CHANGELOG.md) has the details.
+Public preview. The Python package is version 2.0.0a1 and the rules are version 2.0.0a5, both alphas, and the rules may change. Every scan from the Python and TypeScript engines returns the rules version and a hash of the exact rules that ran; the site shows the version in its header. [CHANGELOG.md](CHANGELOG.md) has the details.
 
-Next:
-
-- **First release.** `pip install biasclear` from PyPI. The TypeScript engine goes to npm later.
-- **Measure the rules.** Run each rule on independently labeled data, starting with the SemEval-2020 Task 11 propaganda set, with a script in this repo, and publish the results together with the script.
-- **Later, and optional: "explain this move."** An AI model could explain a marked phrase in plain words, called with your own API key. It would be off unless you turn it on, and labeled where you do. The rules would keep working without it.
+How often the rules are right on new text has not been measured. A fair measurement would run each rule on data labeled by someone else, such as the SemEval-2020 Task 11 propaganda set, with a script in this repo; none has been run, so no accuracy figure is published.
 
 ## Contributing
 
@@ -154,11 +150,11 @@ The first version of BiasClear made claims that did not hold. They are withdrawn
 - It called itself neutral, but two of its rules held lists of named institutions and schools, so the same sentence was flagged or not depending on the name in it.
 - It issued "certificates" that verified nothing.
 
-v2 replaced those rules with rules that match structure only, tests every rule with swapped pairs, and publishes no accuracy figures until a script in this repo measures them on data someone else labeled. The retired v1 code, which the PIT preprint refers to, will be kept at the tag `v1-final`, which is added to this repository after this first version is published.
+v2 replaced those rules with rules that match structure only, tests every rule with swapped pairs, and publishes no accuracy figures until a script in this repo measures them on data someone else labeled. The retired v1 code, which the PIT preprint refers to, is not part of this repository.
 
 ## License
 
-The code is licensed under the [Apache License 2.0](LICENSE). The retired v1 code, to be kept at the tag `v1-final`, keeps its own license, AGPL-3.0. The rule pack, `rules/biasclear-rules.json`, is licensed under [CC BY 4.0](rules/LICENSE); that also covers the copy of the pack inside the Python package, `biasclear/data/biasclear-rules.json`. The site's typefaces, Newsreader and DM Mono, are under the SIL Open Font License 1.1 ([site/fonts](site/fonts/)).
+The code is licensed under the [Apache License 2.0](LICENSE). The retired v1 code is not part of this repository and keeps its own license, AGPL-3.0. The rule pack, `rules/biasclear-rules.json`, is licensed under [CC BY 4.0](rules/LICENSE); that also covers the copy of the pack inside the Python package, `biasclear/data/biasclear-rules.json`. The site's typefaces, Newsreader and DM Mono, are under the SIL Open Font License 1.1 ([site/fonts](site/fonts/)).
 
 ## Citation
 
@@ -178,6 +174,5 @@ The tiers come from Persistent Influence Theory. To cite the preprint:
 
 BiasClear is free and open source, and it stays that way.
 
-- **Follow along:** star or watch this repository to see new rules, the first measured numbers and the first release.
 - **Questions and ideas:** [open an issue](https://github.com/biasclear/biasclear/issues).
 - **Email:** hello@biasclear.com

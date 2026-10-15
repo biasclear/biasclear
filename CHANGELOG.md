@@ -4,7 +4,7 @@ Versions follow PEP 440. The package version and the rules version are listed se
 
 ## 2.0.0a1 (unreleased)
 
-The first release of v2: one rule pack, a Python engine and a TypeScript engine with no runtime dependencies, and a website that runs the rules in the visitor's browser. Alpha. The Python package is what goes to PyPI; the TypeScript engine is not on npm yet.
+The first release of v2: one rule pack, a Python engine and a TypeScript engine with no runtime dependencies, and a website that runs the rules in the visitor's browser. Alpha. The Python package is installed from this repository (it is not published on PyPI), and the TypeScript engine is not published on npm.
 
 Package version 2.0.0a1; rules version 2.0.0a5.
 
@@ -151,7 +151,7 @@ Tests added or changed:
 ### Removed (compared with v1)
 
 - Two rules that contain lists of proper nouns: `CREDENTIAL_AS_PROOF` and `INSTITUTIONAL_NEUTRALITY`, replaced by structural rules with new IDs. (`FIN_CHERRY_PICKED_TIMEFRAME` was left out of rules version 2.0.0a1 and restored in 2.0.0a2.) See `rules/RULE_CHANGES.md`.
-- v1's keyword markers, truth score, LLM layer, learning ring, audit chain, certificates and API server. The retired v1 code will be kept at the tag `v1-final`, added after this version is published.
+- v1's keyword markers, truth score, LLM layer, learning ring, audit chain, certificates and API server. The retired v1 code is not part of this repository.
 
 ### Withdrawn
 

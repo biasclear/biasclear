@@ -289,7 +289,7 @@ function header(root, nav, rulesVersion) {
     </div>
   </div>
   <div class="folio">
-    <p class="lab"><span class="fo-l">Reads text for persuasion. </span>Free. Runs in this tab.</p>
+    <p class="lab"><span class="fo-l">Reads text for persuasion. </span>Free. Runs in this tab. <a class="fo-gh" href="${REPO}">Code on GitHub</a></p>
     <p class="lab">No cookies. No accounts. Rules <span class="ver">${esc(rulesVersion)}</span>.</p>
   </div>
 </header>`;
@@ -310,7 +310,7 @@ function footer(root, rulesVersion, doi, commit) {
       <a href="${root}method.html">Method</a>
       <a href="${root}privacy.html">Privacy</a>
       <a href="${root}about.html">About</a>
-      <a class="wide" href="${REPO}">Source on GitHub</a>
+      <a class="wide" href="${REPO}">See the code on GitHub</a>
       <a class="wide" href="https://doi.org/${esc(doi)}">Built on Persistent Influence Theory (Slimp, 2026)</a>
     </nav>
     <div class="contact">
