@@ -1,19 +1,17 @@
 """Check that every public address the README, the docs and the site link to is live.
 
-Run it before the repository or the site is announced, and again after the
-move to biasclear.com. It needs the network, so CI does not run it. It
-collects every absolute ``https://`` address from README.md, CHANGELOG.md,
-SECURITY.md, docs/REPO_SETTINGS.md and site/pages/*.html, plus the two the
-page layout adds (the repository, from ``REPO`` in scripts/build-site.mjs,
-and the preprint's DOI, from the README's citation), asks each one for its
-page (following redirects), and prints what came back. It exits with 1 if
-any address fails.
+Run it before the repository or the site is announced, before each release,
+and after any change of address. It needs the network, so CI does not run
+it. It collects every absolute ``https://`` address from README.md,
+CHANGELOG.md, SECURITY.md, docs/REPO_SETTINGS.md, docs/PYPI_README.md,
+pyproject.toml and site/pages/*.html, plus the two the page layout adds (the
+repository, from ``REPO`` in scripts/build-site.mjs, and the preprint's DOI,
+from the README's citation), asks each one for its page (following
+redirects), and prints what came back. It exits with 1 if any address fails.
 
-Some of them only work once the owner's launch steps are done: the
-``biasclear`` organization and repository exist, the ``v1-final`` tag is
-pushed, GitHub Pages is deployed, and the first CI run has finished (for the
-README's badge). hello@biasclear.com cannot be checked from here; send it a
-test message.
+The ``v1-final`` links work only once that tag is pushed. The old preview
+address, which docs/REPO_SETTINGS.md quotes, passes if GitHub redirects it.
+hello@biasclear.com cannot be checked from here; send it a test message.
 
 Usage (from the root of this repo):
     python scripts/check_public_links.py
@@ -33,6 +31,8 @@ SOURCES = [
     "CHANGELOG.md",
     "SECURITY.md",
     "docs/REPO_SETTINGS.md",
+    "docs/PYPI_README.md",
+    "pyproject.toml",
     *sorted(str(p.relative_to(ROOT)) for p in (ROOT / "site" / "pages").glob("*.html")),
 ]
 # Addresses that are examples or templates, not links.
