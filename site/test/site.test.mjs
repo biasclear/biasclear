@@ -70,6 +70,73 @@ const read = (file) => readFileSync(file, "utf8");
 const sha256 = (file) => createHash("sha256").update(readFileSync(file)).digest("hex");
 const pages = () => walk(out).filter((f) => f.endsWith(".html"));
 
+/** Check generated markup's exact spelling; expected URLs and paths are not regexes. */
+function assertLiteralHtml(html, expected, label) {
+  assert.ok(html.includes(expected), `${label}: missing ${expected}`);
+}
+
+/**
+ * A strict assertion for this build's static markup, not an HTML sanitizer.
+ * Read quoted attributes through their closing quote so a quoted ">" cannot
+ * hide a later event handler. Scripts must use the emitter's canonical form.
+ */
+function assertNoInlineCode(html, label) {
+  for (const match of html.matchAll(/<([a-z][a-z0-9:-]*)(?=[\t\n\f\r />])/gi)) {
+    let quote = null;
+    let end = match.index + match[0].length;
+    for (; end < html.length; end++) {
+      const c = html[end];
+      if (quote) {
+        if (c === quote) quote = null;
+      } else if (c === '"' || c === "'") quote = c;
+      else if (c === ">") break;
+    }
+    assert.ok(end < html.length, `${label}: an unterminated start tag`);
+    const tag = html.slice(match.index, end + 1);
+    const name = match[1].toLowerCase();
+    assert.notEqual(name, "style", `${label}: a <style> element`);
+    assert.doesNotMatch(tag, /[\s/]style\s*=/i, `${label}: a style attribute`);
+    assert.doesNotMatch(tag, /[\s/]on[a-z]+\s*=/i, `${label}: an event-handler attribute`);
+    if (name === "script") {
+      const prefix = '<script src="';
+      const suffix = '" defer>';
+      assert.ok(tag.startsWith(prefix) && tag.endsWith(suffix), `${label}: a noncanonical script tag`);
+      const src = tag.slice(prefix.length, -suffix.length);
+      assert.ok(src.length > 0 && !/["\s<>]/.test(src), `${label}: a noncanonical script src`);
+      const close = html.indexOf("</script>", end + 1);
+      assert.ok(close >= 0, `${label}: a script without its closing tag`);
+      assert.equal(html.slice(end + 1, close).trim(), "", `${label}: a script with inline code`);
+    }
+    assertSafeUrls(tag, label);
+  }
+  assert.doesNotMatch(html, /javascript:/i, `${label}: a javascript: URL`);
+}
+
+/** Character references a browser decodes in an attribute value, as far as a scheme could hide behind them. */
+function decodeReferences(value) {
+  const named = { colon: ":", tab: "\t", newline: "\n", amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", sol: "/", period: "." };
+  return value
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#([0-9]+);?/g, (_, dec) => String.fromCodePoint(Number.parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (all, name) => named[name.toLowerCase()] ?? all);
+}
+
+/**
+ * Every URL-bearing attribute is relative, https: or mailto: once decoded as a browser would read it
+ * (character references decoded, ASCII tab and line breaks removed, leading spaces and controls
+ * trimmed), and srcdoc is refused outright (311 LOW). Still a check of this build's markup, not a sanitizer.
+ */
+function assertSafeUrls(tag, label) {
+  for (const a of tag.matchAll(/[\s/]([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
+    const name = a[1].toLowerCase();
+    assert.notEqual(name, "srcdoc", `${label}: a srcdoc attribute`);
+    if (!["href", "src", "action", "formaction", "xlink:href", "poster", "background", "cite", "data"].includes(name)) continue;
+    const value = decodeReferences(a[2] ?? a[3] ?? a[4] ?? "").replace(/[\t\n\r]/g, "").replace(/^[\u0000- ]+/, "");
+    const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(value)?.[1].toLowerCase();
+    assert.ok(scheme === undefined || scheme === "https" || scheme === "mailto", `${label}: a ${scheme}: URL in ${name}`);
+  }
+}
+
 before(async () => {
   out = mkdtempSync(join(tmpdir(), "biasclear-site-"));
   site = await build({ out, engineBuild: !process.env.SITE_SKIP_ENGINE_BUILD, log: () => {} });
@@ -104,16 +171,50 @@ describe("pages", () => {
   });
 
   it("has no inline script, inline style or event handler", () => {
-    for (const file of pages()) {
-      const html = read(file);
-      for (const tag of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
-        assert.match(tag[1], /\ssrc="/, `${rel(file)}: a script without src`);
-        assert.equal(tag[2].trim(), "", `${rel(file)}: a script with inline code`);
-      }
-      assert.doesNotMatch(html, /<style\b/i, `${rel(file)}: a <style> element`);
-      assert.doesNotMatch(html, /<[a-z][^>]*\sstyle=/i, `${rel(file)}: a style attribute`);
-      assert.doesNotMatch(html, /<[a-z][^>]*\son[a-z]+=/i, `${rel(file)}: an event-handler attribute`);
-      assert.doesNotMatch(html, /javascript:/i, `${rel(file)}: a javascript: URL`);
+    for (const file of pages()) assertNoInlineCode(read(file), rel(file));
+  });
+
+  it("rejects executable-markup mutations, including case and attribute tricks", () => {
+    assert.doesNotThrow(() => assertNoInlineCode('<script src="./js/theme.js" defer></script>', "control"));
+    const unsafe = [
+      "<SCRIPT>alert(1)</SCRIPT>",
+      '<ScRiPt src="./js/theme.js">alert(1)</ScRiPt>',
+      "<script/ >alert(1)</script>",
+      "<script\n>alert(1)</script>",
+      '<script src="./js/theme.js" defer>alert(1)</script>',
+      '<script data-note=\' src="./js/theme.js"\'></script>',
+      '<script data-note=">" src="./js/theme.js" defer>alert(1)</script>',
+      '<script src="./js/theme.js" defer/>alert(1)</script>',
+      '<script src="./js/theme.js" defer>',
+      "<STYLE>body{color:red}</STYLE>",
+      '<div style ="color:red"></div>',
+      '<div data-note=">" OnClick ="alert(1)"></div>',
+      '<img src="x"\nonerror ="alert(1)">',
+      '<a href="javascript:alert(1)">link</a>',
+      // Slash-delimited attributes were found in the root review.
+      "<img/onerror=alert(1)>",
+      "<svg/onload=alert(1)></svg>",
+      "<div/style=color:red></div>",
+      // Encoded and alternative schemes, and srcdoc (311 LOW).
+      '<a href="jav&#x61;script:alert(1)">link</a>',
+      '<a href="jav&#97;script:alert(1)">link</a>',
+      '<a href="javascript&colon;alert(1)">link</a>',
+      '<a href="java\tscript:alert(1)">link</a>',
+      '<a href="java&Tab;script:alert(1)">link</a>',
+      '<a href=" \njavascript:alert(1)">link</a>',
+      '<a href="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">link</a>',
+      "<a href='vbscript:msgbox(1)'>link</a>",
+      "<a href=vbscript:msgbox(1)>link</a>",
+      '<a href="http://example.org/">link</a>',
+      '<form action="javascript:alert(1)"></form>',
+      '<button formaction="data:text/html,x">go</button>',
+      '<iframe srcdoc="&lt;script&gt;alert(1)&lt;/script&gt;"></iframe>',
+      '<iframe SRCDOC="x"></iframe>',
+    ];
+    for (const html of unsafe) assert.throws(() => assertNoInlineCode(html, "mutation"), { name: "AssertionError" }, html);
+    for (const safe of ['<a href="https://biasclear.com/">x</a>', '<a href="mailto:hello@biasclear.com">x</a>', '<a href="./guide/">x</a>',
+      '<a href="#main">x</a>', '<a href="/method.html#status">x</a>', '<img src="./img/loupe.png" alt="">', '<a href="?q=1">x</a>']) {
+      assert.doesNotThrow(() => assertNoInlineCode(safe, "control"), safe);
     }
   });
 
@@ -233,7 +334,7 @@ describe("link previews", () => {
       for (const file of walk(out2).filter((f) => f.endsWith(".html"))) {
         const name = relative(out2, file).split("\\").join("/");
         let html = read(file);
-        assert.match(html, new RegExp(`<meta property="og:image" content="${siteUrl}${SOCIAL_IMAGE}">`), name);
+        assertLiteralHtml(html, `<meta property="og:image" content="${siteUrl}${SOCIAL_IMAGE}">`, name);
         assert.match(html, /<meta name="twitter:card" content="summary_large_image">/, name);
         const og = html.match(/<meta property="og:url" content="([^"]+)">/);
         if (name === "404.html") assert.equal(og, null);
@@ -252,6 +353,16 @@ describe("link previews", () => {
     assert.equal(siteAddress("https://biasclear.com"), "https://biasclear.com/");
     assert.throws(() => siteAddress("http://biasclear.com/"));
     assert.throws(() => siteAddress("https://biasclear.com/?x=1"));
+  });
+
+  it("compares the preview image URL literally, including dots", () => {
+    const expected = '<meta property="og:image" content="https://example.github.io/biasclear/img/social-preview.png">';
+    assert.doesNotThrow(() => assertLiteralHtml(expected, expected, "control"));
+    for (const mutated of [
+      expected.replace("example.github.io", "exampleXgithubXio"),
+      expected.replace("social-preview.png", "social-previewXpng"),
+      expected.replace("https:", "http:"),
+    ]) assert.throws(() => assertLiteralHtml(mutated, expected, "mutation"), { name: "AssertionError" });
   });
 });
 
@@ -272,7 +383,17 @@ describe("the build", () => {
 describe("the engine", () => {
   it("serves the engine package's browser build, byte for byte", () => {
     assert.equal(sha256(join(out, BUNDLE_PATH)), sha256(ENGINE_IIFE));
-    assert.match(read(join(out, "index.html")), new RegExp(`<script src="\\./${BUNDLE_PATH.replace(/\./g, "\\.")}" defer></script>`));
+    assertLiteralHtml(read(join(out, "index.html")), `<script src="./${BUNDLE_PATH}" defer></script>`, "index.html");
+  });
+
+  it("compares the served bundle's script tag literally", () => {
+    const expected = `<script src="./${BUNDLE_PATH}" defer></script>`;
+    assert.doesNotThrow(() => assertLiteralHtml(expected, expected, "control"));
+    for (const mutated of [
+      expected.replace("./js/", "X/js/"),
+      expected.replace("biasclear.iife", "biasclearXiife"),
+      expected.replace(" defer", " async"),
+    ]) assert.throws(() => assertLiteralHtml(mutated, expected, "mutation"), { name: "AssertionError" });
   });
 
   it("gives the same results through the site's bundle as the engine package", () => {
