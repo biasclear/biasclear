@@ -57,7 +57,6 @@ Here are some of the limits the BiasClear project publishes. The full list of mi
 ## What's inside
 
 - `.claude-plugin/plugin.json`: the plugin's name card.
-- `assets/icon.png`: the listing icon.
 - `skills/biasclear/SKILL.md`: the instructions Claude follows.
 - `skills/biasclear/scripts/biasclear_scan.py`: the script Claude runs.
 - `skills/biasclear/engine/biasclear/`: a copy of BiasClear's Python engine.

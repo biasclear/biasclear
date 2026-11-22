@@ -18,8 +18,5 @@
     "writing",
     "bias"
   ],
-  "icon": "./assets/icon.png",
-  "network": {
-    "hosts": []
-  }
+  "icon": "./assets/icon.png"
 }

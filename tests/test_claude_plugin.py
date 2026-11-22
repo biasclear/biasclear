@@ -80,8 +80,13 @@ def test_manifest():
     assert card["author"]["name"]
     assert card["license"] == "Apache-2.0 AND CC-BY-4.0"
     assert card["homepage"].startswith("https://")
-    assert card["network"] == {"hosts": []}
     assert (PLUGIN / card["icon"]).is_file()
+    # The directory accepts other fields, such as "network", only from
+    # Verified organizations (its validation of 2026-11-21).
+    assert set(card) <= {
+        "name", "displayName", "version", "description", "author",
+        "homepage", "repository", "license", "keywords", "icon",
+    }
 
 
 def test_skill_front_matter():
