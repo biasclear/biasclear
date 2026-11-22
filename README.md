@@ -117,7 +117,7 @@ The same engine in TypeScript, for browsers and Node, with no runtime dependenci
 
 ### In Claude
 
-A Claude plugin in [plugins/biasclear](plugins/biasclear/README.md) lets Claude run these same rules on English text you give it and explain each move in plain words. Its script makes no network calls and keeps nothing, but the text you check is part of your conversation with Claude, so it is not private the way the browser checker is. In Claude Code:
+A Claude plugin in [plugins/biasclear](plugins/biasclear/README.md) lets Claude run these same rules on English text you give it and explain each move in plain words. Its script makes no network calls and keeps nothing, but the text you check is part of your conversation with Claude, so it is not private the way the browser checker is. It needs Python 3.9 or newer wherever Claude runs code. In Claude Code:
 
 ```
 /plugin install biasclear --marketplace biasclear/biasclear

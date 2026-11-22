@@ -14,18 +14,21 @@ the one source of truth:
   rejoins the shards and checks the hash before it scans anything.
 - ``LICENSE`` and ``rules/LICENSE`` are copied in.
 - The plugin's ``version`` in ``.claude-plugin/plugin.json`` is set from the
-  package version, the whole rules version and a hash of the engine files.
-  Claude Code updates an installed plugin when this version changes, so every
-  new rules version and every change to the engine reaches installed copies.
+  package version, the whole rules version and a hash of everything the
+  plugin ships. Claude Code updates an installed plugin when this version
+  changes, so any change to any file in the plugin reaches installed copies.
   Package 2.0.0a1 with rules 2.0.0a5 gives
-  2.0.0-alpha.1.rules.2.0.0.0.5+engine.<the engine hash's first 8 hex digits>.
+  2.0.0-alpha.1.rules.2.0.0.0.5+files.<the hash's first 8 hex digits>.
+
+The plugin may hold only the files this script writes and the ones written by
+hand (``HAND_WRITTEN``); ``--check`` reports any other file.
 
 Usage::
 
     python scripts/sync_claude_plugin.py          # write the copy
     python scripts/sync_claude_plugin.py --check  # exit 1 if the copy is stale
 
-Run it after any change to the engine or the rule pack.
+Run it after any change to the engine, the rule pack or the plugin's files.
 """
 
 from __future__ import annotations
@@ -40,9 +43,20 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "biasclear"
 PLUGIN = ROOT / "plugins" / "biasclear"
 SKILL = PLUGIN / "skills" / "biasclear"
+PLUGIN_JSON = PLUGIN / ".claude-plugin" / "plugin.json"
 ENGINE_FILES = ("__init__.py", "_engine.py")
 SHARD_LIMIT = 200_000  # bytes; the directory's review threshold is 256 KiB
 GENERATED_DIRS = (SKILL / "engine" / "biasclear", SKILL / "rules")
+# Plugin files written by hand, relative to the plugin folder. plugin.json is
+# written by hand too, except its version, which this script sets.
+HAND_WRITTEN = (
+    "README.md",
+    "assets/icon.png",
+    "skills/biasclear/SKILL.md",
+    "skills/biasclear/scripts/biasclear_scan.py",
+)
+_VERSION = r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:(a|b|rc)(0|[1-9]\d*))?"
+_STAGE = {"a": 0, "b": 1, "rc": 2, None: 3}  # final comes after rc
 
 
 def _dump(value: object) -> str:
@@ -56,7 +70,7 @@ def _canonical_hash(pack: dict) -> str:
 
 def _semver(version: str) -> str:
     """PEP 440 'X.Y.Z' or 'X.Y.ZaN'/'bN'/'rcN' as SemVer 'X.Y.Z[-alpha.N]'."""
-    m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:(a|b|rc)(\d+))?", version)
+    m = re.fullmatch(_VERSION, version)
     if not m:
         raise SystemExit(f"cannot turn version {version!r} into a plugin version")
     base = ".".join(m.group(1, 2, 3))
@@ -65,34 +79,43 @@ def _semver(version: str) -> str:
     return base
 
 
-_STAGE = {"a": 0, "b": 1, "rc": 2, None: 3}  # final comes after rc
-
-
-def engine_hash() -> str:
-    """sha256 over the engine files, each with its name and length."""
-    digest = hashlib.sha256()
-    for name in ENGINE_FILES:
-        data = (SRC / name).read_bytes()
-        digest.update(name.encode("utf-8") + b"\0" + str(len(data)).encode("ascii") + b"\0" + data)
-    return digest.hexdigest()
-
-
-def plugin_version(package: str, rules: str, engine_sha256: str) -> str:
-    """The package version, the whole rules version as numbers, and the engine hash.
+def plugin_version(package: str, rules: str, files_sha256: str) -> str:
+    """The package version, the whole rules version as numbers, and a files hash.
 
     The rules part sits in the pre-release, so versions rise in SemVer order
     as the rules move from a5 to a6, b1, rc1 and final, and on to 2.0.1 and
-    2.1.0. The engine hash sits in the build metadata, so a change to the
-    engine alone still gives a different version string.
+    2.1.0. The hash of the plugin's files sits in the build metadata, so any
+    other change still gives a different version string.
     """
-    m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:(a|b|rc)(\d+))?", rules)
+    m = re.fullmatch(_VERSION, rules)
     if not m:
         raise SystemExit(f"cannot turn rules version {rules!r} into a plugin version")
     major, minor, patch, stage, number = m.groups()
     rules_part = f"rules.{major}.{minor}.{patch}.{_STAGE[stage]}.{number or 0}"
     base = _semver(package)
     sep = "." if "-" in base else "-"
-    return f"{base}{sep}{rules_part}+engine.{engine_sha256[:8]}"
+    return f"{base}{sep}{rules_part}+files.{files_sha256[:8]}"
+
+
+def files_hash(generated: dict[Path, bytes], card: dict) -> str:
+    """sha256 over everything the plugin ships, except plugin.json's version.
+
+    It covers the generated files as they are to be written, the files written
+    by hand, and plugin.json's other fields. Each entry adds its path and its
+    length, so no two different sets of files hash alike by moving bytes.
+    """
+    entries = {path.relative_to(PLUGIN).as_posix(): data for path, data in generated.items()}
+    for rel in HAND_WRITTEN:
+        entries[rel] = (PLUGIN / rel).read_bytes()
+    fields = {key: value for key, value in card.items() if key != "version"}
+    entries[PLUGIN_JSON.relative_to(PLUGIN).as_posix()] = json.dumps(
+        fields, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    digest = hashlib.sha256()
+    for rel in sorted(entries):
+        data = entries[rel]
+        digest.update(rel.encode("utf-8") + b"\0" + str(len(data)).encode("ascii") + b"\0" + data)
+    return digest.hexdigest()
 
 
 def planned_files() -> dict[Path, bytes]:
@@ -132,10 +155,9 @@ def planned_files() -> dict[Path, bytes]:
     manifest = {"rules_version": pack["rules_version"], "rules_hash": _canonical_hash(pack), "shards": names}
     files[SKILL / "rules" / "PACK.json"] = _dump(manifest).encode("utf-8")
 
-    plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
-    card = json.loads(plugin_json.read_text(encoding="utf-8"))
-    card["version"] = plugin_version(package_version, pack["rules_version"], engine_hash())
-    files[plugin_json] = _dump(card).encode("utf-8")
+    card = json.loads(PLUGIN_JSON.read_text(encoding="utf-8"))
+    card["version"] = plugin_version(package_version, pack["rules_version"], files_hash(files, card))
+    files[PLUGIN_JSON] = _dump(card).encode("utf-8")
     return files
 
 
@@ -145,15 +167,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     files = planned_files()
-    unexpected = sorted(
-        path for folder in GENERATED_DIRS if folder.is_dir()
-        for path in folder.rglob("*") if path.is_file() and path not in files
-    )
+    expected = set(files) | {PLUGIN / rel for rel in HAND_WRITTEN}
+    unexpected = sorted(p for p in PLUGIN.rglob("*") if (p.is_file() or p.is_symlink()) and p not in expected)
+    generated_strays = [p for p in unexpected if any(folder in p.parents for folder in GENERATED_DIRS)]
+    other_strays = [p for p in unexpected if p not in generated_strays]
 
     if args.check:
         problems = [str(p.relative_to(ROOT)) for p, data in files.items()
                     if not p.exists() or p.read_bytes() != data]
-        problems += [f"{p.relative_to(ROOT)} (not generated; remove it)" for p in unexpected]
+        problems += [f"{p.relative_to(ROOT)} (not generated or written by hand; remove it)" for p in unexpected]
         if problems:
             print("The Claude plugin's copy is out of date. Run: python scripts/sync_claude_plugin.py")
             for problem in problems:
@@ -162,7 +184,7 @@ def main(argv: list[str] | None = None) -> int:
         print("The Claude plugin's copy matches the source.")
         return 0
 
-    for path in unexpected:
+    for path in generated_strays:
         path.unlink()
         print(f"removed {path.relative_to(ROOT)}")
     for path, data in files.items():
@@ -170,6 +192,11 @@ def main(argv: list[str] | None = None) -> int:
         if not path.exists() or path.read_bytes() != data:
             path.write_bytes(data)
             print(f"wrote {path.relative_to(ROOT)}")
+    if other_strays:
+        print("These files are neither generated nor written by hand. Remove them, or add them to HAND_WRITTEN:")
+        for path in other_strays:
+            print(f"  {path.relative_to(ROOT)}")
+        return 1
     return 0
 
 

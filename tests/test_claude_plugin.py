@@ -136,16 +136,18 @@ def test_readme_and_licenses():
 
 def test_plugin_holds_only_expected_files():
     # A stray file would ship with the plugin; the directory lists what it holds.
-    expected = {p.relative_to(PLUGIN).as_posix() for p in load_sync().planned_files() if PLUGIN in p.parents}
-    expected |= {"README.md", "assets/icon.png", "skills/biasclear/SKILL.md", "skills/biasclear/scripts/biasclear_scan.py"}
-    assert {p.relative_to(PLUGIN).as_posix() for p in PLUGIN.rglob("*") if p.is_file()} == expected
+    sync = load_sync()
+    expected = {p.relative_to(PLUGIN).as_posix() for p in sync.planned_files()} | set(sync.HAND_WRITTEN)
+    found = {p.relative_to(PLUGIN).as_posix() for p in PLUGIN.rglob("*") if p.is_file() or p.is_symlink()}
+    assert found == expected
 
 
 def test_directory_file_rules():
-    files = [p for p in PLUGIN.rglob("*") if p.is_file()]
+    entries = list(PLUGIN.rglob("*"))
+    assert not [p for p in entries if p.is_symlink()]  # dangling links included
+    files = [p for p in entries if p.is_file()]
     assert len(files) < 512
     for path in files:
-        assert not path.is_symlink(), path
         assert path.name not in {".DS_Store", "Thumbs.db", "desktop.ini"}, path
         assert "__pycache__" not in path.parts, path
         assert path.stat().st_size < 256 * 1024, f"{path} is over 256 KiB"
@@ -186,7 +188,7 @@ def test_copy_matches_source():
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_plugin_version_changes_with_rules_and_engine():
+def test_plugin_version_changes_with_rules_and_files():
     # Claude Code updates an installed plugin when its version string changes.
     sync = load_sync()
     rules = ["2.0.0a5", "2.0.0a6", "2.0.0b1", "2.0.0rc1", "2.0.0", "2.0.1a5", "2.1.0a5"]
@@ -204,6 +206,35 @@ def test_plugin_version_changes_with_rules_and_engine():
         r"(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?",
         card["version"],
     ), card["version"]
+
+
+@pytest.mark.parametrize("change", ["SKILL.md", "biasclear_scan.py", "plugin.json description"])
+def test_any_plugin_change_changes_the_version(tmp_path, change):
+    for part in ("src", "rules", "plugins", "scripts"):
+        shutil.copytree(ROOT / part, tmp_path / part, ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copy(ROOT / "LICENSE", tmp_path / "LICENSE")
+    check = [sys.executable, str(tmp_path / "scripts" / "sync_claude_plugin.py"), "--check"]
+    assert subprocess.run(check, capture_output=True, check=False).returncode == 0
+    skill = tmp_path / "plugins" / "biasclear" / "skills" / "biasclear"
+    if change == "plugin.json description":
+        card_path = tmp_path / "plugins" / "biasclear" / ".claude-plugin" / "plugin.json"
+        card = json.loads(card_path.read_text(encoding="utf-8"))
+        card["description"] += " Changed."
+        card_path.write_text(json.dumps(card, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    else:
+        path = skill / "SKILL.md" if change == "SKILL.md" else skill / "scripts" / "biasclear_scan.py"
+        path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    result = subprocess.run(check, capture_output=True, text=True, check=False)
+    assert result.returncode == 1 and "plugin.json" in result.stdout, result.stdout
+
+
+def test_skill_quotes_the_real_limits():
+    # Claude repeats these numbers to people.
+    skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    assert f"{MAX_INPUT_CHARS:,} characters" in skill
+    build_site = (ROOT / "scripts" / "build-site.mjs").read_text(encoding="utf-8")
+    ui_max = int(re.search(r"export const UI_MAX = ([\d_]+);", build_site).group(1).replace("_", ""))
+    assert f"{ui_max:,} characters" in skill
 
 
 def test_pack_manifest_records_the_bundled_pack():
@@ -274,6 +305,28 @@ def test_output_starts_with_the_counts_and_ends_with_one_mark_per_line():
     mark_lines = [line for line in out.splitlines() if line.startswith('  {"text": ')]
     assert [json.loads(line.rstrip(",")) for line in mark_lines] == report["marks"]
     assert max(len(line) for line in out.splitlines()) < 1000
+
+
+def test_marks_stay_on_one_line_for_any_line_splitter():
+    # str.splitlines() also breaks at U+2028, U+2029 and NEL, which \s matches.
+    text = "Everyone\x85agrees this is right. Either we act now or we lose everything."
+    out = run_script(text=text).stdout.decode("utf-8")
+    report = json.loads(out)
+    assert any("\x85" in m["text"] or " " in m["text"] for m in report["marks"])
+    mark_lines = [line for line in out.splitlines() if line.startswith('  {"text": ')]
+    assert [json.loads(line.rstrip(",")) for line in mark_lines] == report["marks"]
+
+
+def test_script_drops_a_leading_byte_order_mark(tmp_path):
+    # Notepad and other Windows tools start UTF-8 files with a byte-order mark.
+    source = tmp_path / "bom.txt"
+    text = "Everyone agrees this is the only safe choice. Act now!"
+    source.write_bytes(b"\xef\xbb\xbf" + text.encode("utf-8"))
+    report = json.loads(run_script("--file", str(source)).stdout)
+    assert report["characters"] == len(text)
+    assert [(m["rule_id"], m["start"], m["end"]) for m in report["marks"]] == [
+        (m["rule_id"], m["start"], m["end"]) for m in scan(text)["moves"]
+    ]
 
 
 def test_script_loads_the_engine_without_touching_sys_path():

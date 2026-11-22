@@ -41,7 +41,7 @@ REMINDERS = [
     "BiasClear reads wording only. It does not judge whether anything is true, and it does not judge people or sides.",
     "No marks does not mean no persuasion. The rules miss persuasion put in other words, tone and insinuation.",
     "How often the rules are right on new text has not been measured yet.",
-    "Some rules stay quiet when something shaped like a citation sits beside the claim. The rules check the shape of a citation, not whether the source exists.",
+    "Some rules stay quiet when something shaped like a citation sits beside the claim. The rules check the shape of a citation, not whether the source exists. A citation beside the first copy of a phrase can also quiet a later copy that has none.",
     "A quoted phrase is marked the same as one the writer uses.",
     "The swapped-side tests still list known gaps, where the same kind of wording is marked when it is aimed at one side and not the other (rules/RULE_CHANGES.md in the BiasClear repository).",
     "The rules are written for English.",
@@ -67,7 +67,9 @@ def read_text(path: str | None) -> str:
     if len(data) > max_bytes:
         raise ScanError(f"the text is longer than {MAX_CHARS:,} characters")
     try:
-        text = data.decode("utf-8")
+        # A byte-order mark at the very start (Notepad and other Windows tools
+        # add one) marks the encoding; it is not part of the text.
+        text = data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise ScanError(f"the text is not valid UTF-8 ({exc.reason} at byte {exc.start}); save it as UTF-8 and try again") from None
     if len(text) > MAX_CHARS:
@@ -192,6 +194,17 @@ def build_report(text: str, domain: str | None) -> dict:
     }
 
 
+_LINE_BREAKS = {" ": "\\u2028", " ": "\\u2029", "\x85": "\\u0085"}
+
+
+def _json(value: object) -> str:
+    """JSON on one line, even for readers that also break lines at U+2028, U+2029 or NEL."""
+    text = json.dumps(value, ensure_ascii=False)
+    for char, escape in _LINE_BREAKS.items():
+        text = text.replace(char, escape)
+    return text
+
+
 def render(report: dict) -> str:
     """The report as JSON, with each move, reminder and mark on its own line."""
     keys = list(report)
@@ -199,22 +212,22 @@ def render(report: dict) -> str:
     for i, key in enumerate(keys):
         value = report[key]
         comma = "," if i < len(keys) - 1 else ""
-        name = json.dumps(key)
+        name = _json(key)
         if isinstance(value, dict) and value:
             items = list(value.items())
             lines.append(f" {name}: {{")
             for j, (sub, item) in enumerate(items):
                 tail = "," if j < len(items) - 1 else ""
-                lines.append(f"  {json.dumps(sub, ensure_ascii=False)}: {json.dumps(item, ensure_ascii=False)}{tail}")
+                lines.append(f"  {_json(sub)}: {_json(item)}{tail}")
             lines.append(" }" + comma)
         elif isinstance(value, list) and value:
             lines.append(f" {name}: [")
             for j, item in enumerate(value):
                 tail = "," if j < len(value) - 1 else ""
-                lines.append(f"  {json.dumps(item, ensure_ascii=False)}{tail}")
+                lines.append(f"  {_json(item)}{tail}")
             lines.append(" ]" + comma)
         else:
-            lines.append(f" {name}: {json.dumps(value, ensure_ascii=False)}{comma}")
+            lines.append(f" {name}: {_json(value)}{comma}")
     lines.append("}")
     return "\n".join(lines) + "\n"
 
