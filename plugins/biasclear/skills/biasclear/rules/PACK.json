@@ -1,0 +1,9 @@
+{
+  "rules_version": "2.0.0a5",
+  "rules_hash": "f4f57a192c0fbb6bf5f57d5eb6b9e5253eb71a28683074229ca4627577907026",
+  "shards": [
+    "rules-01.json",
+    "rules-02.json",
+    "rules-03.json"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "1",
+  "rules_version": "2.0.0a5",
+  "tiers": {
+    "1": {
+      "name": "Ideological",
+      "alias": "The Source Code",
+      "description": "Foundational meta-narratives that define epistemic boundaries. Renders incompatible information illegitimate before it is even evaluated."
+    },
+    "2": {
+      "name": "Psychological",
+      "alias": "The Compiler",
+      "description": "Cognitive and social processes that compile ideological boundaries into personal filters. Manages dissonance by favoring confirming data."
+    },
+    "3": {
+      "name": "Institutional",
+      "alias": "The Execution",
+      "description": "Institutional structures that amplify compliant narratives and suppress dissent. Embeds persistence in societal machinery."
+    }
+  },
+  "citation_suppression": {
+    "window": 120,
+    "flags": "i",
+    "patterns": [
+      "\\((?:(?:[\\w@#]|[^\\x00-\\x7f\\s\\w–—])(?:[\\w'’‘&./+*@#%!-]|[^\\x00-\\x7f\\s\\w’‘–—])*|\\([A-Z][\\w'’&.–-]*\\)|\\[[A-Z][\\w'’&.–-]*\\])(?:[;,]?\\s+(?:(?:[\\w@#]|[^\\x00-\\x7f\\s\\w–—])(?:[\\w'’‘&./+*@#%!-]|[^\\x00-\\x7f\\s\\w’‘–—])*|\\([A-Z][\\w'’&.–-]*\\)|\\[[A-Z][\\w'’&.–-]*\\])|\\s*[—–]\\s*(?:(?:[\\w@#]|[^\\x00-\\x7f\\s\\w–—])(?:[\\w'’‘&./+*@#%!-]|[^\\x00-\\x7f\\s\\w’‘–—])*|\\([A-Z][\\w'’&.–-]*\\)|\\[[A-Z][\\w'’&.–-]*\\]))*(?:\\s+(?:et\\s+al\\.?|&\\s+(?:[A-Z]|[^\\x00-\\x7f\\s])[\\w'’.–-]*))?,?\\s*\\d{4}\\)",
+      "\\[\\d+\\]",
+      "\\b\\d+\\s+[A-Z][a-z]*\\.\\s*(?:[A-Z][a-z]*\\.\\s*){0,2}(?:\\d+[a-z]{1,2}\\s+)?(?:at\\s+)?\\d+",
+      "(?<![\\w-])(?:Id\\.|Ibid\\.)\\s|\\b(?:supra|infra)(?:,|\\s+(?:note|at|n\\.|\\d))",
+      "\\b[A-Z][a-z]*\\s+v\\.\\s+[A-Z][\\w'’&.-]*|\\b[A-Z][a-z]*\\s+v\\s+[A-Z][\\w'’&-]*(?=\\s*(?:[.;,:)\\]]|\\(|\\[|\\d|(?![\\s\\S])))",
+      "\\b(?:Table|Fig(?:ure)?|Appendix|Exhibit)\\s+(?:\\d+|[A-Z](?![a-z]))",
+      "\\bpp?\\.\\s*\\d+",
+      "(?:Report|Bulletin|Publication|Circular)\\s+(?:No\\.?|Number)\\s+[\\d-]+",
+      "\\b(?:Nat'l|Int'l|Fed\\.|Dep't|Comm'n|Inst\\.|Ass'n|Gov't|Found\\.|Fdn\\.|Soc'y|Ctr\\.|Univ\\.|Coll\\.)\\s+(?:\\S*\\.\\s+){0,2}?\\d",
+      "\\((?:[\\w\\s.,:;'’‘&/+*@#\\[\\]–—%!-]|[^\\x00-\\x7f\\s\\w’‘–—])+(?:\\((?:[\\w\\s.,:;'’‘&/+*@#\\[\\]–—%!-]|[^\\x00-\\x7f\\s\\w’‘–—])*\\)(?:[\\w\\s.,:;'’‘&/+*@#\\[\\]–—%!-]|[^\\x00-\\x7f\\s\\w’‘–—])*)?,\\s*(?:at\\s+)?\\d{1,4}(?:\\s*[-–]\\s*\\d{1,4})?\\)",
+      "\\((?:(?!(?:at|to|from|until|by|before|after|around|about)\\s)[\\w'’.-]+\\s+){1,4}\\d+(?::\\d+(?:\\s*[-–]\\s*\\d+)?|[ab])\\)",
+      "\\(\\d{4}\\)\\s+\\d+\\s+(?!(?:about|above|after|again|ago|all|almost|also|and|are|around|at|before|below|between|but|by|did|down|during|each|even|for|from|had|has|have|her|his|in|into|its|just|less|more|nearly|not|now|of|off|on|only|or|our|out|over|per|since|some|than|that|the|their|then|there|these|they|this|those|through|to|under|until|up|was|we|were|when|while|with|you)\\b)[A-Z]{2,8}\\s+\\d+",
+      "\\b\\d{4}\\s+(?!(?:about|above|after|again|ago|all|almost|also|and|are|around|at|before|below|between|but|by|did|down|during|each|even|for|from|had|has|have|her|his|in|into|its|just|less|more|nearly|not|now|of|off|on|only|or|our|out|over|per|since|some|than|that|the|their|then|there|these|they|this|those|through|to|under|until|up|was|we|were|when|while|with|you)\\b)[A-Z]{2,8}\\s+\\d{1,5}(?=\\s*(?:[.;,)\\]]|(?![\\s\\S])))",
+      "\\b(?!(?:about|above|after|again|ago|all|almost|also|and|are|around|at|before|below|between|but|by|did|down|during|each|even|for|from|had|has|have|her|his|in|into|its|just|less|more|nearly|not|now|of|off|on|only|or|our|out|over|per|since|some|than|that|the|their|then|there|these|they|this|those|through|to|under|until|up|was|we|were|when|while|with|you)\\b)[A-Z][A-Za-z]{2,9}\\s+\\d{1,3},\\s*\\d{1,5}(?=\\s*(?:[.;,)\\]]|(?![\\s\\S])))"
+    ]
+  }
+}

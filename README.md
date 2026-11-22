@@ -115,6 +115,16 @@ python -m biasclear --domain all < draft.txt
 
 The same engine in TypeScript, for browsers and Node, with no runtime dependencies: [packages/engine](packages/engine/README.md). It is not published on npm.
 
+### In Claude
+
+A Claude plugin in [plugins/biasclear](plugins/biasclear/README.md) lets Claude run these same rules on English text you give it and explain each move in plain words. Its script makes no network calls and keeps nothing, but the text you check is part of your conversation with Claude, so it is not private the way the browser checker is. In Claude Code:
+
+```
+/plugin install biasclear --marketplace biasclear/biasclear
+```
+
+On older versions of Claude Code, run `/plugin marketplace add biasclear/biasclear`, then `/plugin install biasclear@biasclear`.
+
 ## How it works
 
 - **One rule pack.** Every rule lives in one file, [rules/biasclear-rules.json](rules/biasclear-rules.json): patterns over English wording, each with a name, a description and a PIT tier. It is the single source of truth for every engine and carries its own rules version. [rules/RULE_CHANGES.md](rules/RULE_CHANGES.md) records the changes and why, in plain words. The patterns themselves are long: letters are spelled as `[Ee]`, so that a word matches in any case while capitals still count elsewhere in the same pattern. Word lists are meant to hold both sides' words, but that coverage is not complete yet: some insults are marked while their mirror aimed at the other side is not. The ones found are listed in [rules/RULE_CHANGES.md](rules/RULE_CHANGES.md) ("Mirror coverage").
