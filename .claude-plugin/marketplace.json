@@ -4,7 +4,7 @@
     "name": "BiasClear",
     "url": "https://github.com/biasclear"
   },
-  "description": "BiasClear's Claude plugin: mark common persuasion moves in English text with BiasClear's open rules.",
+  "description": "BiasClear's Claude plugin: mark common persuasion moves in English text with BiasClear's open rules. It misses moves made in other words.",
   "plugins": [
     {
       "name": "biasclear",

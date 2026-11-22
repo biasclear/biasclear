@@ -164,7 +164,7 @@ v2 replaced those rules with rules that match structure only, tests every rule w
 
 ## License
 
-The code is licensed under the [Apache License 2.0](LICENSE). The retired v1 code is not part of this repository and keeps its own license, AGPL-3.0. The rule pack, `rules/biasclear-rules.json`, is licensed under [CC BY 4.0](rules/LICENSE); that also covers the copy of the pack inside the Python package, `biasclear/data/biasclear-rules.json`. The site's typefaces, Newsreader and DM Mono, are under the SIL Open Font License 1.1 ([site/fonts](site/fonts/)).
+The code is licensed under the [Apache License 2.0](LICENSE). The retired v1 code is not part of this repository and keeps its own license, AGPL-3.0. The rule pack, `rules/biasclear-rules.json`, is licensed under [CC BY 4.0](rules/LICENSE); that also covers the copy of the pack inside the Python package, `biasclear/data/biasclear-rules.json`, and the split copy in the Claude plugin, `plugins/biasclear/skills/biasclear/rules/`. The site's typefaces, Newsreader and DM Mono, are under the SIL Open Font License 1.1 ([site/fonts](site/fonts/)).
 
 ## Citation
 

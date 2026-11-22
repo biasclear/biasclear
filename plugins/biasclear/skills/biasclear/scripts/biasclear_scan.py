@@ -9,10 +9,11 @@ What it does:
 1. Rejoins the bundled rule pack (rules/header.json plus the rules-NN.json
    shards) and checks its rules hash and version against rules/PACK.json
    before anything runs. A missing, damaged or changed pack is refused.
-2. Imports the bundled engine (engine/biasclear/) where it sits and hands it
-   the checked pack in memory. Nothing is written to disk.
-3. Prints one JSON object (UTF-8): every mark, the moves found with a plain
-   description of each, and fixed reminders on how to read the result.
+2. Loads the bundled engine (engine/biasclear/) straight from its folder and
+   hands it the checked pack in memory. Nothing is written to disk.
+3. Prints one JSON object (UTF-8): the counts, the moves found with a plain
+   description of each, fixed reminders on how to read the result, and then
+   every mark, one per line.
 
 Python standard library only. No network calls, no logging, nothing kept.
 """
@@ -25,7 +26,7 @@ sys.dont_write_bytecode = True  # keep no compiled copy of the engine anywhere
 
 import argparse  # noqa: E402
 import hashlib  # noqa: E402
-import importlib  # noqa: E402
+import importlib.util  # noqa: E402
 import json  # noqa: E402
 from pathlib import Path  # noqa: E402
 
@@ -90,7 +91,7 @@ def load_pack() -> tuple[dict, dict]:
         matches = digest == manifest["rules_hash"] and pack["rules_version"] == manifest["rules_version"]
     except ScanError:
         raise
-    except (OSError, ValueError, KeyError, TypeError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, RecursionError) as exc:
         raise ScanError(f"the bundled rule pack is missing or damaged ({exc}); reinstall the plugin") from None
     if not matches:
         raise ScanError("the bundled rule pack does not match its recorded fingerprint; reinstall the plugin")
@@ -120,14 +121,23 @@ class _PackInMemory:
 
 
 def run_engine(pack: dict, manifest: dict, text: str, domain: str | None) -> dict:
-    """Scan with the bundled engine, imported in place, using the checked pack."""
+    """Scan with the bundled engine, loaded from its folder, using the checked pack."""
     for name in [n for n in sys.modules if n == "biasclear" or n.startswith("biasclear.")]:
         del sys.modules[name]
-    sys.path.insert(0, str(ENGINE_DIR.parent))
+    # Load the package straight from its folder. No folder is put on sys.path,
+    # so no other file can be imported in place of a module the engine uses.
+    spec = importlib.util.spec_from_file_location(
+        "biasclear", ENGINE_DIR / "__init__.py", submodule_search_locations=[str(ENGINE_DIR)]
+    )
+    if spec is None or spec.loader is None:
+        raise ScanError("could not load the bundled engine; reinstall the plugin")
+    package = importlib.util.module_from_spec(spec)
+    sys.modules["biasclear"] = package
     try:
-        engine = importlib.import_module("biasclear._engine")
-    finally:
-        sys.path.remove(str(ENGINE_DIR.parent))
+        spec.loader.exec_module(package)
+        engine = sys.modules["biasclear._engine"]
+    except (ImportError, SyntaxError, OSError, KeyError) as exc:
+        raise ScanError(f"the bundled engine is missing or damaged ({exc}); reinstall the plugin") from None
     if Path(engine.__file__).resolve().parent != ENGINE_DIR.resolve():
         raise ScanError("could not load the bundled engine")
     engine.resources = _PackInMemory(json.dumps(pack, ensure_ascii=False))
@@ -164,6 +174,8 @@ def build_report(text: str, domain: str | None) -> dict:
             "marks": 0,
         })
         found["marks"] += 1
+    # The counts and the moves come first, so a long output still starts with
+    # the whole picture; the marks come last.
     return {
         "tool": "BiasClear",
         "rules_version": result["rules_version"],
@@ -172,12 +184,39 @@ def build_report(text: str, domain: str | None) -> dict:
         "characters": len(text),
         "mark_count": len(marks),
         "move_count": len(moves),
-        "marks": marks,
         "moves": moves,
-        "offsets": "start and end count characters (Unicode code points) from the start of the text.",
         "reminders": REMINDERS,
+        "offsets": "start and end count characters (Unicode code points) from the start of the text.",
         "source": "https://github.com/biasclear/biasclear",
+        "marks": marks,
     }
+
+
+def render(report: dict) -> str:
+    """The report as JSON, with each move, reminder and mark on its own line."""
+    keys = list(report)
+    lines = ["{"]
+    for i, key in enumerate(keys):
+        value = report[key]
+        comma = "," if i < len(keys) - 1 else ""
+        name = json.dumps(key)
+        if isinstance(value, dict) and value:
+            items = list(value.items())
+            lines.append(f" {name}: {{")
+            for j, (sub, item) in enumerate(items):
+                tail = "," if j < len(items) - 1 else ""
+                lines.append(f"  {json.dumps(sub, ensure_ascii=False)}: {json.dumps(item, ensure_ascii=False)}{tail}")
+            lines.append(" }" + comma)
+        elif isinstance(value, list) and value:
+            lines.append(f" {name}: [")
+            for j, item in enumerate(value):
+                tail = "," if j < len(value) - 1 else ""
+                lines.append(f"  {json.dumps(item, ensure_ascii=False)}{tail}")
+            lines.append(" ]" + comma)
+        else:
+            lines.append(f" {name}: {json.dumps(value, ensure_ascii=False)}{comma}")
+    lines.append("}")
+    return "\n".join(lines) + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -194,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
     except ScanError as exc:
         print(f"biasclear: {exc}", file=sys.stderr)
         return 2
-    sys.stdout.buffer.write((json.dumps(report, ensure_ascii=False, indent=1) + "\n").encode("utf-8"))
+    sys.stdout.buffer.write(render(report).encode("utf-8"))
     sys.stdout.buffer.flush()
     return 0
 

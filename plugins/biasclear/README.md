@@ -25,7 +25,7 @@ After installing the plugin, give Claude some text and ask, for example:
 - "What persuasion moves does this ad use?"
 - "Run BiasClear on this speech, using the news rules."
 
-Claude puts the text in a temporary file and runs BiasClear's bundled script on it. It then deletes the file. Claude lists each marked phrase with the move's name and what the move does, and ends with how to read the result.
+Claude puts the text in a temporary file, runs BiasClear's bundled script on it, and is told to delete the file afterwards. Claude lists the marks, each with the move's name and what the move does (for a long list, the count for each move with examples), and ends with how to read the result.
 
 You can also run the script yourself, with Python 3.9 or newer:
 
@@ -38,13 +38,13 @@ python3 -I skills/biasclear/scripts/biasclear_scan.py --file my-text.txt
 - **Runs:** one Python script, `skills/biasclear/scripts/biasclear_scan.py`, which uses only Python's standard library.
   - It rejoins the bundled rule pack and checks the pack's fingerprint (the rules hash) before anything runs. It refuses a missing, damaged or changed pack.
   - It then runs the bundled BiasClear engine on the text, in memory.
-  - In Claude Code the script runs on your computer. In the Claude app it runs in Claude's code sandbox.
+  - Where Claude runs code on your computer, as Claude Code usually does, the script runs there. In the Claude app, or in Claude Code on the web, it runs in a cloud sandbox.
 - **Sends:** the script makes no network connections and fetches nothing. The text you check is part of your conversation with Claude, so it is not private the way BiasClear's browser checker is.
-- **Keeps:** the script writes nothing to disk and keeps no log. To hand your text to the script, Claude writes it to a temporary file and deletes it afterwards.
+- **Keeps:** the script writes nothing to disk and keeps no log. To hand your text to the script, Claude writes it to a temporary file, and its instructions tell it to delete that file afterwards.
 
 ## Limits
 
-Here are some of the limits the BiasClear project publishes. The full list of misses is on the [Method page](https://github.com/biasclear/biasclear/blob/main/site/pages/method.html).
+Here are some of the limits the BiasClear project publishes. The full list of misses is on the [Method page](https://biasclear.com/method.html#misses).
 
 - A mark is a prompt to look closer, not a finding. Some harmless wording gets marked.
 - No marks does not mean no persuasion. The rules miss persuasion put in other words, tone and insinuation.

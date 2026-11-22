@@ -14,10 +14,11 @@ the one source of truth:
   rejoins the shards and checks the hash before it scans anything.
 - ``LICENSE`` and ``rules/LICENSE`` are copied in.
 - The plugin's ``version`` in ``.claude-plugin/plugin.json`` is set from the
-  package version and the rules version, so that a rules update reaches
-  installed copies: package 2.0.0a1 with rules 2.0.0a5 gives 2.0.0-alpha.1.5.
-  A change to the engine alone reaches installed copies only with a new
-  package version.
+  package version, the whole rules version and a hash of the engine files.
+  Claude Code updates an installed plugin when this version changes, so every
+  new rules version and every change to the engine reaches installed copies.
+  Package 2.0.0a1 with rules 2.0.0a5 gives
+  2.0.0-alpha.1.rules.2.0.0.0.5+engine.<the engine hash's first 8 hex digits>.
 
 Usage::
 
@@ -64,11 +65,34 @@ def _semver(version: str) -> str:
     return base
 
 
-def plugin_version(package: str, rules: str) -> str:
-    """The package version with the rules version's last number appended."""
-    rules_number = re.findall(r"\d+", rules)[-1]
+_STAGE = {"a": 0, "b": 1, "rc": 2, None: 3}  # final comes after rc
+
+
+def engine_hash() -> str:
+    """sha256 over the engine files, each with its name and length."""
+    digest = hashlib.sha256()
+    for name in ENGINE_FILES:
+        data = (SRC / name).read_bytes()
+        digest.update(name.encode("utf-8") + b"\0" + str(len(data)).encode("ascii") + b"\0" + data)
+    return digest.hexdigest()
+
+
+def plugin_version(package: str, rules: str, engine_sha256: str) -> str:
+    """The package version, the whole rules version as numbers, and the engine hash.
+
+    The rules part sits in the pre-release, so versions rise in SemVer order
+    as the rules move from a5 to a6, b1, rc1 and final, and on to 2.0.1 and
+    2.1.0. The engine hash sits in the build metadata, so a change to the
+    engine alone still gives a different version string.
+    """
+    m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:(a|b|rc)(\d+))?", rules)
+    if not m:
+        raise SystemExit(f"cannot turn rules version {rules!r} into a plugin version")
+    major, minor, patch, stage, number = m.groups()
+    rules_part = f"rules.{major}.{minor}.{patch}.{_STAGE[stage]}.{number or 0}"
     base = _semver(package)
-    return f"{base}.{rules_number}" if "-" in base else f"{base}-rules.{rules_number}"
+    sep = "." if "-" in base else "-"
+    return f"{base}{sep}{rules_part}+engine.{engine_sha256[:8]}"
 
 
 def planned_files() -> dict[Path, bytes]:
@@ -110,7 +134,7 @@ def planned_files() -> dict[Path, bytes]:
 
     plugin_json = PLUGIN / ".claude-plugin" / "plugin.json"
     card = json.loads(plugin_json.read_text(encoding="utf-8"))
-    card["version"] = plugin_version(package_version, pack["rules_version"])
+    card["version"] = plugin_version(package_version, pack["rules_version"], engine_hash())
     files[plugin_json] = _dump(card).encode("utf-8")
     return files
 

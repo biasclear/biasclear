@@ -9,6 +9,7 @@ returning the engine's own marks.
 from __future__ import annotations
 
 import ast
+import importlib.util
 import json
 import os
 import re
@@ -68,6 +69,23 @@ def tampered_copy(tmp_path: Path) -> Path:
     return copy
 
 
+def load_sync():
+    spec = importlib.util.spec_from_file_location("sync_claude_plugin", ROOT / "scripts" / "sync_claude_plugin.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def semver_key(version: str) -> tuple:
+    """SemVer precedence: build metadata ignored, a release above its pre-releases."""
+    core = version.partition("+")[0]
+    main, _, pre = core.partition("-")
+    numbers = tuple(int(x) for x in main.split("."))
+    if not pre:
+        return (numbers, 1, ())
+    return (numbers, 0, tuple((0, int(i), "") if i.isdigit() else (1, 0, i) for i in pre.split(".")))
+
+
 # The plugin's shape --------------------------------------------------------
 
 
@@ -116,6 +134,13 @@ def test_readme_and_licenses():
     assert (SKILL / "rules" / "LICENSE").read_bytes() == (ROOT / "rules" / "LICENSE").read_bytes()
 
 
+def test_plugin_holds_only_expected_files():
+    # A stray file would ship with the plugin; the directory lists what it holds.
+    expected = {p.relative_to(PLUGIN).as_posix() for p in load_sync().planned_files() if PLUGIN in p.parents}
+    expected |= {"README.md", "assets/icon.png", "skills/biasclear/SKILL.md", "skills/biasclear/scripts/biasclear_scan.py"}
+    assert {p.relative_to(PLUGIN).as_posix() for p in PLUGIN.rglob("*") if p.is_file()} == expected
+
+
 def test_directory_file_rules():
     files = [p for p in PLUGIN.rglob("*") if p.is_file()]
     assert len(files) < 512
@@ -159,6 +184,26 @@ def test_copy_matches_source():
         capture_output=True, text=True, check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_plugin_version_changes_with_rules_and_engine():
+    # Claude Code updates an installed plugin when its version string changes.
+    sync = load_sync()
+    rules = ["2.0.0a5", "2.0.0a6", "2.0.0b1", "2.0.0rc1", "2.0.0", "2.0.1a5", "2.1.0a5"]
+    packages = ["2.0.0a1", "2.0.0b1", "2.0.0rc1", "2.0.0", "2.0.1"]
+    for versions in (
+        [sync.plugin_version("2.0.0a1", r, "0" * 64) for r in rules],
+        [sync.plugin_version(p, "2.0.0a5", "0" * 64) for p in packages],
+    ):
+        assert all(semver_key(a) < semver_key(b) for a, b in zip(versions, versions[1:])), versions
+    assert sync.plugin_version("2.0.0a1", "2.0.0a5", "a" * 64) != sync.plugin_version("2.0.0a1", "2.0.0a5", "b" * 64)
+    card = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    assert re.fullmatch(
+        r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+        r"(-(0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?"
+        r"(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?",
+        card["version"],
+    ), card["version"]
 
 
 def test_pack_manifest_records_the_bundled_pack():
@@ -211,12 +256,37 @@ def test_script_reads_stdin_and_handles_empty_text():
 
 
 def test_script_writes_utf8_on_any_console():
-    text = "Typical Ωmegans. Everyone knows Ω is best."
+    # Windows writes piped output in the console's code page unless told not to.
+    text = "Typical Ωmegans! Everyone knows Ω is best."
     env = dict(os.environ, PYTHONIOENCODING="cp1252")
-    result = run_script(text=text, env=env)
+    result = run_script(text=text, env=env, isolated=False)  # -I would ignore PYTHONIOENCODING
     assert result.returncode == 0, result.stderr.decode()
     report = json.loads(result.stdout.decode("utf-8"))
     assert [m["text"] for m in report["marks"]] == [m["match"] for m in scan(text)["moves"]]
+    assert any("Ω" in m["text"] for m in report["marks"])
+
+
+def test_output_starts_with_the_counts_and_ends_with_one_mark_per_line():
+    out = run_script(text=SAMPLE).stdout.decode("utf-8")
+    report = json.loads(out)
+    assert list(report)[:7] == ["tool", "rules_version", "rules_hash", "domain", "characters", "mark_count", "move_count"]
+    assert list(report)[-1] == "marks"
+    mark_lines = [line for line in out.splitlines() if line.startswith('  {"text": ')]
+    assert [json.loads(line.rstrip(",")) for line in mark_lines] == report["marks"]
+    assert max(len(line) for line in out.splitlines()) < 1000
+
+
+def test_script_loads_the_engine_without_touching_sys_path():
+    # With a folder on sys.path, a stray file there could be imported in place
+    # of a module the engine uses.
+    tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
+    uses = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Attribute) and node.attr == "path"
+        and isinstance(node.value, ast.Name) and node.value.id == "sys"
+    ]
+    assert uses == []
+    assert any(isinstance(node, ast.Attribute) and node.attr == "spec_from_file_location" for node in ast.walk(tree))
 
 
 def test_script_refuses_bad_input(tmp_path):
@@ -240,17 +310,23 @@ def test_script_refuses_a_changed_pack_before_running_it(tmp_path):
     assert result.returncode == 2 and b"fingerprint" in result.stderr
 
 
-@pytest.mark.parametrize("damage", ["missing shard", "broken shard", "broken manifest"])
-def test_script_refuses_a_damaged_pack(tmp_path, damage):
+@pytest.mark.parametrize(
+    "damage", ["missing shard", "broken shard", "deeply nested shard", "broken manifest", "missing engine file"]
+)
+def test_script_refuses_a_damaged_pack_or_engine(tmp_path, damage):
     copy = tampered_copy(tmp_path)
     if damage == "missing shard":
         (copy / "rules" / "rules-02.json").unlink()
     elif damage == "broken shard":
         (copy / "rules" / "rules-02.json").write_text("[{", encoding="utf-8")
-    else:
+    elif damage == "deeply nested shard":
+        (copy / "rules" / "rules-02.json").write_text("[" * 200_000 + "]" * 200_000, encoding="utf-8")
+    elif damage == "broken manifest":
         (copy / "rules" / "PACK.json").write_text("{}", encoding="utf-8")
+    else:
+        (copy / "engine" / "biasclear" / "_engine.py").unlink()
     result = run_script(text=SAMPLE, script=copy / "scripts" / "biasclear_scan.py")
-    assert result.returncode == 2 and b"missing or damaged" in result.stderr
+    assert result.returncode == 2 and b"missing or damaged" in result.stderr, result.stderr.decode()
 
 
 def test_script_writes_nothing(tmp_path):
