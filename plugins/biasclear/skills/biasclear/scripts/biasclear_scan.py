@@ -41,7 +41,7 @@ REMINDERS = [
     "BiasClear reads wording only. It does not judge whether anything is true, and it does not judge people or sides.",
     "No marks does not mean no persuasion. The rules miss persuasion put in other words, tone and insinuation.",
     "How often the rules are right on new text has not been measured yet.",
-    "Some rules stay quiet when something shaped like a citation sits beside the claim. The rules check the shape of a citation, not whether the source exists. A citation beside the first copy of a phrase can also quiet a later copy that has none.",
+    "Some rules stay quiet only when every claim they would mark has something shaped like a citation beside it. The rules check the shape of a citation, not whether the source exists. A citation beside the first copy of a phrase can also quiet a later copy that has none.",
     "A quoted phrase is marked the same as one the writer uses.",
     "The swapped-side tests still list known gaps, where the same kind of wording is marked when it is aimed at one side and not the other (rules/RULE_CHANGES.md in the BiasClear repository).",
     "The rules are written for English.",
@@ -55,7 +55,7 @@ class ScanError(Exception):
 
 def read_text(path: str | None) -> str:
     """Read UTF-8 text from a file or from standard input, strictly."""
-    max_bytes = 4 * MAX_CHARS
+    max_bytes = 4 * MAX_CHARS + 3  # room for a byte-order mark
     if path is None:
         data = sys.stdin.buffer.read(max_bytes + 1)
     else:
@@ -67,11 +67,13 @@ def read_text(path: str | None) -> str:
     if len(data) > max_bytes:
         raise ScanError(f"the text is longer than {MAX_CHARS:,} characters")
     try:
-        # A byte-order mark at the very start (Notepad and other Windows tools
-        # add one) marks the encoding; it is not part of the text.
-        text = data.decode("utf-8-sig")
+        text = data.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise ScanError(f"the text is not valid UTF-8 ({exc.reason} at byte {exc.start}); save it as UTF-8 and try again") from None
+    # A byte-order mark at the very start (Notepad and other Windows tools
+    # add one) marks the encoding; it is not part of the text.
+    if text.startswith("\ufeff"):
+        text = text[1:]
     if len(text) > MAX_CHARS:
         raise ScanError(f"the text is longer than {MAX_CHARS:,} characters")
     return text
@@ -138,14 +140,15 @@ def run_engine(pack: dict, manifest: dict, text: str, domain: str | None) -> dic
     try:
         spec.loader.exec_module(package)
         engine = sys.modules["biasclear._engine"]
-    except (ImportError, SyntaxError, OSError, KeyError) as exc:
+    except Exception as exc:  # any damage gets the plain refusal, not a traceback
         raise ScanError(f"the bundled engine is missing or damaged ({exc}); reinstall the plugin") from None
-    if Path(engine.__file__).resolve().parent != ENGINE_DIR.resolve():
+    engine_file = getattr(engine, "__file__", None)
+    if not engine_file or Path(engine_file).resolve().parent != ENGINE_DIR.resolve():
         raise ScanError("could not load the bundled engine")
-    engine.resources = _PackInMemory(json.dumps(pack, ensure_ascii=False))
     try:
+        engine.resources = _PackInMemory(json.dumps(pack, ensure_ascii=False))
         result = engine.scan(text, domain=domain)
-    except (OSError, ValueError, KeyError) as exc:
+    except Exception as exc:  # any damage gets the plain refusal, not a traceback
         raise ScanError(f"the bundled engine could not run ({exc}); reinstall the plugin") from None
     if result["rules_hash"] != manifest["rules_hash"] or result["rules_version"] != manifest["rules_version"]:
         raise ScanError("the bundled rule pack does not match its recorded fingerprint; reinstall the plugin")
@@ -194,7 +197,7 @@ def build_report(text: str, domain: str | None) -> dict:
     }
 
 
-_LINE_BREAKS = {" ": "\\u2028", " ": "\\u2029", "\x85": "\\u0085"}
+_LINE_BREAKS = {"\u2028": "\\u2028", "\u2029": "\\u2029", "\x85": "\\u0085"}
 
 
 def _json(value: object) -> str:

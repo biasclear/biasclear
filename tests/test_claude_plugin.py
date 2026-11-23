@@ -208,24 +208,89 @@ def test_plugin_version_changes_with_rules_and_files():
     ), card["version"]
 
 
-@pytest.mark.parametrize("change", ["SKILL.md", "biasclear_scan.py", "plugin.json description"])
-def test_any_plugin_change_changes_the_version(tmp_path, change):
+def plugin_copy(tmp_path: Path) -> Path:
     for part in ("src", "rules", "plugins", "scripts"):
         shutil.copytree(ROOT / part, tmp_path / part, ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copy(ROOT / "LICENSE", tmp_path / "LICENSE")
-    check = [sys.executable, str(tmp_path / "scripts" / "sync_claude_plugin.py"), "--check"]
-    assert subprocess.run(check, capture_output=True, check=False).returncode == 0
-    skill = tmp_path / "plugins" / "biasclear" / "skills" / "biasclear"
+    return tmp_path
+
+
+@pytest.mark.parametrize("change", [
+    "SKILL.md", "biasclear_scan.py", "README.md", "icon.png", "plugin.json description",
+    "engine source", "rule text", "rules version",
+])
+def test_any_plugin_change_changes_the_version(tmp_path, change):
+    root = plugin_copy(tmp_path)
+    sync_script = [sys.executable, str(root / "scripts" / "sync_claude_plugin.py")]
+    plugin = root / "plugins" / "biasclear"
+    skill = plugin / "skills" / "biasclear"
+    card_path = plugin / ".claude-plugin" / "plugin.json"
+    pack_path = root / "src" / "biasclear" / "data" / "biasclear-rules.json"
+    assert subprocess.run(sync_script + ["--check"], capture_output=True, check=False).returncode == 0
+    before = json.loads(card_path.read_text(encoding="utf-8"))["version"]
     if change == "plugin.json description":
-        card_path = tmp_path / "plugins" / "biasclear" / ".claude-plugin" / "plugin.json"
         card = json.loads(card_path.read_text(encoding="utf-8"))
         card["description"] += " Changed."
         card_path.write_text(json.dumps(card, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    elif change in ("rule text", "rules version"):
+        pack = json.loads(pack_path.read_text(encoding="utf-8"))
+        if change == "rule text":  # same rules_version, so only the files hash can move
+            pack["rules"][-1]["description"] += " Changed."
+        else:
+            pack["rules_version"] += "1"
+        pack_path.write_text(json.dumps(pack, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     else:
-        path = skill / "SKILL.md" if change == "SKILL.md" else skill / "scripts" / "biasclear_scan.py"
-        path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
-    result = subprocess.run(check, capture_output=True, text=True, check=False)
+        path = {
+            "SKILL.md": skill / "SKILL.md",
+            "biasclear_scan.py": skill / "scripts" / "biasclear_scan.py",
+            "README.md": plugin / "README.md",
+            "icon.png": plugin / "assets" / "icon.png",
+            "engine source": root / "src" / "biasclear" / "_engine.py",
+        }[change]
+        path.write_bytes(path.read_bytes() + b"\n")
+    result = subprocess.run(sync_script + ["--check"], capture_output=True, text=True, check=False)
     assert result.returncode == 1 and "plugin.json" in result.stdout, result.stdout
+    subprocess.run(sync_script, capture_output=True, check=True)
+    assert json.loads(card_path.read_text(encoding="utf-8"))["version"] != before
+
+
+def test_check_reports_strays_anywhere_and_write_keeps_hand_placed_ones(tmp_path):
+    root = plugin_copy(tmp_path)
+    sync_script = [sys.executable, str(root / "scripts" / "sync_claude_plugin.py")]
+    skill = root / "plugins" / "biasclear" / "skills" / "biasclear"
+    (skill / "scripts" / "helper.py").write_text("x = 1\n", encoding="utf-8")
+    (skill / "rules" / "stray.json").write_text("[]\n", encoding="utf-8")
+    check = subprocess.run(sync_script + ["--check"], capture_output=True, text=True, check=False)
+    assert check.returncode == 1 and "helper.py" in check.stdout and "stray.json" in check.stdout, check.stdout
+    write = subprocess.run(sync_script, capture_output=True, text=True, check=False)
+    assert write.returncode == 1 and "helper.py" in write.stdout, write.stdout
+    assert (skill / "scripts" / "helper.py").exists()
+    assert not (skill / "rules" / "stray.json").exists()
+
+
+def test_check_refuses_a_symlink_even_at_an_expected_path(tmp_path):
+    root = plugin_copy(tmp_path)
+    link = root / "plugins" / "biasclear" / "skills" / "biasclear" / "rules" / "LICENSE"
+    link.unlink()
+    link.symlink_to(root / "rules" / "LICENSE")
+    check = subprocess.run([sys.executable, str(root / "scripts" / "sync_claude_plugin.py"), "--check"],
+                           capture_output=True, text=True, check=False)
+    assert check.returncode == 1 and "LICENSE" in check.stdout, check.stdout
+
+
+def test_sync_names_a_missing_hand_written_file(tmp_path):
+    root = plugin_copy(tmp_path)
+    (root / "plugins" / "biasclear" / "README.md").unlink()
+    check = subprocess.run([sys.executable, str(root / "scripts" / "sync_claude_plugin.py"), "--check"],
+                           capture_output=True, text=True, check=False)
+    assert check.returncode == 1 and "missing hand-written plugin files: README.md" in check.stderr, check.stderr
+
+
+def test_plugin_version_refuses_leading_zeros():
+    sync = load_sync()
+    for package, rules in (("2.0.0a01", "2.0.0a5"), ("2.0.0a1", "2.0.0a05"), ("02.0.0", "2.0.0a5"), ("2.0.0a1", "2.00.0")):
+        with pytest.raises(SystemExit):
+            sync.plugin_version(package, rules, "0" * 64)
 
 
 def test_skill_quotes_the_real_limits():
@@ -309,10 +374,10 @@ def test_output_starts_with_the_counts_and_ends_with_one_mark_per_line():
 
 def test_marks_stay_on_one_line_for_any_line_splitter():
     # str.splitlines() also breaks at U+2028, U+2029 and NEL, which \s matches.
-    text = "Everyone\x85agrees this is right. Either we act now or we lose everything."
+    text = "Everyone\x85agrees this is right. Either we act\u2028now or we lose everything."
     out = run_script(text=text).stdout.decode("utf-8")
     report = json.loads(out)
-    assert any("\x85" in m["text"] or " " in m["text"] for m in report["marks"])
+    assert any("\x85" in m["text"] or "\u2028" in m["text"] for m in report["marks"])
     mark_lines = [line for line in out.splitlines() if line.startswith('  {"text": ')]
     assert [json.loads(line.rstrip(",")) for line in mark_lines] == report["marks"]
 
@@ -327,6 +392,21 @@ def test_script_drops_a_leading_byte_order_mark(tmp_path):
     assert [(m["rule_id"], m["start"], m["end"]) for m in report["marks"]] == [
         (m["rule_id"], m["start"], m["end"]) for m in scan(text)["moves"]
     ]
+
+
+def test_byte_order_mark_counts_toward_no_limit_and_no_error_offset(tmp_path):
+    bom = b"\xef\xbb\xbf"
+    # The limit is in characters: a mark plus the longest text still fits.
+    longest = tmp_path / "longest.txt"
+    longest.write_bytes(bom + "\U0001F600".encode("utf-8") * MAX_INPUT_CHARS)
+    full = run_script("--file", str(longest))
+    assert full.returncode == 0, full.stderr.decode()
+    assert json.loads(full.stdout)["characters"] == MAX_INPUT_CHARS
+    # A bad byte is named by its place in the file, mark included.
+    bad = tmp_path / "bad.txt"
+    bad.write_bytes(bom + b"ab\xff")
+    refused = run_script("--file", str(bad))
+    assert refused.returncode == 2 and b"at byte 5" in refused.stderr, refused.stderr.decode()
 
 
 def test_script_loads_the_engine_without_touching_sys_path():
@@ -364,7 +444,10 @@ def test_script_refuses_a_changed_pack_before_running_it(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "damage", ["missing shard", "broken shard", "deeply nested shard", "broken manifest", "missing engine file"]
+    "damage", [
+        "missing shard", "broken shard", "deeply nested shard", "broken manifest",
+        "missing engine file", "engine that fails on import",
+    ]
 )
 def test_script_refuses_a_damaged_pack_or_engine(tmp_path, damage):
     copy = tampered_copy(tmp_path)
@@ -376,8 +459,10 @@ def test_script_refuses_a_damaged_pack_or_engine(tmp_path, damage):
         (copy / "rules" / "rules-02.json").write_text("[" * 200_000 + "]" * 200_000, encoding="utf-8")
     elif damage == "broken manifest":
         (copy / "rules" / "PACK.json").write_text("{}", encoding="utf-8")
-    else:
+    elif damage == "missing engine file":
         (copy / "engine" / "biasclear" / "_engine.py").unlink()
+    else:
+        (copy / "engine" / "biasclear" / "_engine.py").write_text("raise RuntimeError('damaged')\n", encoding="utf-8")
     result = run_script(text=SAMPLE, script=copy / "scripts" / "biasclear_scan.py")
     assert result.returncode == 2 and b"missing or damaged" in result.stderr, result.stderr.decode()
 

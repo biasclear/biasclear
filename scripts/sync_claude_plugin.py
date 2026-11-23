@@ -15,8 +15,10 @@ the one source of truth:
 - ``LICENSE`` and ``rules/LICENSE`` are copied in.
 - The plugin's ``version`` in ``.claude-plugin/plugin.json`` is set from the
   package version, the whole rules version and a hash of everything the
-  plugin ships. Claude Code updates an installed plugin when this version
-  changes, so any change to any file in the plugin reaches installed copies.
+  plugin ships. Claude Code moves an installed plugin to a new version when
+  it updates the plugin (by itself only if auto-update is on for the
+  plugin's marketplace), so any change to any file in the plugin can reach
+  installed copies.
   Package 2.0.0a1 with rules 2.0.0a5 gives
   2.0.0-alpha.1.rules.2.0.0.0.5+files.<the hash's first 8 hex digits>.
 
@@ -103,7 +105,12 @@ def files_hash(generated: dict[Path, bytes], card: dict) -> str:
     It covers the generated files as they are to be written, the files written
     by hand, and plugin.json's other fields. Each entry adds its path and its
     length, so no two different sets of files hash alike by moving bytes.
+    Text is hashed with LF line ends, as git checks it out, so a file saved
+    with CRLF on one computer doesn't give a different version there.
     """
+    missing = [rel for rel in HAND_WRITTEN if not (PLUGIN / rel).is_file()]
+    if missing:
+        raise SystemExit("missing hand-written plugin files: " + ", ".join(missing))
     entries = {path.relative_to(PLUGIN).as_posix(): data for path, data in generated.items()}
     for rel in HAND_WRITTEN:
         entries[rel] = (PLUGIN / rel).read_bytes()
@@ -113,7 +120,7 @@ def files_hash(generated: dict[Path, bytes], card: dict) -> str:
     ).encode("utf-8")
     digest = hashlib.sha256()
     for rel in sorted(entries):
-        data = entries[rel]
+        data = entries[rel] if rel.endswith(".png") else entries[rel].replace(b"\r\n", b"\n")
         digest.update(rel.encode("utf-8") + b"\0" + str(len(data)).encode("ascii") + b"\0" + data)
     return digest.hexdigest()
 
@@ -168,7 +175,9 @@ def main(argv: list[str] | None = None) -> int:
 
     files = planned_files()
     expected = set(files) | {PLUGIN / rel for rel in HAND_WRITTEN}
-    unexpected = sorted(p for p in PLUGIN.rglob("*") if (p.is_file() or p.is_symlink()) and p not in expected)
+    # A symlink is never expected, even at an expected path: the directory
+    # refuses symlinks, and writing through one could change a file elsewhere.
+    unexpected = sorted(p for p in PLUGIN.rglob("*") if p.is_symlink() or (p.is_file() and p not in expected))
     generated_strays = [p for p in unexpected if any(folder in p.parents for folder in GENERATED_DIRS)]
     other_strays = [p for p in unexpected if p not in generated_strays]
 

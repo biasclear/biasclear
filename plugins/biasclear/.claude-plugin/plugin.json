@@ -1,7 +1,7 @@
 {
   "name": "biasclear",
   "displayName": "BiasClear",
-  "version": "2.0.0-alpha.1.rules.2.0.0.0.5+files.da87c916",
+  "version": "2.0.0-alpha.1.rules.2.0.0.0.5+files.5afddc4d",
   "description": "Marks common persuasion moves in English text with BiasClear's open rules and explains each one in plain words. It looks at wording only. It never judges whether a claim is true, and never judges people or sides. It misses moves made in other words, tone and insinuation. Its script makes no network calls; the text you check is part of your conversation with Claude.",
   "author": {
     "name": "BiasClear",

@@ -27,7 +27,7 @@ After installing the plugin, give Claude some text and ask, for example:
 - "What persuasion moves does this ad use?"
 - "Run BiasClear on this speech, using the news rules."
 
-Claude puts the text in a temporary file, runs BiasClear's bundled script on it, and is told to delete the file afterwards. Claude lists the marks, each with the move's name and what the move does (for a long list, the count for each move with examples), and ends with how to read the result.
+Claude puts the text in a temporary file (or uses your UTF-8 text file as it is), runs BiasClear's bundled script on it, and is told to delete any file it wrote afterwards. Claude lists the marks, each with the move's name and what the move does (for a long list, the count for each move with examples), and ends with how to read the result.
 
 You can also run the script yourself, with Python 3.9 or newer:
 
@@ -42,7 +42,7 @@ python3 -I skills/biasclear/scripts/biasclear_scan.py --file my-text.txt
   - It then runs the bundled BiasClear engine on the text, in memory.
   - Where Claude runs code on your computer, as Claude Code usually does, the script runs there. In the Claude app, or in Claude Code on the web, it runs in a cloud sandbox.
 - **Sends:** the script makes no network connections and fetches nothing. The text you check is part of your conversation with Claude, so it is not private the way BiasClear's browser checker is.
-- **Keeps:** the script writes nothing to disk and keeps no log. To hand your text to the script, Claude writes it to a temporary file, and its instructions tell it to delete that file afterwards. Claude itself keeps your conversation, including the text and the marks, the same way it keeps any conversation.
+- **Keeps:** the script writes nothing to disk and keeps no log. To hand your text to the script, Claude writes it to a temporary file, unless you gave it a UTF-8 text file, and its instructions tell it to delete the files it wrote afterwards. Claude itself keeps your conversation, including the text and the marks, the same way it keeps any conversation.
 
 ## Limits
 
@@ -51,7 +51,7 @@ Here are some of the limits the BiasClear project publishes. The full list of mi
 - A mark is a prompt to look closer, not a finding. Some harmless wording gets marked.
 - No marks does not mean no persuasion. The rules miss persuasion put in other words, tone and insinuation.
 - How often the rules are right on new text has not been measured yet.
-- Some rules stay quiet when something shaped like a citation sits beside the claim. The rules check the shape of a citation, not whether the source exists. A citation beside the first copy of a phrase can also quiet a later copy that has none.
+- Some rules stay quiet only when every claim they would mark has something shaped like a citation beside it. The rules check the shape of a citation, not whether the source exists. A citation beside the first copy of a phrase can also quiet a later copy that has none.
 - A quoted phrase is marked the same as one the writer uses.
 - The swapped-side tests still list known gaps, where the same kind of wording is marked when it is aimed at one side and not the other. They are listed in [rules/RULE_CHANGES.md](https://github.com/biasclear/biasclear/blob/main/rules/RULE_CHANGES.md).
 - The rules are written for English.
@@ -66,7 +66,7 @@ Here are some of the limits the BiasClear project publishes. The full list of mi
 
 The pack is split only to keep each file small. The script rejoins it and refuses to run if the rejoined pack's hash doesn't match.
 
-The engine copy, the rule pack and the plugin's version are generated from the main repository by `scripts/sync_claude_plugin.py`. The repository's tests fail if they ever differ from the source. The version is the package version, then the rules version as numbers (`rules.2.0.0.0.5` is rules 2.0.0a5), then a short hash of the plugin's files, so that any change reaches installed copies.
+The engine copy, the rule pack and the plugin's version are generated from the main repository by `scripts/sync_claude_plugin.py`. The repository's tests fail if they ever differ from the source. The version is the package version, then the rules version as numbers (`rules.2.0.0.0.5` is rules 2.0.0a5), then a short hash of the plugin's files, so that any change gives a new version. Claude Code moves an installed copy to it by itself only if you turn on auto-update for the biasclear marketplace in `/plugin`, which is off by default; otherwise update the plugin there.
 
 ## License
 
