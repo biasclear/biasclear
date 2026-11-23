@@ -4,7 +4,9 @@ BiasClear rule pack license
 The BiasClear rule pack, rules/biasclear-rules.json, is licensed under the
 Creative Commons Attribution 4.0 International license (CC BY 4.0). This also
 covers the byte-identical copy of the pack shipped in the Python package at
-src/biasclear/data/biasclear-rules.json.
+src/biasclear/data/biasclear-rules.json, and the same rules in the Claude
+plugin, split into header.json and rules-NN.json in
+plugins/biasclear/skills/biasclear/rules/.
 
 Everything else in this repository, including the engine code, is licensed
 under the Apache License, Version 2.0 (see LICENSE at the repository root).

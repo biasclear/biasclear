@@ -115,6 +115,16 @@ python -m biasclear --domain all < draft.txt
 
 The same engine in TypeScript, for browsers and Node, with no runtime dependencies: [packages/engine](packages/engine/README.md). It is not published on npm.
 
+### In Claude
+
+A Claude plugin in [plugins/biasclear](plugins/biasclear/README.md) lets Claude run these same rules on English text you give it and explain each move in plain words. Its script makes no network calls and keeps nothing, but the text you check is part of your conversation with Claude, so it is not private the way the browser checker is. The plugin needs Python 3.9 or newer wherever Claude runs code. In Claude Code:
+
+```
+/plugin install biasclear --marketplace biasclear/biasclear
+```
+
+On older versions of Claude Code, run `/plugin marketplace add biasclear/biasclear`, then `/plugin install biasclear@biasclear`.
+
 ## How it works
 
 - **One rule pack.** Every rule lives in one file, [rules/biasclear-rules.json](rules/biasclear-rules.json): patterns over English wording, each with a name, a description and a PIT tier. It is the single source of truth for every engine and carries its own rules version. [rules/RULE_CHANGES.md](rules/RULE_CHANGES.md) records the changes and why, in plain words. The patterns themselves are long: letters are spelled as `[Ee]`, so that a word matches in any case while capitals still count elsewhere in the same pattern. Word lists are meant to hold both sides' words, but that coverage is not complete yet: some insults are marked while their mirror aimed at the other side is not. The ones found are listed in [rules/RULE_CHANGES.md](rules/RULE_CHANGES.md) ("Mirror coverage").
@@ -154,7 +164,7 @@ v2 replaced those rules with rules that match structure only, tests every rule w
 
 ## License
 
-The code is licensed under the [Apache License 2.0](LICENSE). The retired v1 code is not part of this repository and keeps its own license, AGPL-3.0. The rule pack, `rules/biasclear-rules.json`, is licensed under [CC BY 4.0](rules/LICENSE); that also covers the copy of the pack inside the Python package, `biasclear/data/biasclear-rules.json`. The site's typefaces, Newsreader and DM Mono, are under the SIL Open Font License 1.1 ([site/fonts](site/fonts/)).
+The code is licensed under the [Apache License 2.0](LICENSE). The retired v1 code is not part of this repository and keeps its own license, AGPL-3.0. The rule pack, `rules/biasclear-rules.json`, is licensed under [CC BY 4.0](rules/LICENSE); that also covers the copy of the pack inside the Python package, `biasclear/data/biasclear-rules.json`, and the split copy in the Claude plugin, `plugins/biasclear/skills/biasclear/rules/`. The site's typefaces, Newsreader and DM Mono, are under the SIL Open Font License 1.1 ([site/fonts](site/fonts/)).
 
 ## Citation
 

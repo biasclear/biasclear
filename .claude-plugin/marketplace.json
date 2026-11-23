@@ -1,0 +1,15 @@
+{
+  "name": "biasclear",
+  "owner": {
+    "name": "BiasClear",
+    "url": "https://github.com/biasclear"
+  },
+  "description": "BiasClear's Claude plugin: mark common persuasion moves in English text with BiasClear's open rules. It misses moves made in other words.",
+  "plugins": [
+    {
+      "name": "biasclear",
+      "source": "./plugins/biasclear",
+      "description": "Marks common persuasion moves in English text with BiasClear's open rules and explains each one in plain words. Wording only; it misses moves made in other words. The script makes no network calls."
+    }
+  ]
+}
